@@ -1,0 +1,56 @@
+Structure du dossier
+Le numéro de série du volume est 2E00-7BE0
+C:\USERS\YANN GUESSONG\DESKTOP\PROJET-BDFINAL\CLIENT\SRC
+¦   App.css
+¦   App.tsx
+¦   index.css
+¦   main.tsx
+¦   
++---assets
+¦       hero.png
+¦       react.svg
+¦       vite.svg
+¦       
++---components
+¦   ¦   AdminNavbar.tsx
+¦   ¦   
+¦   +---admin
+¦   ¦       AffectationForm.tsx
+¦   ¦       ClassementClasse.tsx
+¦   ¦       SallesManager.tsx
+¦   ¦       
+¦   +---parent
+¦   ¦       DisciplineView.tsx
+¦   ¦       
+¦   +---teacher
+¦           GradesEntry.tsx
+¦           
++---pages
+¦   ¦   AdminDashboard.tsx
+¦   ¦   AdminEnrollments.tsx
+¦   ¦   AdminFeeConfig.tsx
+¦   ¦   Login.tsx
+¦   ¦   ParentPayment.tsx
+¦   ¦   ParentScolarite.tsx
+¦   ¦   Register.tsx
+¦   ¦   StudentList.tsx
+¦   ¦   
+¦   +---admin
+¦   ¦       BulletinPage.tsx
+¦   ¦       DisciplinePage.tsx
+¦   ¦       Infrastructure.tsx
+¦   ¦       MatierePage.tsx
+¦   ¦       PersonnelPage.tsx
+¦   ¦       PlanningPage.tsx
+¦   ¦       
+¦   +---teacher
+¦           EpreuvePage.tsx
+¦           
++---services
+¦       apiServices.ts
+¦       enrollmentService.ts
+¦       
++---types
++---utils
+        generateInvoice.ts
+        

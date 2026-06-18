@@ -1,0 +1,389 @@
+// ---------------------------------------------------------
+// CONFIGURATION
+// ---------------------------------------------------------
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  DISABLED
+}
+
+enum Role {
+  ADMIN_PRINCIPAL
+  PERSONNEL
+  PARENT
+}
+
+enum FonctionPersonnel {
+  ENSEIGNANT
+  SURVEILLANT
+  DIRECTION
+  SECRETAIRE
+  COMPTABLE
+  ADMINISTRATIF
+}
+
+enum EnrollmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentMethod {
+  ORANGE_MONEY
+  MTN_MOMO
+  CARTE_BANCAIRE
+}
+
+enum PaymentStatus {
+  PENDING
+  VALIDATED
+  REJECTED
+}
+enum SalleEtat {
+  DISPONIBLE
+  EN_SERVICE
+  EN_RENOVATION
+  EN_CONSTRUCTION
+  FERMEE_TEMPORAIREMENT
+}
+enum IncidentType {
+  RETARD
+  ABSENCE_INJUSTIFIEE
+  COMPORTEMENT
+  AUTRE
+}
+enum JourSemaine {
+  LUNDI
+  MARDI
+  MERCREDI
+  JEUDI
+  VENDREDI
+  SAMEDI
+}
+
+// ---------------------------------------------------------
+// AUTHENTIFICATION (Table Centrale)
+// ---------------------------------------------------------
+
+model User {
+  id        Int        @id @default(autoincrement())
+  email     String     @unique
+  password  String
+  role      Role       @default(PARENT)
+  status    UserStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+
+  adminProfile     Admin?
+  personnelProfile Personnel?
+  parentProfile    Parents?
+
+  @@map("users")
+}
+
+// ---------------------------------------------------------
+// PROFILS UTILISATEURS
+// ---------------------------------------------------------
+
+model Admin {
+  id     Int     @id @default(autoincrement())
+  nom    String  @db.VarChar(100)
+  mobile String? @db.VarChar(15)
+  userId Int     @unique
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("Admin")
+}
+
+model Personnel {
+  id          Int               @id @default(autoincrement())
+  nom         String
+  prenom      String
+  fonction    FonctionPersonnel
+  telephone   String
+  departement String?
+  photo       String?
+  statut      String            @default("Actif")
+  userId      Int               @unique
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classes     Classe[]
+  cours       Cours[]
+}
+
+model Parents {
+  id        Int      @id @default(autoincrement())
+  nom       String   @db.VarChar(60)
+  prenom    String   @db.VarChar(60)
+  telephone String?  @db.VarChar(15)
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  enfants   Eleve[]
+  demandes  EnrollmentRequest[] // Relation vers les demandes d'inscription
+  paiements  Payment[]           // Relation vers les paiements effectués par le parent
+
+  @@map("Parents")
+}
+
+// ---------------------------------------------------------
+// GESTION DES INSCRIPTIONS (Flux Parent -> Admin)
+// ---------------------------------------------------------
+
+model EnrollmentRequest {
+  id            Int              @id @default(autoincrement())
+  nom           String           @db.VarChar(60)
+  prenom        String           @db.VarChar(60)
+  dateNaissance DateTime         @db.Date
+  lieuNaissance String           @db.VarChar(30)
+  sexe          Int              @default(0) // 0=fille, 1=garcon
+   niveau        String         @db.VarChar(20) // ex: "SIL", "CP", "CE1"
+  status        EnrollmentStatus @default(PENDING)
+  adminNotes    String?          // Pour motif de refus
+  
+  // Le parent qui a fait la demande
+  parentId      Int
+  parent        Parents          @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@map("EnrollmentRequest")
+}
+
+// ---------------------------------------------------------
+// PÉDAGOGIE
+// ---------------------------------------------------------
+
+model Eleve {
+  matricule     Int       @id @default(autoincrement()) // Changé en autoincrement pour la création auto
+  nom           String    @db.VarChar(60)
+  prenom        String    @db.VarChar(60)
+  dateNaissance DateTime  @db.Date
+  lieuNaissance String    @db.VarChar(30)
+  sexe          Int       @default(0)
+  langue        String    @default("Français")
+  photoURL      String?
+  statut        String    @default("Inscrit")
+
+  parentId      Int
+  parent        Parents   @relation(fields: [parentId], references: [id],onDelete: Restrict)
+  
+  classroomId   Int?
+  classroom     Classe?   @relation(fields: [classroomId], references: [idClasse],onDelete: SetNull)
+
+  evaluations   Evaluation[]
+  niveau           String    // ex: "SIL", "CP", "CE1"
+  paiements     Payment[]  // Relation vers les paiements effectués par le parent pour cet élève
+  
+  salleId        Int?
+  salle          Salle?     @relation(fields: [salleId], references: [idSalle], onDelete: SetNull)
+  notes          Note[]
+  incidents      Incident[]
+  soldePoints    Int        @default(20) // Pour la discipline
+  @@map("Eleve")
+}
+
+model Classe {
+  idClasse      Int       @id @default(autoincrement())
+  libelle       String    @db.VarChar(100)
+  idCycle       Int
+  cycle         Cycle     @relation(fields: [idCycle], references: [idCycle],onDelete: Restrict)
+  responsableId Int?
+  responsable   Personnel? @relation(fields: [responsableId], references: [id],onDelete: SetNull)
+  students      Eleve[]
+  salles        Salle[]
+  cours         Cours[]
+  epreuves  Epreuve[] 
+
+  @@map("Classe")
+}
+
+model Salle {
+  idSalle   Int      @id @default(autoincrement())
+  libelle   String   @db.VarChar(30)
+  position  String?
+  surface   String?
+  capacite  Int?
+  idClasse  Int
+  etat           SalleEtat @default(DISPONIBLE)
+  actif          Boolean   @default(true)
+  classe    Classe   @relation(fields: [idClasse], references: [idClasse],onDelete: Cascade)
+  eleves    Eleve[]
+  plannings      EmploiDuTemps[]
+
+  @@map("Salle")
+}
+
+model Cycle {
+  idCycle Int      @id @default(autoincrement())
+  libelle String   @db.VarChar(255)
+  classes Classe[]
+
+  @@map("Cycle")
+}
+
+// ---------------------------------------------------------
+// NOTES ET COURS
+// ---------------------------------------------------------
+
+model Cours {
+  idCours      Int       @id @default(autoincrement())
+  idMatiere    Int
+  matiere      Matiere   @relation(fields: [idMatiere], references: [id],onDelete: Restrict)
+  
+  coefficient  Float     @default(1.0)
+  idClasse     Int
+  classe       Classe    @relation(fields: [idClasse], references: [idClasse],onDelete: Cascade)
+  enseignantId Int?
+  enseignant   Personnel? @relation(fields: [enseignantId], references: [id],onDelete: SetNull)
+  evaluations  Evaluation[]
+  plannings    EmploiDuTemps[] // Relation vers l'emploi du temps pour savoir quand ce cours a lieu
+
+  @@map("Cours")
+}
+
+model Note {
+  id          Int      @id @default(autoincrement())
+  valeur      Float
+  evaluation  String
+  idMatiere       Int
+  matiere         Matiere  @relation(fields: [idMatiere], references: [id],onDelete: Restrict)
+  eleveId     Int
+  eleve       Eleve    @relation(fields: [eleveId], references: [matricule],onDelete: Cascade)
+  dateSaisie  DateTime @default(now())
+}
+
+model Incident {
+  id            Int          @id @default(autoincrement())
+  type          IncidentType
+  date          DateTime     @default(now())
+  gravite       String       // Faible, Moyenne, Haute
+  pointsDeduits Int          @default(0)
+  commentaire   String
+  auteur        String       // Nom de l'enseignant/surveillant
+  eleveId       Int
+  eleve         Eleve        @relation(fields: [eleveId], references: [matricule],onDelete: Cascade)
+}
+
+model Evaluation {
+  idEval       Int      @id @default(autoincrement())
+  note         Float
+  appreciation String?
+  matricule    Int
+  eleve        Eleve    @relation(fields: [matricule], references: [matricule],onDelete: Cascade)
+  idCours      Int
+  cours        Cours    @relation(fields: [idCours], references: [idCours],onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@map("Evaluation")
+}
+
+
+
+model FeeConfig {
+  id            Int      @id @default(autoincrement())
+  niveau        String   @unique // ex: "CP1", "CE1"
+  montantTotal  Float    // Le prix total de l'année
+  montantTranche Float   // Prix d'une tranche (ex: Total / 3)
+  
+  // Relation optionnelle : on pourrait lier cela à la table Classe plus tard
+}
+
+model Payment {
+  id              Int           @id @default(autoincrement())
+  montant         Float
+  nombreTranches  Int           // Combien de tranches le parent paie
+  methode         PaymentMethod
+  transactionRef  String?       // ID reçu d'Orange/MTN
+  status          PaymentStatus @default(PENDING)
+  adminNotes      String?
+  
+  // Relations
+  eleveId         Int
+  eleve           Eleve         @relation(fields: [eleveId], references: [matricule],onDelete: Cascade)
+  
+  parentId        Int
+  parent          Parents       @relation(fields: [parentId], references: [id],onDelete: Cascade)
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("Payment")
+}
+
+// --- BIBLIOTHÈQUE ---
+model Livre {
+  id              Int     @id @default(autoincrement())
+  titre           String
+  auteur          String
+  maisonEdition   String?
+  description     String?
+  cycle           String
+  classeConcernee String
+  langue          String
+  couvertureUrl   String?
+  pdfUrl          String?
+  idMatiere       Int
+  matiere         Matiere  @relation(fields: [idMatiere], references: [id],onDelete: Restrict)
+}
+
+
+
+// --- EMPLOI DU TEMPS ---
+model Matiere {
+  id      Int      @id @default(autoincrement())
+  nom     String   @unique // ex: Mathématiques, Histoire-Géo
+  code    String?  // ex: MATH-01
+  cours   Cours[]
+  livres  Livre[]  // Lien avec la bibliothèque (Section 12 du PDF)
+  notes   Note[]   // Lien avec les notes (Section 8 du PDF)
+  epreuves  Epreuve[]  // ← ajouter
+}
+
+model EmploiDuTemps {
+  id           Int          @id @default(autoincrement())
+  jour         JourSemaine
+  heureDebut   String       // ex: "08:00"
+  heureFin     String       // ex: "10:00"
+  
+  idCours      Int
+  cours        Cours        @relation(fields: [idCours], references: [idCours],onDelete: Cascade)
+  
+  idSalle      Int
+  salle        Salle        @relation(fields: [idSalle], references: [idSalle],onDelete: Cascade)
+
+  @@index([idCours])
+  @@index([idSalle])
+}
+model Epreuve {
+  id          Int      @id @default(autoincrement())
+  evaluation  String   // ex: "Trimestre 1", "Examen Final"
+  anneeAcad   String   // ex: "2024-2025"
+  auteur      String   // Nom de l'enseignant
+  sujetUrl    String?  // Lien vers le fichier sujet
+  corrigeUrl  String?  // Lien vers le corrigé
+
+  // Relations
+  idMatiere   Int
+  matiere     Matiere  @relation(fields: [idMatiere], references: [id], onDelete: Restrict)
+  
+  idClasse    Int
+  classe      Classe   @relation(fields: [idClasse], references: [idClasse], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@map("Epreuve")
+}

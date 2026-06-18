@@ -1,0 +1,41 @@
+Structure du dossier
+Le numéro de série du volume est 2E00-7BE0
+C:\USERS\YANN GUESSONG\DESKTOP\PROJET-BDFINAL\SERVER\SRC
+¦   seed.ts
+¦   
++---controllers
+¦       adminController.ts
+¦       authController.ts
+¦       bulletin.controller.ts
+¦       discipline.controller.ts
+¦       enrollmentController.ts
+¦       epreuve.controller.ts
+¦       matiere.controller.ts
+¦       note.controller.ts
+¦       paymentController.ts
+¦       personnel.controller.ts
+¦       planning.controller.ts
+¦       salle.controller.ts
+¦       studentController.ts
+¦       
++---lib
+¦       prisma.ts
+¦       
++---middlewares
+¦       authMiddleware.ts
+¦       
++---routes
+        adminRoutes.ts
+        authRoutes.ts
+        bulletinRoutes.ts
+        disciplineRoutes.ts
+        enrollmentRoutes.ts
+        epreuveRoutes.ts
+        matiereRoutes.ts
+        noteRoutes.ts
+        paymentRoutes.ts
+        personnelRoutes.ts
+        planningRoutes.ts
+        salleRoutes.ts
+        studentRoutes.ts
+        
