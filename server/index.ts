@@ -22,6 +22,7 @@ import disciplineRoutes from './src/routes/disciplineRoutes';
 import noteRoutes       from './src/routes/noteRoutes';
 import epreuveRoutes    from './src/routes/epreuveRoutes';
 import paymentRoutes    from './src/routes/paymentRoutes';
+import bibliothequeRoutes from './src/routes/bibliothequeRoutes';
 
 // ── Déclaration des routes ──
 app.use('/api/auth',        authRoutes);
@@ -37,6 +38,7 @@ app.use('/api/discipline',  disciplineRoutes);
 app.use('/api/notes',       noteRoutes);
 app.use('/api/epreuves',    epreuveRoutes);
 app.use('/api/payments',    paymentRoutes);
+app.use('/api/bibliotheque', bibliothequeRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

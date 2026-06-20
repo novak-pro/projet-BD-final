@@ -2,6 +2,26 @@ import { Response } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 
+export const getIncidentsByEleve = async (req: AuthRequest, res: Response): Promise<void> => {
+  const eleveId = (req as any).params.eleveId;
+
+  try {
+    const incidents = await prisma.incident.findMany({
+      where: { eleveId: Number(eleveId) },
+      orderBy: { date: 'desc' }
+    });
+
+    const eleve = await prisma.eleve.findUnique({
+      where: { matricule: Number(eleveId) },
+      select: { soldePoints: true }
+    });
+
+    res.json({ incidents, soldePoints: eleve?.soldePoints ?? 20 });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur de récupération" });
+  }
+};
+
 export const rapporterIncident = async (req: AuthRequest, res: Response): Promise<void> => {
   const { eleveId, type, gravite, pointsDeduits, commentaire, auteur } = req.body as any;
 

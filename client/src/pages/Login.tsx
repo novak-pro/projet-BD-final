@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, ShieldCheck, Briefcase, Users } from 'lucide-react';
+import { ShieldCheck, Briefcase, Users, Mail, Lock } from 'lucide-react';
 import { ROLE_GROUPS } from '../types/roles';
+import api from '../services/axiosInstance';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import BrandHeader from '../components/BrandHeader';
+import { useTranslation } from '../i18n/LanguageContext';
 
 const Login = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [activeRole, setActiveRole] = useState('ADMIN');
@@ -21,147 +26,127 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      const response = await api.post('/auth/login', { email, password });
+      const data = response.data;
+      const userRole = data.user.role;
+      const allowedRoles = ROLE_GROUPS[activeRole];
 
-      const data = await response.json();
-
-      if (response.ok) {
-        const userRole = data.user.role;
-        const allowedRoles = ROLE_GROUPS[activeRole];
-
-        if (!allowedRoles.includes(userRole)) {
-          setError("Ce compte n'a pas accès à cet espace de connexion.");
-          return;
-        }
-
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('role', userRole);
-
-        if (userRole === 'ADMIN_PRINCIPAL') navigate('/admin');
-        else navigate('/dashboard');
-      } else {
-        setError(data.error || "Identifiants invalides");
+      if (!allowedRoles.includes(userRole)) {
+        setError(t('auth.errorAccess'));
+        return;
       }
-    } catch (err) {
-      setError("Serveur indisponible.");
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', userRole);
+
+      if (userRole === 'ADMIN_PRINCIPAL') navigate('/admin');
+      else if (userRole === 'PERSONNEL') navigate('/teacher/epreuves');
+      else if (userRole === 'PARENT') navigate('/parent/scolarite');
+      else navigate('/');
+    } catch (err: any) {
+      setError(err.response?.data?.error || t('auth.errorServer'));
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* ── BANDEAU LOGO (pleine largeur, fond blanc) ── */}
-      <div className="w-full bg-white py-12 flex justify-center items-center border-b-4 border-red-600 shadow-md">
-        <div className="flex items-center gap-3">
-          <div className="text-blue-900">
-            <GraduationCap size={56} strokeWidth={2.5} />
-          </div>
-          <div className="flex flex-col leading-none">
-            <span className="text-4xl font-black italic text-red-600 tracking-tighter">School</span>
-            <span className="text-lg font-bold tracking-[0.3em] text-blue-900 ml-1">PORTAL</span>
-          </div>
-        </div>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1a2a4a 100%)' }}>
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher className="text-white/60 hover:text-white" />
       </div>
 
-      {/* ── SECTION FOND (tabs + formulaire) ── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 bg-gray-700 relative">
-        {/* ── TABS (boutons pilules indépendants) ── */}
-        <div className="flex gap-2 mb-6">
-          {roles.map((role) => {
-            const Icon = role.icon;
-            return (
-              <button
-                key={role.id}
-                onClick={() => setActiveRole(role.id)}
-                className={`flex items-center gap-2 px-5 py-2 rounded-full text-[11px] font-bold transition-all ${
-                  activeRole === role.id
-                    ? 'bg-[#3182ce] text-white shadow-lg'
-                    : 'bg-[#1a202c] text-gray-300 hover:bg-gray-800'
-                }`}
-              >
-                <Icon size={14} />
-                {role.label}
-              </button>
-            );
-          })}
-        </div>
+      <div className="w-full max-w-md">
+        <BrandHeader subtitle="Connectez-vous à votre espace" />
 
-        {/* ── CARTE FORMULAIRE (carrée, bordures nettes) ── */}
-        <div className="w-full max-w-lg bg-white rounded-md shadow-2xl overflow-hidden">
-          {/* En-tête LOGIN (bandeau interne) */}
-          <div className="text-center py-4 border-b border-gray-200">
-            <span className="text-sm font-light tracking-[0.3em] text-gray-500 uppercase">
-              Login
-            </span>
-          </div>
+        <div className="bg-white rounded-2xl shadow-xl shadow-black/10">
+          <div className="px-8 py-8">
+            <h2 className="text-lg font-semibold text-center mb-6" style={{ color: '#0f172a' }}>Connexion</h2>
 
-          {/* Corps avec padding uniforme — tout le contenu respecte cette marge */}
-          <div className="p-10">
+            <div className="flex gap-2 mb-6">
+              {roles.map((role) => {
+                const Icon = role.icon;
+                const isActive = activeRole === role.id;
+                return (
+                  <button
+                    key={role.id}
+                    onClick={() => setActiveRole(role.id)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all ${
+                      isActive ? 'text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'
+                    }`}
+                    style={isActive ? { background: '#0f172a' } : {}}
+                  >
+                    <Icon size={14} />
+                    {role.label}
+                  </button>
+                );
+              })}
+            </div>
+
             {error && (
-              <p className="text-red-500 text-xs font-bold text-center bg-red-50 py-2 rounded mb-4">
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 px-4 py-2.5 rounded-lg mb-5">
                 {error}
-              </p>
+              </div>
             )}
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <input
-                type="email"
-                placeholder="Email Address"
-                className="w-full border border-gray-300 rounded px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors text-sm"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+            <form onSubmit={handleLogin} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Email</label>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
+                    <Mail size={16} className="text-slate-400" />
+                  </div>
+                  <input
+                    type="email"
+                    placeholder={t('auth.emailPlaceholder')}
+                    className="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-200 outline-none text-sm transition-all placeholder:text-slate-400"
+                    style={{ color: '#0f172a' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#0f172a'; e.target.style.boxShadow = '0 0 0 3px rgba(15,23,42,0.08)' }}
+                    onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none' }}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
 
-              <input
-                type="password"
-                placeholder="Password"
-                className="w-full border border-gray-300 rounded px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors text-sm"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-
-              <div className="flex justify-between items-center text-[11px] text-gray-500 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-0" />
-                  <span className="group-hover:text-gray-700 transition-colors">Remember me</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => navigate('/register')}
-                  className="font-bold hover:text-blue-600 transition-colors uppercase tracking-wider"
-                >
-                  Forgot password?
-                </button>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1.5">Mot de passe</label>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
+                    <Lock size={16} className="text-slate-400" />
+                  </div>
+                  <input
+                    type="password"
+                    placeholder={t('auth.passwordPlaceholder')}
+                    className="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-200 outline-none text-sm transition-all placeholder:text-slate-400"
+                    style={{ color: '#0f172a' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#0f172a'; e.target.style.boxShadow = '0 0 0 3px rgba(15,23,42,0.08)' }}
+                    onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none' }}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-[#e53e3e] hover:bg-red-700 text-white font-bold py-3 rounded shadow-lg 
-                           transition-all transform active:scale-95 uppercase tracking-[0.2em] text-sm mt-2"
+                className="w-full py-2.5 rounded-lg text-white font-semibold text-sm transition-all hover:brightness-110 active:scale-[0.98]"
+                style={{ background: '#0f172a' }}
               >
-                Log In
+                {t('auth.signInBtn')}
               </button>
             </form>
+
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => navigate('/register')}
+                className="text-xs transition-colors text-slate-400 hover:text-slate-600"
+              >
+                {t('auth.noAccountRegister')}{' '}
+                <span className="underline font-semibold" style={{ color: '#0f172a' }}>{t('auth.noAccountRegisterLink')}</span>
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* Pied de page optionnel */}
-        <div className="mt-6 mb-6 text-center">
-          <button
-            onClick={() => navigate('/register')}
-            className="text-white/60 text-xs hover:text-white transition-colors"
-          >
-            Besoin d'un compte ? <span className="underline font-bold">Faire une demande</span>
-          </button>
-        </div>
-
-        <div className="absolute bottom-4 right-4 bg-white/10 px-3 py-1 rounded text-[10px] text-white/50 backdrop-blur-sm">
-          SECURED BY 🛡️ EDUMANAGER POSITIVE
         </div>
       </div>
     </div>

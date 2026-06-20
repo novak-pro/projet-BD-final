@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export const getAllStudents = async (req: Request, res: Response) => {
   try {
@@ -9,8 +7,10 @@ export const getAllStudents = async (req: Request, res: Response) => {
       include: {
         parent: true,
         classroom: true,
+        salle: true,
         evaluations: true
-      }
+      },
+      orderBy: { nom: 'asc' }
     });
     res.json(students);
   } catch (error) {
@@ -81,7 +81,7 @@ export const createStudent = async (req: Request, res: Response) => {
 export const updateStudent = async (req: Request, res: Response) => {
   try {
     const { matricule } = req.params;
-    const { nom, prenom, dateNaissance, lieuNaissance, sexe, langue, classroomId, statut } = req.body;
+    const { nom, prenom, dateNaissance, lieuNaissance, sexe, langue, classroomId, salleId, statut } = req.body;
     
     const student = await prisma.eleve.update({
       where: { matricule: parseInt(matricule as string) },
@@ -92,7 +92,8 @@ export const updateStudent = async (req: Request, res: Response) => {
         lieuNaissance,
         sexe,
         langue,
-        classroomId,
+        classroomId: classroomId ? Number(classroomId) : undefined,
+        salleId: salleId ? Number(salleId) : null,
         statut
       },
       include: {

@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { rapporterIncident } from '../controllers/discipline.controller';
+import { rapporterIncident, getIncidentsByEleve } from '../controllers/discipline.controller';
 import { protect, restrictTo } from '../middlewares/authMiddleware';
 
 const router = Router();
-router.post('/incident', protect, restrictTo('PARENT'), rapporterIncident);
+router.post('/incident', protect, restrictTo('ADMIN_PRINCIPAL', 'PERSONNEL'), rapporterIncident);
+router.get('/eleve/:eleveId', protect, getIncidentsByEleve);
 export default router;

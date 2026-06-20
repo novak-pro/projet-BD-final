@@ -1,30 +1,32 @@
 // components/admin/ClassementClasse.tsx
 const ClassementClasse = ({ bulletins }) => {
   return (
-    <div className="bg-white p-6 rounded-xl shadow-lg">
-      <h2 className="text-xl font-bold mb-4">Classement de la Classe</h2>
+    <div className="admin-card">
+      <div className="admin-card-header">
+        <h2>Classement de la Classe</h2>
+      </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left">
           <thead>
-            <tr className="bg-indigo-600 text-white">
-              <th className="p-3 rounded-tl-lg">Rang</th>
-              <th className="p-3">Élève</th>
-              <th className="p-3">Moyenne</th>
-              <th className="p-3">Points Totaux</th>
-              <th className="p-3 rounded-tr-lg">Action</th>
+            <tr className="text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100">
+              <th className="px-3 py-3">Rang</th>
+              <th className="px-3 py-3">Élève</th>
+              <th className="px-3 py-3">Moyenne</th>
+              <th className="px-3 py-3">Points Totaux</th>
+              <th className="px-3 py-3">Action</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-50">
             {bulletins.map((b) => (
-              <tr key={b.matricule} className="border-b hover:bg-gray-50">
-                <td className="p-3 font-bold">
+              <tr key={b.matricule} className="hover:bg-gray-50">
+                <td className="px-3 py-3 font-bold">
                   {b.rang === 1 ? '🥇 1er' : b.rang === 2 ? '🥈 2ème' : `${b.rang}ème`}
                 </td>
-                <td className="p-3 uppercase">{b.nom} {b.prenom}</td>
-                <td className="p-3 text-indigo-700 font-bold">{b.moyenne} / 20</td>
-                <td className="p-3 text-gray-500">{b.totalPoints} / {b.totalCoeffs * 20}</td>
-                <td className="p-3">
-                  <button className="text-blue-600 hover:underline">Voir Bulletin</button>
+                <td className="px-3 py-3 uppercase text-sm">{b.nom} {b.prenom}</td>
+                <td className="px-3 py-3 font-bold text-sm" style={{ color: 'var(--navy)' }}>{b.moyenne} / 20</td>
+                <td className="px-3 py-3 text-sm text-gray-500">{b.totalPoints} / {b.totalCoeffs * 20}</td>
+                <td className="px-3 py-3">
+                  <button className="text-sm font-medium" style={{ color: 'var(--accent)' }}>Voir Bulletin</button>
                 </td>
               </tr>
             ))}

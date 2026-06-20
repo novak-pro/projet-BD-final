@@ -6,7 +6,7 @@ export const calculerBulletinsClasse = async (req: Request, res: Response): Prom
 
   try {
     const eleves = await prisma.eleve.findMany({
-      where: { salleId: Number(idClasse) },
+      where: { classroomId: Number(idClasse) },
       include: {
         notes: {
           where: { evaluation: String(evaluation) },

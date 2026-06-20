@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { protect, restrictTo } from '../middlewares/authMiddleware';
 
-import { getPendingUsers, handleUserValidation } from '../controllers/adminController';
+import { getPendingUsers, handleUserValidation, getStats } from '../controllers/adminController';
 import { createSalle, getAllSalles, updateEtatSalle } from '../controllers/salle.controller';
 import { createMatiere, getMatieres } from '../controllers/matiere.controller';
 import { getAllPersonnel, affecterEnseignant } from '../controllers/personnel.controller';
@@ -10,6 +10,9 @@ const router = Router();
 
 // Toutes les routes admin nécessitent d'être connecté + être ADMIN_PRINCIPAL
 router.use(protect, restrictTo('ADMIN_PRINCIPAL'));
+
+// --- Stats Dashboard ---
+router.get('/stats', getStats);
 
 // --- Validation des comptes ---
 router.get('/pending', getPendingUsers);

@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export const createPlanning = async (req: Request, res: Response) => {
   try {
@@ -53,6 +51,56 @@ export const getPlanningByClasse = async (req: Request, res: Response) => {
             matiere: true,
             enseignant: true
           }
+        }
+      },
+      orderBy: { heureDebut: 'asc' }
+    });
+    res.json(edt);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur de récupération" });
+  }
+};
+
+export const deletePlanning = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.emploiDuTemps.delete({ where: { id: Number(id) } });
+    res.json({ message: "Créneau supprimé" });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la suppression" });
+  }
+};
+
+export const getCoursByClasse = async (req: Request, res: Response) => {
+  try {
+    const { idClasse } = req.params;
+    const cours = await prisma.cours.findMany({
+      where: { idClasse: Number(idClasse) },
+      include: { matiere: true, enseignant: true }
+    });
+    res.json(cours);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur de récupération des cours" });
+  }
+};
+
+export const getPlanningByEleve = async (req: Request, res: Response) => {
+  const { eleveId } = req.params;
+  try {
+    const eleve = await prisma.eleve.findUnique({
+      where: { matricule: Number(eleveId) },
+      select: { classroomId: true }
+    });
+    if (!eleve || !eleve.classroomId) {
+      res.json([]);
+      return;
+    }
+    const edt = await prisma.emploiDuTemps.findMany({
+      where: { cours: { idClasse: eleve.classroomId } },
+      include: {
+        salle: true,
+        cours: {
+          include: { matiere: true, enseignant: true }
         }
       },
       orderBy: { heureDebut: 'asc' }

@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient, PaymentMethod, PaymentStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
+import { PaymentMethod, PaymentStatus } from '@prisma/client';
 
 /**
  * 1. Récupère les informations tarifaires d'un élève selon son niveau
@@ -108,5 +107,32 @@ export const getPayments = async (req: Request, res: Response) => {
     res.json(payments);
   } catch (error) {
     res.status(500).json({ error: "Erreur de récupération" });
+  }
+};
+
+/**
+ * 5. Récupérer toutes les configurations de frais (Admin)
+ */
+export const getAllFeeConfigs = async (req: Request, res: Response) => {
+  try {
+    const configs = await prisma.feeConfig.findMany({ orderBy: { niveau: 'asc' } });
+    res.json(configs);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur de récupération" });
+  }
+};
+
+/**
+ * 6. Créer une configuration de frais (Admin)
+ */
+export const createFeeConfig = async (req: Request, res: Response) => {
+  try {
+    const { niveau, montantTotal, montantTranche } = req.body;
+    const config = await prisma.feeConfig.create({
+      data: { niveau, montantTotal: parseFloat(montantTotal), montantTranche: parseFloat(montantTranche) }
+    });
+    res.status(201).json(config);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la création" });
   }
 };

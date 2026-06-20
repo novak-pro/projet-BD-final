@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 export const createMatiere = async (req: Request, res: Response) => {
   try {
@@ -20,4 +18,14 @@ export const getMatieres = async (req: Request, res: Response) => {
     include: { _count: { select: { livres: true, cours: true } } }
   });
   res.json(matieres);
+};
+
+export const deleteMatiere = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.matiere.delete({ where: { id: Number(id) } });
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la suppression" });
+  }
 };

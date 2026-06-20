@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { createMatiere, getMatieres } from '../controllers/matiere.controller';
+import { createMatiere, getMatieres, deleteMatiere } from '../controllers/matiere.controller';
 import { protect, restrictTo } from '../middlewares/authMiddleware';
 const router = Router();
-router.post('/', protect, restrictTo('admin'), createMatiere);
-router.get('/', protect, restrictTo('admin'), getMatieres);
+router.post('/', protect, restrictTo('ADMIN_PRINCIPAL'), createMatiere);
+router.get('/', protect, restrictTo('ADMIN_PRINCIPAL'), getMatieres);
+router.delete('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteMatiere);
 export default router;

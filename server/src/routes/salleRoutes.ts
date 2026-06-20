@@ -3,7 +3,7 @@ import { createSalle, getAllSalles, updateEtatSalle } from '../controllers/salle
 import { protect, restrictTo} from '../middlewares/authMiddleware';
 
 const router = Router();
-router.post('/', protect, restrictTo('admin'), createSalle);
-router.get('/', protect, restrictTo('admin'), getAllSalles);
-router.patch('/:id/etat', protect, restrictTo('admin'), updateEtatSalle);
+router.post('/', protect, restrictTo('ADMIN_PRINCIPAL'), createSalle);
+router.get('/', protect, restrictTo('ADMIN_PRINCIPAL'), getAllSalles);
+router.patch('/:id/etat', protect, restrictTo('ADMIN_PRINCIPAL'), updateEtatSalle);
 export default router;

@@ -23,7 +23,8 @@
     "bcrypt": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "jspdf": "^4.2.1",
-    "jspdf-autotable": "^5.0.8"
+    "jspdf-autotable": "^5.0.8",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

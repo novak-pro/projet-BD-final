@@ -1,95 +1,89 @@
 import { useEffect, useState } from 'react';
 import { Check, X, UserCheck, Users, Building2, GraduationCap, Clock, ShieldAlert } from 'lucide-react';
+import api from '../services/axiosInstance';
+import { useTranslation } from '../i18n/LanguageContext';
 
-// Composant pour les cartes de stats (Style Image 3)
-const StatCard = ({ title, value, icon: Icon, colorClass }: any) => (
-  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow">
-    <div>
-      <p className="text-3xl font-bold text-gray-700">{value}</p>
-      <p className="text-[10px] font-bold text-gray-400 uppercase mt-1 tracking-wider">{title}</p>
+const StatCard = ({ title, value, icon: Icon, color }: any) => (
+  <div className="admin-stat-card">
+    <div className="admin-stat-icon" style={{ background: `${color}15`, color }}>
+      <Icon size={20} />
     </div>
-    <div className="text-gray-200">
-      <Icon size={48} strokeWidth={1.5} />
+    <div>
+      <strong>{value}</strong>
+      <span>{title}</span>
     </div>
   </div>
 );
 
 const AdminDashboard = () => {
+  const { t } = useTranslation();
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalEleves: 0, totalEnseignants: 0, totalSalles: 0, pendingUsers: 0 });
   const [loading, setLoading] = useState(true);
 
-  const fetchPending = async () => {
+  const fetchData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:3000/api/admin/pending', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await res.json();
-      setPendingUsers(Array.isArray(data) ? data : []);
+      const [statsRes, pendingRes] = await Promise.all([
+        api.get('/admin/stats'),
+        api.get('/admin/pending')
+      ]);
+      setStats(statsRes.data);
+      setPendingUsers(Array.isArray(pendingRes.data) ? pendingRes.data : []);
     } catch (err) {
-      console.error("Erreur fetch pending:", err);
+      console.error("Erreur fetch:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchPending(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const processUser = async (userId: number, action: 'ACTIVE' | 'DISABLED') => {
-    const token = localStorage.getItem('token');
-    await fetch('http://localhost:3000/api/admin/validate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({ userId, action })
-    });
-    fetchPending();
+    try {
+      await api.post('/admin/validate', { userId, action });
+    } catch (err) {
+      console.error("Erreur process user:", err);
+    }
+    fetchData();
   };
 
   return (
-    <div className="space-y-8">
-      
-      {/* ── GRILLE DE STATISTIQUES (Style Image 3) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Élèves" value="1,036" icon={Users} />
-        <StatCard title="Enseignants" value="92" icon={GraduationCap} />
-        <StatCard title="Salles de classe" value="58" icon={Building2} />
-        <StatCard title="Demandes en attente" value={pendingUsers.length} icon={Clock} />
+    <div className="space-y-6">
+      <div className="admin-stats-overview">
+        <StatCard title={t('student.list')} value={stats.totalEleves.toLocaleString()} icon={Users} color="#1B2A4A" />
+        <StatCard title={t('nav.personnel')} value={stats.totalEnseignants.toLocaleString()} icon={GraduationCap} color="#4A7DC9" />
+        <StatCard title={t('nav.infrastructure')} value={stats.totalSalles.toLocaleString()} icon={Building2} color="#2C4A7C" />
+        <StatCard title={t('auth.register')} value={stats.pendingUsers} icon={Clock} color="#dc2626" />
       </div>
 
-      {/* ── SECTION PRINCIPALE : DEMANDES D'ACCÈS ── */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-100 overflow-hidden">
-        
-        {/* En-tête du tableau style "Masantren" */}
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-          <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2 uppercase tracking-wider">
-            <ShieldAlert size={18} className="text-amber-500" />
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <h2>
+            <ShieldAlert size={18} style={{ color: 'var(--navy)' }} />
             Demandes d'accès au portail
           </h2>
-          <span className="text-[10px] bg-blue-600 text-white px-2 py-1 rounded font-bold">
-            {pendingUsers.length} À TRAITER
+          <span className="admin-badge" style={{ background: 'var(--navy)', color: '#fff' }}>
+            {pendingUsers.length} {pendingUsers.length > 1 ? 'A TRAITER' : 'A TRAITER'}
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="p-10 text-center text-gray-400 animate-pulse text-sm">Chargement des données...</div>
-          ) : (
+        {loading ? (
+          <div className="p-10 text-center text-gray-400 animate-pulse text-sm">{t('common.loading')}</div>
+        ) : (
+          <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b">
-                  <th className="px-6 py-4 italic">Utilisateur</th>
-                  <th className="px-6 py-4">Rôle demandé</th>
-                  <th className="px-6 py-4">Contact / Email</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                <tr className="text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100">
+                  <th className="px-4 py-3">Utilisateur</th>
+                  <th className="px-4 py-3">Rôle</th>
+                  <th className="px-4 py-3">Contact</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {pendingUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-6 py-12 text-center text-gray-400 text-sm">
+                    <td colSpan={4} className="px-4 py-12 text-center text-gray-400 text-sm">
                       <div className="flex flex-col items-center gap-2">
                         <UserCheck size={40} className="text-gray-200" />
                         <p>Aucune demande d'inscription en attente.</p>
@@ -98,10 +92,10 @@ const AdminDashboard = () => {
                   </tr>
                 ) : (
                   pendingUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-blue-50/30 transition-colors">
-                      <td className="px-6 py-4">
+                    <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 font-bold text-xs shadow-sm">
+                          <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white font-bold text-xs shadow-sm" style={{ background: 'var(--navy)' }}>
                             {(user.personnelProfile?.nom?.[0] || user.parentProfile?.nom?.[0] || 'U').toUpperCase()}
                           </div>
                           <div>
@@ -109,36 +103,31 @@ const AdminDashboard = () => {
                               {user.personnelProfile?.nom || user.parentProfile?.nom}{' '}
                               {user.personnelProfile?.prenom || user.parentProfile?.prenom}
                             </div>
-                            <div className="text-[11px] text-gray-400 lowercase italic">{user.email}</div>
+                            <div className="text-[11px] text-gray-400">{user.email}</div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded text-[10px] font-black tracking-widest uppercase
-                          ${user.role === 'PERSONNEL'
-                            ? 'bg-purple-50 text-purple-600 border border-purple-100'
-                            : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
+                      <td className="px-4 py-3">
+                        <span className="admin-badge" style={{ background: user.role === 'PERSONNEL' ? '#f3e8ff' : '#e8edf5', color: user.role === 'PERSONNEL' ? '#9333ea' : 'var(--navy)' }}>
                           {user.role}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="text-xs text-gray-600 font-medium">
-                          {user.personnelProfile?.telephone || user.parentProfile?.telephone || 'Non renseigné'}
-                        </div>
+                      <td className="px-4 py-3 text-xs text-gray-600">
+                        {user.personnelProfile?.telephone || user.parentProfile?.telephone || 'Non renseigné'}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={() => processUser(user.id, 'ACTIVE')}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-green-500 text-white rounded text-[10px] font-bold hover:bg-green-600 shadow-sm transition-all active:scale-95"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded text-[10px] font-bold hover:bg-green-700 transition-all"
                           >
-                            <Check size={14} /> ACCEPTER
+                            <Check size={12} /> ACCEPTER
                           </button>
                           <button
                             onClick={() => processUser(user.id, 'DISABLED')}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-red-500 text-white rounded text-[10px] font-bold hover:bg-red-600 shadow-sm transition-all active:scale-95"
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded text-[10px] font-bold hover:bg-red-700 transition-all"
                           >
-                            <X size={14} /> REFUSER
+                            <X size={12} /> REFUSER
                           </button>
                         </div>
                       </td>
@@ -147,13 +136,8 @@ const AdminDashboard = () => {
                 )}
               </tbody>
             </table>
-          )}
-        </div>
-        
-        {/* Footer du tableau */}
-        <div className="p-4 bg-gray-50 border-t border-gray-100 text-[10px] text-gray-400 italic">
-          Affichage des demandes d'accès directes. Veuillez vérifier l'identité avant validation.
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

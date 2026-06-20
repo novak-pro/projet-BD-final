@@ -3,6 +3,6 @@ import { getAllPersonnel, affecterEnseignant } from '../controllers/personnel.co
 import { protect, restrictTo } from '../middlewares/authMiddleware';
 
 const router = Router();
-router.get('/', protect, restrictTo('admin'), getAllPersonnel);
-router.post('/affecter', protect, restrictTo('admin'), affecterEnseignant);
+router.get('/', protect, restrictTo('ADMIN_PRINCIPAL'), getAllPersonnel);
+router.post('/affecter', protect, restrictTo('ADMIN_PRINCIPAL'), affecterEnseignant);
 export default router;

@@ -1,6 +1,20 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 
+export const getStats = async (req: Request, res: Response) => {
+  try {
+    const [totalEleves, totalEnseignants, totalSalles, pendingUsers] = await Promise.all([
+      prisma.eleve.count(),
+      prisma.personnel.count(),
+      prisma.salle.count(),
+      prisma.user.count({ where: { status: 'PENDING' } })
+    ]);
+    res.json({ totalEleves, totalEnseignants, totalSalles, pendingUsers });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur de recuperation des stats" });
+  }
+};
+
 // Récupérer tous les comptes en attente de validation (PENDING)
 export const getPendingUsers = async (req: Request, res: Response) => {
   try {

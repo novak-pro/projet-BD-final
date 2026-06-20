@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma';
 
 // 1. Un parent soumet une demande d'inscription
 export const submitEnrollment = async (req: Request, res: Response) => {
@@ -96,5 +94,39 @@ export const getEnrollments = async (req: Request, res: Response) => {
     }
   } catch (error) {
     res.status(500).json({ error: "Erreur de récupération" });
+  }
+};
+
+// 4. Récupérer les enfants d'un parent connecté
+export const getMyChildren = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user.id;
+    const parent = await prisma.parents.findUnique({
+      where: { userId },
+      include: {
+        enfants: {
+          select: {
+            matricule: true,
+            nom: true,
+            prenom: true,
+            niveau: true
+          }
+        }
+      }
+    });
+    if (!parent) return res.status(403).json({ error: "Profil parent non trouvé" });
+    res.json(parent.enfants);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur de récupération des enfants" });
+  }
+};
+
+// 5. Récupérer toutes les classes
+export const getAllClasses = async (req: Request, res: Response) => {
+  try {
+    const classes = await prisma.classe.findMany({ orderBy: { libelle: 'asc' } });
+    res.json(classes);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur de récupération des classes" });
   }
 };

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import type { AxiosResponse } from 'axios';
+import { CreditCard, Clock } from 'lucide-react';
+import api from '../services/axiosInstance';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useTranslation } from '../i18n/LanguageContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,7 @@ type Methode = typeof METHODES[number];
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 const ParentPayment = () => {
+  const { t } = useTranslation();
   // États du formulaire
   const [children, setChildren]           = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<string>('');
@@ -55,25 +57,25 @@ const ParentPayment = () => {
   // ── Chargement des données ────────────────────────────────────────────────
 
   useEffect(() => {
-    axios
-      .get<Child[]>('/api/enrollments/my-children')
-      .then((res: AxiosResponse<Child[]>) => setChildren(res.data))
+    api
+      .get('/enrollments/my-children')
+      .then((res) => setChildren(res.data))
       .catch(() => console.error('Impossible de charger les enfants'));
   }, []);
 
   useEffect(() => {
     if (!selectedChild) return;
-    axios
-      .get<FeeConfig>(`/api/payments/config/${selectedChild}`)
-      .then((res: AxiosResponse<FeeConfig>) => setConfig(res.data))
+    api
+      .get(`/payments/config/${selectedChild}`)
+      .then((res) => setConfig(res.data))
       .catch(() => console.error('Impossible de charger la configuration'));
   }, [selectedChild]);
 
   useEffect(() => {
     setLoadingHistory(true);
-    axios
-      .get<Payment[]>('/api/payments/my-payments')
-      .then((res: AxiosResponse<Payment[]>) => setMyPayments(res.data))
+    api
+      .get('/payments/my-payments')
+      .then((res) => setMyPayments(res.data))
       .catch(() => console.error('Impossible de charger l\'historique'))
       .finally(() => setLoadingHistory(false));
   }, []);
@@ -103,7 +105,7 @@ const ParentPayment = () => {
 
     setLoading(true);
     try {
-      await axios.post('/api/payments/initiate', {
+      await api.post('/payments/initiate', {
         eleveId: selectedChild,
         nombreTranches: tranches,
         methode,
@@ -169,18 +171,20 @@ const ParentPayment = () => {
   // ── Rendu ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-2xl mx-auto p-6 space-y-8">
+    <div className="max-w-2xl mx-auto flex flex-col gap-6">
 
       {/* ── Formulaire de paiement ── */}
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+      <div className="admin-card">
         
-        {/* En-tête */}
-        <div className="bg-blue-600 p-6 text-white text-center">
-          <h2 className="text-2xl font-bold">Paiement de la Pension</h2>
-          <p className="text-blue-100 text-sm mt-1">Réglez les frais de scolarité en quelques clics</p>
+        <div className="admin-card-header">
+          <h2>
+            <CreditCard size={18} style={{ color: 'var(--navy)' }} />
+            Paiement de la Pension
+          </h2>
+          <p style={{ color: 'var(--gray)', fontSize: '0.88rem' }}>Réglez les frais de scolarité en quelques clics</p>
         </div>
 
-        <form onSubmit={handlePayment} className="p-8 space-y-6">
+        <form onSubmit={handlePayment} className="space-y-6">
 
           {/* Sélection de l'enfant */}
           <div>
@@ -191,7 +195,7 @@ const ParentPayment = () => {
               required
               value={selectedChild}
               onChange={(e) => setSelectedChild(e.target.value)}
-              className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none transition-all"
+              className="w-full border border-gray-200 p-3 rounded-[var(--radius)] outline-none text-sm focus:border-[var(--accent)]"
             >
               <option value="">Choisir un enfant...</option>
               {children.map((c) => (
@@ -216,9 +220,9 @@ const ParentPayment = () => {
                       key={num}
                       type="button"
                       onClick={() => setTranches(num)}
-                      className={`flex-1 py-3 rounded-xl font-bold transition-all ${
+                      className={`flex-1 py-3 rounded-[var(--radius)] font-bold transition-all ${
                         tranches === num
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-[var(--navy)] text-white'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
@@ -229,9 +233,9 @@ const ParentPayment = () => {
               </div>
 
               {/* Montant calculé */}
-              <div className="bg-gray-50 p-4 rounded-xl flex justify-between items-center border border-dashed border-gray-300">
+              <div className="bg-gray-50 p-4 rounded-[var(--radius)] flex justify-between items-center border border-dashed border-gray-300">
                 <span className="text-gray-600 font-medium">Montant à verser :</span>
-                <span className="text-2xl font-black text-blue-700">
+                <span className="text-2xl font-black" style={{ color: 'var(--navy)' }}>
                   {totalAmount.toLocaleString()} FCFA
                 </span>
               </div>
@@ -247,9 +251,9 @@ const ParentPayment = () => {
                       key={m}
                       type="button"
                       onClick={() => setMethode(m)}
-                      className={`py-2 text-xs rounded-lg border-2 font-bold transition-all ${
+                      className={`py-2 text-xs rounded-[var(--radius)] border font-bold transition-all ${
                         methode === m
-                          ? 'border-blue-600 bg-blue-50 text-blue-600'
+                          ? 'border-[var(--accent)] bg-[var(--accent-light)] text-[var(--navy)]'
                           : 'border-gray-100 text-gray-400 hover:border-gray-300'
                       }`}
                     >
@@ -270,7 +274,7 @@ const ParentPayment = () => {
                   placeholder="ID de transaction reçu par SMS"
                   value={transactionRef}
                   onChange={(e) => setTransactionRef(e.target.value)}
-                  className="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none transition-all"
+                  className="w-full border border-gray-200 p-3 rounded-[var(--radius)] outline-none text-sm focus:border-[var(--accent)]"
                 />
               </div>
 
@@ -278,7 +282,7 @@ const ParentPayment = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-700 transition-all active:scale-95 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full btn-admin justify-center text-base py-4 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {loading ? 'Traitement en cours...' : 'Confirmer le Paiement'}
               </button>
@@ -288,9 +292,12 @@ const ParentPayment = () => {
       </div>
 
       {/* ── Historique des paiements ── */}
-      <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-        <div className="p-5 border-b border-gray-100">
-          <h3 className="text-lg font-bold text-gray-800">Historique des paiements</h3>
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <h2>
+            <Clock size={18} style={{ color: 'var(--navy)' }} />
+            Historique des paiements
+          </h2>
         </div>
 
         {loadingHistory ? (
@@ -328,7 +335,7 @@ const ParentPayment = () => {
                   {p.status === 'VALIDATED' && (
                     <button
                       onClick={() => generateInvoicePDF(p)}
-                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"
+                      className="flex items-center gap-1 font-medium text-sm transition-colors" style={{ color: 'var(--navy)' }}
                       title="Télécharger le reçu PDF"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
