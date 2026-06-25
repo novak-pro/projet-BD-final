@@ -1,8 +1,41 @@
 node_modules/
+**/node_modules/
+**/node_modules */
+client/node_modules client/
+server/node_modules server/
+
+# Env files
 .env
+.env.local
+.env.*.local
 server/.env
 client/.env
+
+# Builds
 dist/
 build/
 coverage/
+
+# Debug logs
+vite-err*.txt
+vite-out*.txt
 *.log
+
+# Temp / generated
+cahier_extracted.txt
+extract-pdf.cjs
+*.package-lock.json
+
+# Images that shouldn't be tracked
+WhatsApp Image*.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

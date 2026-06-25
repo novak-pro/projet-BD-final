@@ -5,6 +5,7 @@ import { protect, restrictTo } from '../middlewares/authMiddleware';
 const router = Router();
 
 router.get('/', protect, studentController.getAllStudents);
+router.get('/with-frequente', protect, studentController.getStudentsWithFrequente);
 router.get('/:matricule', protect, studentController.getStudentById);
 router.post('/', protect, restrictTo('ADMIN_PRINCIPAL'), studentController.createStudent);
 router.put('/:matricule', protect, restrictTo('ADMIN_PRINCIPAL'), studentController.updateStudent);

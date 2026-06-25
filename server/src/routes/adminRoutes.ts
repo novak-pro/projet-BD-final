@@ -4,7 +4,7 @@ import { protect, restrictTo } from '../middlewares/authMiddleware';
 import { getPendingUsers, handleUserValidation, getStats } from '../controllers/adminController';
 import { createSalle, getAllSalles, updateEtatSalle } from '../controllers/salle.controller';
 import { createMatiere, getMatieres } from '../controllers/matiere.controller';
-import { getAllPersonnel, affecterEnseignant } from '../controllers/personnel.controller';
+import { getAllPersonnel } from '../controllers/personnel.controller';
 
 const router = Router();
 
@@ -29,6 +29,5 @@ router.get('/matieres', getMatieres);
 
 // --- Personnel ---
 router.get('/personnel', getAllPersonnel);
-router.post('/personnel/affecter', affecterEnseignant);
 
 export default router;

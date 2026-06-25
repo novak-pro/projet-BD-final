@@ -91,6 +91,9 @@ model User {
   personnelProfile Personnel?
   parentProfile    Parents?
 
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+
   @@map("users")
 }
 
@@ -114,6 +117,8 @@ model Personnel {
   prenom      String
   fonction    FonctionPersonnel
   telephone   String
+  ville       String?
+  quartier    String?
   departement String?
   photo       String?
   statut      String            @default("Actif")
@@ -121,6 +126,7 @@ model Personnel {
   user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   classes     Classe[]
   cours       Cours[]
+  salleTitulaire Salle[]  @relation("SalleTitulaire")
 }
 
 model Parents {
@@ -128,12 +134,14 @@ model Parents {
   nom       String   @db.VarChar(60)
   prenom    String   @db.VarChar(60)
   telephone String?  @db.VarChar(15)
+  ville     String?
+  quartier  String?
   userId    Int      @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   enfants   Eleve[]
-  demandes  EnrollmentRequest[] // Relation vers les demandes d'inscription
-  paiements  Payment[]           // Relation vers les paiements effectués par le parent
+  demandes  EnrollmentRequest[]
+  paiements  Payment[]
 
   @@map("Parents")
 }
@@ -148,12 +156,13 @@ model EnrollmentRequest {
   prenom        String           @db.VarChar(60)
   dateNaissance DateTime         @db.Date
   lieuNaissance String           @db.VarChar(30)
-  sexe          Int              @default(0) // 0=fille, 1=garcon
-   niveau        String         @db.VarChar(20) // ex: "SIL", "CP", "CE1"
+  sexe          Int              @default(0)
+  niveau        String           @db.VarChar(20)
+  classe        String?          @db.VarChar(20)   // ex: "CP", "CE1" — souhait du parent
+  photoURL      String?          // Photo de l'enfant soumise lors de l'inscription
   status        EnrollmentStatus @default(PENDING)
-  adminNotes    String?          // Pour motif de refus
-  
-  // Le parent qui a fait la demande
+  adminNotes    String?
+
   parentId      Int
   parent        Parents          @relation(fields: [parentId], references: [id], onDelete: Cascade)
 
@@ -193,6 +202,7 @@ model Eleve {
   notes          Note[]
   incidents      Incident[]
   soldePoints    Int        @default(20) // Pour la discipline
+  frequences     Frequente[]
   @@map("Eleve")
 }
 
@@ -206,23 +216,26 @@ model Classe {
   students      Eleve[]
   salles        Salle[]
   cours         Cours[]
-  epreuves  Epreuve[] 
+  epreuves      Epreuve[]
+  frequences    Frequente[]
 
   @@map("Classe")
 }
 
 model Salle {
-  idSalle   Int      @id @default(autoincrement())
-  libelle   String   @db.VarChar(30)
-  position  String?
-  surface   String?
-  capacite  Int?
-  idClasse  Int
-  etat           SalleEtat @default(DISPONIBLE)
-  actif          Boolean   @default(true)
-  classe    Classe   @relation(fields: [idClasse], references: [idClasse],onDelete: Cascade)
-  eleves    Eleve[]
-  plannings      EmploiDuTemps[]
+  idSalle                Int         @id @default(autoincrement())
+  libelle                String      @db.VarChar(30)
+  position               String?
+  capacite               Int?
+  idClasse               Int?
+  etat                   SalleEtat   @default(DISPONIBLE)
+  actif                  Boolean     @default(true)
+  enseignantTitulaireId  Int?
+  classe                 Classe?     @relation(fields: [idClasse], references: [idClasse], onDelete: SetNull)
+  titulaire              Personnel?  @relation("SalleTitulaire", fields: [enseignantTitulaireId], references: [id], onDelete: SetNull)
+  eleves                 Eleve[]
+  cours                  Cours[]
+  plannings              EmploiDuTemps[]
 
   @@map("Salle")
 }
@@ -245,12 +258,14 @@ model Cours {
   matiere      Matiere   @relation(fields: [idMatiere], references: [id],onDelete: Restrict)
   
   coefficient  Float     @default(1.0)
-  idClasse     Int
-  classe       Classe    @relation(fields: [idClasse], references: [idClasse],onDelete: Cascade)
+  idClasse     Int?
+  classe       Classe?   @relation(fields: [idClasse], references: [idClasse],onDelete: Cascade)
+  idSalle      Int?
+  salle        Salle?    @relation(fields: [idSalle], references: [idSalle], onDelete: SetNull)
   enseignantId Int?
   enseignant   Personnel? @relation(fields: [enseignantId], references: [id],onDelete: SetNull)
   evaluations  Evaluation[]
-  plannings    EmploiDuTemps[] // Relation vers l'emploi du temps pour savoir quand ce cours a lieu
+  plannings    EmploiDuTemps[]
 
   @@map("Cours")
 }
@@ -276,6 +291,7 @@ model Incident {
   auteur        String       // Nom de l'enseignant/surveillant
   eleveId       Int
   eleve         Eleve        @relation(fields: [eleveId], references: [matricule],onDelete: Cascade)
+  status        String       @default("APPROVED") // APPROVED | PENDING | REJECTED
 }
 
 model Evaluation {
@@ -387,3 +403,77 @@ model Epreuve {
 
   @@map("Epreuve")
 }
+
+// ---------------------------------------------------------
+// MESSAGERIE INTERNE
+// ---------------------------------------------------------
+
+model Message {
+  id          Int       @id @default(autoincrement())
+  content     String
+  type        String    // "ANNOUNCEMENT" ou "PERSONAL"
+  status      String    @default("SENT") // "SENT" (admin), "PENDING"/"APPROVED"/"REJECTED" (enseignant)
+  senderId    Int
+  recipientId Int?
+  sender      User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   User?     @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+
+  @@map("Message")
+}
+
+// ---------------------------------------------------------
+// ANNÉES ACADÉMIQUES
+// ---------------------------------------------------------
+
+model AnneeAcademique {
+  idAcademi  Int          @id @default(autoincrement())
+  libelle    String       @unique // ex: "2024-2025"
+  dateDebut  DateTime     @db.Date
+  dateFin    DateTime     @db.Date
+  active     Boolean      @default(false)
+
+  trimestres Trimestre[]
+  frequences Frequente[]
+
+  @@map("AnneeAcademique")
+}
+
+model Trimestre {
+  idTrimestre Int          @id @default(autoincrement())
+  libelle     String       // ex: "Trimestre 1"
+  idAcademi   Int
+  annee       AnneeAcademique @relation(fields: [idAcademi], references: [idAcademi], onDelete: Cascade)
+
+  sessions    Session[]
+
+  @@map("Trimestre")
+}
+
+model Session {
+  idSession   Int       @id @default(autoincrement())
+  libelle     String    // ex: "Session 1 - Devoirs"
+  idTrimestre Int
+  trimestre   Trimestre @relation(fields: [idTrimestre], references: [idTrimestre], onDelete: Cascade)
+
+  @@map("Session")
+}
+
+// ---------------------------------------------------------
+// FRÉQUENTATION (Affectation élève → classe par année)
+// ---------------------------------------------------------
+
+model Frequente {
+  idFrequente Int             @id @default(autoincrement())
+  idEleve     Int
+  idSalle     Int             // id de la classe (Classe.idClasse)
+  idAcademi   Int
+
+  eleve       Eleve           @relation(fields: [idEleve], references: [matricule], onDelete: Cascade)
+  classe      Classe          @relation(fields: [idSalle], references: [idClasse], onDelete: Restrict)
+  annee       AnneeAcademique @relation(fields: [idAcademi], references: [idAcademi], onDelete: Restrict)
+
+  @@unique([idEleve, idSalle, idAcademi])
+  @@map("Frequente")
+}
+

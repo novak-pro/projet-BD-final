@@ -24,10 +24,21 @@ export const salleService = {
 
 export const personnelService = {
   getAll: () => axios.get(`${API_URL}/personnel`, getAuthHeader()),
-  affecter: (data: any) => axios.post(`${API_URL}/personnel/affecter`, data, getAuthHeader())
+  update: (id: number, data: any) => axios.put(`${API_URL}/personnel/${id}`, data, getAuthHeader()),
+  delete: (id: number) => axios.delete(`${API_URL}/personnel/${id}`, getAuthHeader()),
+  promouvoirTitulaire: (data: any) => axios.post(`${API_URL}/personnel/promouvoir-titulaire`, data, getAuthHeader()),
+  retirerPromotion: (personnelId: number) => axios.delete(`${API_URL}/personnel/retirer-promotion/${personnelId}`, getAuthHeader()),
+  affecterSalle: (data: any) => axios.post(`${API_URL}/personnel/affecter-salle`, data, getAuthHeader()),
+  getCours: (personnelId: number) => axios.get(`${API_URL}/personnel/${personnelId}/cours`, getAuthHeader()),
 };
 
 export const matiereService = {
   getAll: () => axios.get(`${API_URL}/matieres`, getAuthHeader()),
-  create: (nom: string) => axios.post(`${API_URL}/matieres`, { nom }, getAuthHeader())
+  create: (nom: string) => axios.post(`${API_URL}/matieres`, { nom }, getAuthHeader()),
+  update: (id: number, data: any) => axios.put(`${API_URL}/matieres/${id}`, data, getAuthHeader()),
+  delete: (id: number) => axios.delete(`${API_URL}/matieres/${id}`, getAuthHeader())
+};
+
+export const epreuveService = {
+  getAll: () => axios.get(`${API_URL}/epreuves`, getAuthHeader())
 };

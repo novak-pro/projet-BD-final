@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FileBarChart, Download, Printer, User as UserIcon, RefreshCw, ScrollText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileBarChart, Download, Printer, User as UserIcon, RefreshCw, ScrollText, X } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
 
@@ -11,19 +11,32 @@ interface Bulletin {
   rang: number;
   totalPoints: number;
   totalCoeffs: number;
+  details?: NoteDetail[];
+}
+
+interface NoteDetail {
+  matiere: string;
+  valeur: number;
+  coefficient: number;
+}
+
+interface Classe {
+  idClasse: number;
+  libelle: string;
 }
 
 const BulletinPage = () => {
   const { t } = useTranslation();
   const [classe, setClasse] = useState("");
   const [evaluation, setEvaluation] = useState("Contrôle continu");
-  const [classes, setClasses] = useState<any[]>([]);
+  const [classes, setClasses] = useState<Classe[]>([]);
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    loadClasses();
-  }, []);
+  // Détail modal
+  const [detailStudent, setDetailStudent] = useState<Bulletin | null>(null);
+
+  useEffect(() => { loadClasses(); }, []);
 
   useEffect(() => {
     if (classe) loadBulletins();
@@ -33,9 +46,7 @@ const BulletinPage = () => {
     try {
       const res = await api.get('/enrollments/classes');
       setClasses(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error("Erreur", err);
-    }
+    } catch { console.error("Erreur chargement classes"); }
   };
 
   const loadBulletins = async () => {
@@ -44,12 +55,18 @@ const BulletinPage = () => {
     try {
       const res = await api.get(`/bulletins/classe?idClasse=${classe}&evaluation=${encodeURIComponent(evaluation)}`);
       setBulletins(Array.isArray(res.data) ? res.data : []);
-    } catch (err) {
-      console.error("Erreur", err);
+    } catch {
       setBulletins([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadDetails = async (b: Bulletin) => {
+    try {
+      const res = await api.get(`/bulletins/details?matricule=${b.matricule}&evaluation=${encodeURIComponent(evaluation)}`);
+      setDetailStudent({ ...b, details: res.data });
+    } catch { setDetailStudent(b); }
   };
 
   const moyenneColor = (m: number) => {
@@ -74,7 +91,7 @@ const BulletinPage = () => {
           </select>
           <select className="border border-gray-200 rounded-[var(--radius)] py-1.5 px-3 text-sm outline-none focus:border-[var(--accent)]" value={classe} onChange={e => setClasse(e.target.value)}>
             <option value="">Sélectionner une classe</option>
-            {classes.map((c: any) => (
+            {classes.map(c => (
               <option key={c.idClasse} value={c.idClasse}>{c.libelle}</option>
             ))}
           </select>
@@ -121,7 +138,7 @@ const BulletinPage = () => {
                     <span className="font-medium text-gray-700">#{b.rang}</span>
                   </td>
                   <td className="px-3 py-3">
-                    <button className="text-indigo-600 font-bold hover:underline">Voir détails</button>
+                    <button onClick={() => loadDetails(b)} className="text-indigo-600 font-bold hover:underline text-sm">Voir détails</button>
                   </td>
                 </tr>
               ))
@@ -129,6 +146,56 @@ const BulletinPage = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Détail modal */}
+      {detailStudent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[var(--radius-lg)] p-6 w-full max-w-lg shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-gray-800">
+                Bulletin de {detailStudent.prenom} {detailStudent.nom}
+              </h2>
+              <button onClick={() => setDetailStudent(null)} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">Matricule: #{detailStudent.matricule} — {evaluation}</p>
+
+            {detailStudent.details && detailStudent.details.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100">
+                      <th className="p-2">Matière</th>
+                      <th className="p-2 text-center">Note /20</th>
+                      <th className="p-2 text-center">Coefficient</th>
+                      <th className="p-2 text-center">Points</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {detailStudent.details.map((d, i) => (
+                      <tr key={i}>
+                        <td className="p-2 font-medium text-gray-700">{d.matiere}</td>
+                        <td className={`p-2 text-center font-bold ${moyenneColor(d.valeur)}`}>{d.valeur.toFixed(2)}</td>
+                        <td className="p-2 text-center text-gray-500">{d.coefficient}</td>
+                        <td className="p-2 text-center text-gray-700">{(d.valeur * d.coefficient).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-200 font-bold">
+                      <td className="p-2">Total</td>
+                      <td className="p-2 text-center">{detailStudent.moyenne.toFixed(2)} / 20</td>
+                      <td className="p-2 text-center">{detailStudent.totalCoeffs}</td>
+                      <td className="p-2 text-center">{detailStudent.totalPoints.toFixed(2)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ) : (
+              <p className="text-center text-gray-400 py-6">Aucune note disponible.</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

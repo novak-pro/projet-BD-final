@@ -1,15 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
-import { Settings, Sun, Moon, LogOut, Languages } from 'lucide-react';
+import { useRef, useState, useEffect } from 'react';
+import { Settings, Sun, Moon, LogOut, Languages, Image } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { useLogo } from '../contexts/LogoContext';
 
 const SettingsDropdown = ({ sidebar }: { sidebar?: boolean }) => {
   const { theme, toggleTheme } = useTheme();
   const { lang, setLang } = useTranslation();
+  const { logoUrl, setLogoUrl } = useLogo();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const role = localStorage.getItem('role');
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -18,6 +22,18 @@ const SettingsDropdown = ({ sidebar }: { sidebar?: boolean }) => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setLogoUrl(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoUrl(null);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -63,6 +79,22 @@ const SettingsDropdown = ({ sidebar }: { sidebar?: boolean }) => {
               <span className={lang === 'en' ? 'text-gray-900' : 'text-gray-400'}>EN</span>
             </span>
           </button>
+
+          {role === 'ADMIN_PRINCIPAL' && (
+            <>
+              <button onClick={() => fileRef.current?.click()} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                <Image size={16} className="text-emerald-500" />
+                <span className="flex-1 text-left">{logoUrl ? 'Changer le logo' : 'Ajouter un logo'}</span>
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
+
+              {logoUrl && (
+                <button onClick={handleRemoveLogo} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
+                  <span className="flex-1 text-left pl-7">Retirer le logo</span>
+                </button>
+              )}
+            </>
+          )}
 
           <div className="border-t border-gray-100 my-1" />
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Mail, Lock, Phone, Briefcase, ArrowLeft, GraduationCap } from 'lucide-react';
+import { User, Mail, Lock, Phone, Briefcase, ArrowLeft, GraduationCap, MapPin, Home } from 'lucide-react';
 import BrandHeader from '../components/BrandHeader';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
@@ -16,6 +16,8 @@ const Register = () => {
     nom: '',
     prenom: '',
     telephone: '',
+    ville: '',
+    quartier: '',
     fonction: 'ENSEIGNANT'
   });
   const [message, setMessage] = useState('');
@@ -113,6 +115,37 @@ const Register = () => {
                     onFocus={(e) => { e.target.style.borderColor = '#0f172a'; e.target.style.boxShadow = '0 0 0 3px rgba(15,23,42,0.08)' }}
                     onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none' }}
                     onChange={(e) => setFormData({...formData, telephone: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Ville</label>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
+                      <MapPin size={16} className="text-slate-400" />
+                    </div>
+                    <input type="text" placeholder="Ville de résidence" required
+                      className="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-200 outline-none text-sm transition-all placeholder:text-slate-400"
+                      style={{ color: '#0f172a' }}
+                      onFocus={(e) => { e.target.style.borderColor = '#0f172a'; e.target.style.boxShadow = '0 0 0 3px rgba(15,23,42,0.08)' }}
+                      onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none' }}
+                      onChange={(e) => setFormData({...formData, ville: e.target.value})} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-500 mb-1.5">Quartier</label>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-lg border border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
+                      <Home size={16} className="text-slate-400" />
+                    </div>
+                    <input type="text" placeholder="Quartier" required
+                      className="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-200 outline-none text-sm transition-all placeholder:text-slate-400"
+                      style={{ color: '#0f172a' }}
+                      onFocus={(e) => { e.target.style.borderColor = '#0f172a'; e.target.style.boxShadow = '0 0 0 3px rgba(15,23,42,0.08)' }}
+                      onBlur={(e) => { e.target.style.borderColor = '#e2e8f0'; e.target.style.boxShadow = 'none' }}
+                      onChange={(e) => setFormData({...formData, quartier: e.target.value})} />
+                  </div>
                 </div>
               </div>
 

@@ -4,6 +4,7 @@
 
   "nav.dashboard": "Dashboard",
   "nav.students": "Student Management",
+  "nav.enrollments": "Enrollments",
   "nav.personnel": "Personnel & HR",
   "nav.infrastructure": "Infrastructure",
   "nav.subjects": "Subjects & Exams",
@@ -23,6 +24,8 @@
   "parent.discipline": "Discipline",
   "parent.bulletins": "Report Cards",
   "parent.planning": "Schedule",
+  "parent.children": "My children",
+  "parent.profile": "Child profile",
 
   "admin.title": "Admin EduManager",
   "teacher.title": "Teacher Portal",

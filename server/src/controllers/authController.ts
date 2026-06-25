@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken';
  * Crée un utilisateur avec le statut 'PENDING' par défaut.
  */
 export const register = async (req: Request, res: Response) => {
-  const { email, password, role, nom, prenom, telephone, fonction } = req.body;
+  const { email, password, role, nom, prenom, telephone, fonction, ville, quartier } = req.body;
 
   try {
     // 1. Vérifier si l'utilisateur existe déjà
@@ -25,15 +25,15 @@ export const register = async (req: Request, res: Response) => {
       data: {
         email,
         password: hashedPassword,
-        role: role, // 'PARENT' ou 'PERSONNEL'
-        status: 'PENDING', // Toujours en attente selon le cahier des charges
+        role: role,
+        status: 'PENDING',
         ...(role === 'PERSONNEL' ? {
           personnelProfile: {
-            create: { nom, prenom, telephone, fonction: fonction || 'ADMINISTRATIF' }
+            create: { nom, prenom, telephone, ville, quartier, fonction: fonction || 'ADMINISTRATIF' }
           }
         } : {
           parentProfile: {
-            create: { nom, prenom, telephone }
+            create: { nom, prenom, telephone, ville, quartier }
           }
         })
       }

@@ -1,0 +1,138 @@
+import { useState, useEffect } from 'react';
+import { ClipboardList, BookOpen, Users, GraduationCap, ChevronRight } from 'lucide-react';
+import api from '../../services/axiosInstance';
+import GradesEntry from '../../components/teacher/GradesEntry';
+
+interface CoursItem {
+  idCours: number;
+  coefficient: number;
+  matiere: { id: number; nom: string };
+  classe: {
+    idClasse: number;
+    libelle: string;
+    cycle: { libelle: string };
+    _count: { students: number };
+    students?: Array<{ matricule: number; nom: string; prenom: string }>;
+  };
+}
+
+const evaluationOptions = ['Devoir', 'Interrogation', 'Examen Trimestriel'];
+const trimestreOptions = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
+
+const TeacherGrades = () => {
+  const [cours, setCours] = useState<CoursItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCours, setSelectedCours] = useState<CoursItem | null>(null);
+  const [evaluation, setEvaluation] = useState('Devoir');
+  const [trimestre, setTrimestre] = useState('Trimestre 1');
+
+  useEffect(() => {
+    api.get('/cours/mes-cours')
+      .then((res: any) => setCours(res.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSelectCours = async (c: CoursItem) => {
+    if (!c.classe.students) {
+      try {
+        const res = await api.get(`/cours/${c.idCours}`);
+        setSelectedCours(res.data);
+        return;
+      } catch { return; }
+    }
+    setSelectedCours(c);
+  };
+
+  if (loading) return <div className="p-10 text-center text-gray-400">Chargement...</div>;
+
+  if (cours.length === 0) {
+    return (
+      <div className="admin-card p-10 text-center">
+        <ClipboardList size={48} className="mx-auto text-gray-300 mb-4" />
+        <h2 className="text-xl font-bold text-gray-700 mb-2">Aucun cours</h2>
+        <p className="text-gray-400">Vous n'avez pas de cours pour saisir des notes.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <h2>
+            <ClipboardList size={18} style={{ color: 'var(--navy)' }} />
+            Saisie des notes
+          </h2>
+        </div>
+
+        {!selectedCours ? (
+          <>
+            <p className="text-sm text-gray-500 mb-4">Sélectionnez un cours pour saisir les notes :</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {cours.map(c => (
+                <button
+                  key={c.idCours}
+                  onClick={() => handleSelectCours(c)}
+                  className="text-left bg-white border border-gray-200 rounded-[var(--radius-lg)] p-4 hover:border-[var(--accent)] hover:shadow-sm transition-all flex items-start gap-3"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-[var(--navy)]/10 flex items-center justify-center shrink-0">
+                    <BookOpen size={18} className="text-[var(--navy)]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-800 text-sm">{c.matiere.nom}</p>
+                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                      <GraduationCap size={11} /> {c.classe.libelle}
+                    </p>
+                    <p className="text-xs text-gray-400 flex items-center gap-1">
+                      <Users size={11} /> {c.classe._count.students} élèves
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="text-gray-300 shrink-0 mt-1" />
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => setSelectedCours(null)}
+              className="text-sm text-[var(--navy)] hover:underline mb-4 inline-block"
+            >
+              ← Choisir un autre cours
+            </button>
+
+            <div className="bg-gray-50 rounded-[var(--radius)] p-4 mb-6">
+              <p className="font-bold text-gray-800">{selectedCours.matiere.nom}</p>
+              <p className="text-sm text-gray-500">{selectedCours.classe.libelle} · {selectedCours.classe.cycle?.libelle}</p>
+            </div>
+
+            <div className="admin-form-row mb-6">
+              <div className="admin-field">
+                <label>Type d'évaluation</label>
+                <select value={evaluation} onChange={e => setEvaluation(e.target.value)}>
+                  {evaluationOptions.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div className="admin-field">
+                <label>Trimestre</label>
+                <select value={trimestre} onChange={e => setTrimestre(e.target.value)}>
+                  {trimestreOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <GradesEntry
+              eleves={(selectedCours.classe.students || []).map(s => ({ matricule: s.matricule, nom: `${s.prenom} ${s.nom}` }))}
+              matiereId={selectedCours.matiere.id}
+              classeId={selectedCours.classe.idClasse}
+              evaluation={`${evaluation} - ${trimestre}`}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default TeacherGrades;

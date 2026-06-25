@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen,
-  Calendar, GraduationCap, ShieldCheck, CreditCard, Menu, X, Building2
+  Calendar, GraduationCap, ShieldCheck, CreditCard, Menu, X, Building2, MessageSquare, FileText
 } from 'lucide-react';
 import LanguageSwitcher from '../LanguageSwitcher';
 import SettingsDropdown from '../SettingsDropdown';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { useLogo } from '../../contexts/LogoContext';
 
 const AdminLayout = () => {
   const { t } = useTranslation();
+  const { logoUrl } = useLogo();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -24,6 +26,8 @@ const AdminLayout = () => {
     { icon: <GraduationCap size={18} />,   label: t('nav.finance'),       path: '/admin/finance' },
     { icon: <CreditCard size={18} />,      label: t('nav.payments'),      path: '/admin/paiements' },
     { icon: <BookOpen size={18} />,        label: t('nav.library'),       path: '/admin/bibliotheque' },
+    { icon: <Calendar size={18} />,        label: 'Années académiques',  path: '/admin/academique' },
+    { icon: <MessageSquare size={18} />,   label: 'Messagerie',          path: '/admin/messages' },
   ];
 
   const currentPage = menuItems.find(m => m.path === location.pathname);
@@ -33,9 +37,13 @@ const AdminLayout = () => {
       {sidebarOpen && <div className="admin-overlay" onClick={() => setSidebarOpen(false)} />}
 
       <aside className={`admin-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="admin-sidebar-header">
+          <div className="admin-sidebar-header">
           <div className="admin-sidebar-logo">
-            <GraduationCap size={18} />
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo école" className="w-full h-full object-contain p-0.5" />
+            ) : (
+              <GraduationCap size={18} />
+            )}
           </div>
           <div>
             <h2>EduManager</h2>

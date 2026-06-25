@@ -4,6 +4,7 @@
 
   "nav.dashboard": "Tableau de Bord",
   "nav.students": "Gestion des Élèves",
+  "nav.enrollments": "Inscriptions",
   "nav.personnel": "Personnel & RH",
   "nav.infrastructure": "Infrastructure",
   "nav.subjects": "Matières & Épreuves",
@@ -23,6 +24,8 @@
   "parent.discipline": "Discipline",
   "parent.bulletins": "Bulletins",
   "parent.planning": "Emploi du temps",
+  "parent.children": "Mes enfants",
+  "parent.profile": "Profil enfant",
 
   "admin.title": "Admin EduManager",
   "teacher.title": "Espace Enseignant",

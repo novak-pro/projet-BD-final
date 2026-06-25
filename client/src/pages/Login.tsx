@@ -40,7 +40,7 @@ const Login = () => {
       localStorage.setItem('role', userRole);
 
       if (userRole === 'ADMIN_PRINCIPAL') navigate('/admin');
-      else if (userRole === 'PERSONNEL') navigate('/teacher/epreuves');
+      else if (userRole === 'PERSONNEL') navigate('/teacher/dashboard');
       else if (userRole === 'PARENT') navigate('/parent/scolarite');
       else navigate('/');
     } catch (err: any) {

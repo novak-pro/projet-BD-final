@@ -6,7 +6,7 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // ── Import des routes ──
 import authRoutes       from './src/routes/authRoutes';
@@ -23,6 +23,9 @@ import noteRoutes       from './src/routes/noteRoutes';
 import epreuveRoutes    from './src/routes/epreuveRoutes';
 import paymentRoutes    from './src/routes/paymentRoutes';
 import bibliothequeRoutes from './src/routes/bibliothequeRoutes';
+import messageRoutes from './src/routes/messageRoutes';
+import coursRoutes from './src/routes/coursRoutes';
+import academiqueRoutes from './src/routes/academiqueRoutes';
 
 // ── Déclaration des routes ──
 app.use('/api/auth',        authRoutes);
@@ -39,6 +42,9 @@ app.use('/api/notes',       noteRoutes);
 app.use('/api/epreuves',    epreuveRoutes);
 app.use('/api/payments',    paymentRoutes);
 app.use('/api/bibliotheque', bibliothequeRoutes);
+app.use('/api/messages',    messageRoutes);
+app.use('/api/cours',       coursRoutes);
+app.use('/api/academique',  academiqueRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

@@ -81,7 +81,7 @@ export const createStudent = async (req: Request, res: Response) => {
 export const updateStudent = async (req: Request, res: Response) => {
   try {
     const { matricule } = req.params;
-    const { nom, prenom, dateNaissance, lieuNaissance, sexe, langue, classroomId, salleId, statut } = req.body;
+    const { nom, prenom, dateNaissance, lieuNaissance, sexe, langue, niveau, classroomId, salleId, statut } = req.body;
     
     const student = await prisma.eleve.update({
       where: { matricule: parseInt(matricule as string) },
@@ -92,19 +92,68 @@ export const updateStudent = async (req: Request, res: Response) => {
         lieuNaissance,
         sexe,
         langue,
-        classroomId: classroomId ? Number(classroomId) : undefined,
+        niveau,
+        classroomId: classroomId ? Number(classroomId) : null,
         salleId: salleId ? Number(salleId) : null,
         statut
       },
       include: {
-        parent: true,
-        classroom: true
+        parent: { include: { user: true } },
+        classroom: true,
+        salle: true,
       }
     });
-    
+
+    // Notify parent of the update
+    if (student.parent?.user) {
+      const content = `Les informations de votre enfant ${student.prenom} ${student.nom} (Matricule: ${student.matricule}) ont été modifiées par l'administration. Veuillez vérifier son profil.`;
+      await prisma.message.create({
+        data: {
+          content,
+          type: 'PERSONAL',
+          status: 'SENT',
+          senderId: (req as any).user.id,
+          recipientId: student.parent.user.id,
+        },
+      });
+    }
+
     res.json(student);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update student' });
+  }
+};
+
+export const getStudentsWithFrequente = async (req: Request, res: Response) => {
+  try {
+    const anneeId = req.query.anneeId as string | undefined;
+
+    const whereFilter: any = {};
+
+    if (anneeId) {
+      whereFilter.frequences = { some: { idAcademi: parseInt(anneeId) } };
+    }
+
+    const students = await prisma.eleve.findMany({
+      where: whereFilter,
+      include: {
+        parent: true,
+        classroom: true,
+        salle: true,
+        frequences: {
+          include: {
+            classe: { include: { cycle: true } },
+            annee: true,
+          },
+          orderBy: { idFrequente: 'desc' },
+        },
+      },
+      orderBy: { nom: 'asc' },
+    });
+
+    res.json(students);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch students with frequente' });
   }
 };
 

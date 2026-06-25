@@ -20,6 +20,20 @@ export const getMatieres = async (req: Request, res: Response) => {
   res.json(matieres);
 };
 
+export const updateMatiere = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { nom, code } = req.body;
+    const matiere = await prisma.matiere.update({
+      where: { id: Number(id) },
+      data: { ...(nom && { nom }), ...(code !== undefined && { code }) },
+    });
+    res.json(matiere);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la mise à jour" });
+  }
+};
+
 export const deleteMatiere = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

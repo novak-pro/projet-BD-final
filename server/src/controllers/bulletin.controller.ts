@@ -1,6 +1,47 @@
 import { Request, Response } from 'express';
 import prisma from '../lib/prisma';
 
+export const getDetailBulletin = async (req: Request, res: Response): Promise<void> => {
+  const { matricule, evaluation } = req.query;
+
+  try {
+    const eleve = await prisma.eleve.findUnique({
+      where: { matricule: Number(matricule) },
+      include: {
+        notes: {
+          where: { evaluation: String(evaluation) },
+          include: {
+            matiere: {
+              include: {
+                cours: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!eleve) {
+      res.status(404).json({ error: "Élève non trouvé" });
+      return;
+    }
+
+    const details = eleve.notes.map((note) => {
+      const coeff = note.matiere.cours[0]?.coefficient || 1;
+      return {
+        matiere: note.matiere.nom,
+        valeur: note.valeur,
+        coefficient: coeff,
+        points: note.valeur * coeff,
+      };
+    });
+
+    res.json(details);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la récupération des détails" });
+  }
+};
+
 export const calculerBulletinsClasse = async (req: Request, res: Response): Promise<void> => {
   const { idClasse, evaluation } = req.query;
 

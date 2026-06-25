@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 // Layout
 import AdminLayout from './components/layout/AdminLayout';
 import ParentLayout from './components/layout/ParentLayout';
+import TeacherLayout from './components/layout/TeacherLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages publiques
@@ -21,9 +22,16 @@ import DisciplinePage      from './pages/admin/DisciplinePage';
 import StudentList         from './pages/StudentList';
 import BibliothequePage    from './pages/admin/BibliothequePage';
 import AdminPayments       from './pages/admin/AdminPayments';
+import AdminMessages       from './pages/admin/AdminMessages';
+import AdminAcademique     from './pages/admin/AdminAcademique';
 
 // Pages enseignant
-import EpreuvePage from './pages/teacher/EpreuvePage';
+import EpreuvePage       from './pages/teacher/EpreuvePage';
+import TeacherDashboard  from './pages/teacher/TeacherDashboard';
+import CourseDetail      from './pages/teacher/CourseDetail';
+import TeacherDiscipline from './pages/teacher/TeacherDiscipline';
+import TeacherPlanning   from './pages/teacher/TeacherPlanning';
+import TeacherGrades     from './pages/teacher/TeacherGrades';
 
 // Pages parent
 import ParentScolarite from './pages/ParentScolarite';
@@ -32,6 +40,7 @@ import ParentBibliotheque from './pages/ParentBibliotheque';
 import ParentDiscipline from './pages/ParentDiscipline';
 import ParentBulletins from './pages/ParentBulletins';
 import ParentPlanning from './pages/ParentPlanning';
+import ParentChildProfile from './pages/ParentChildProfile';
 
 function App() {
   return (
@@ -57,13 +66,23 @@ function App() {
             <Route path="/admin/discipline"     element={<DisciplinePage />} />
             <Route path="/admin/students"       element={<StudentList />} />
             <Route path="/admin/bibliotheque"   element={<BibliothequePage />} />
+            <Route path="/admin/messages"      element={<AdminMessages />} />
+            <Route path="/admin/academique"    element={<AdminAcademique />} />
+
             <Route path="/students"             element={<StudentList />} />
           </Route>
         </Route>
 
         {/* ── Pages enseignant (réservé PERSONNEL) ── */}
         <Route element={<ProtectedRoute allowedRoles={['PERSONNEL']} />}>
-          <Route path="/teacher/epreuves" element={<EpreuvePage />} />
+          <Route element={<TeacherLayout />}>
+            <Route path="/teacher/dashboard"    element={<TeacherDashboard />} />
+            <Route path="/teacher/cours/:idCours" element={<CourseDetail />} />
+            <Route path="/teacher/epreuves"     element={<EpreuvePage />} />
+            <Route path="/teacher/discipline"   element={<TeacherDiscipline />} />
+            <Route path="/teacher/planning"     element={<TeacherPlanning />} />
+            <Route path="/teacher/grades"       element={<TeacherGrades />} />
+          </Route>
         </Route>
 
         {/* ── Pages parent (réservé PARENT) ── */}
@@ -75,6 +94,7 @@ function App() {
             <Route path="/parent/discipline" element={<ParentDiscipline />} />
             <Route path="/parent/bulletins" element={<ParentBulletins />} />
             <Route path="/parent/planning" element={<ParentPlanning />} />
+            <Route path="/parent/enfant/:matricule" element={<ParentChildProfile />} />
           </Route>
         </Route>
 

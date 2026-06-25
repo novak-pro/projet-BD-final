@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { enrollmentService } from '../services/enrollmentService';
+import api from '../services/axiosInstance';
+
+interface ClasseItem {
+  idClasse: number;
+  libelle: string;
+  cycle?: { libelle: string };
+}
 
 interface EnrollmentRequest {
   id: number;
@@ -7,6 +14,8 @@ interface EnrollmentRequest {
   prenom: string;
   dateNaissance: string;
   sexe: number;
+  niveau: string;
+  classe: string | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   parent: {
     nom: string;
@@ -18,10 +27,13 @@ interface EnrollmentRequest {
 
 const AdminEnrollments = () => {
   const [requests, setRequests] = useState<EnrollmentRequest[]>([]);
+  const [classes, setClasses] = useState<ClasseItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [approveModal, setApproveModal] = useState<{ id: number } | null>(null);
+  const [selectedClasse, setSelectedClasse] = useState('');
 
   useEffect(() => {
-    fetchRequests();
+    Promise.all([fetchRequests(), fetchClasses()]);
   }, []);
 
   const fetchRequests = async () => {
@@ -29,24 +41,44 @@ const AdminEnrollments = () => {
       const res = await enrollmentService.getAll();
       setRequests(res.data);
     } catch (err) {
-      console.error("Erreur lors du chargement", err);
+      console.error("Erreur", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAction = async (id: number, status: 'APPROVED' | 'REJECTED') => {
-    const notes = window.prompt(status === 'APPROVED' ? "Note optionnelle :" : "Motif du refus obligatore :");
-    
-    if (status === 'REJECTED' && !notes) {
-      alert("Un motif est requis pour rejeter une inscription.");
+  const fetchClasses = async () => {
+    try {
+      const res = await api.get('/enrollments/classes');
+      setClasses(res.data);
+    } catch (err) {
+      console.error("Erreur classes", err);
+    }
+  };
+
+  const handleAction = async (id: number, status: 'APPROVED' | 'REJECTED', classroomId?: string) => {
+    if (status === 'REJECTED') {
+      const notes = window.prompt("Motif du refus obligatoire :");
+      if (!notes) { alert("Un motif est requis."); return; }
+      try {
+        await enrollmentService.process(id, status, notes);
+        alert("Demande refusée.");
+        fetchRequests();
+      } catch (err) { alert("Erreur"); }
       return;
     }
 
+    setApproveModal({ id });
+  };
+
+  const confirmApprove = async () => {
+    if (!approveModal) return;
     try {
-      await enrollmentService.process(id, status, notes || "");
-      alert(`Demande ${status === 'APPROVED' ? 'validée (Élève créé)' : 'refusée'}.`);
-      fetchRequests(); // Recharger la liste
+      await enrollmentService.process(approveModal.id, 'APPROVED', '', selectedClasse);
+      alert("Demande validée — Élève créé avec sa classe.");
+      setApproveModal(null);
+      setSelectedClasse('');
+      fetchRequests();
     } catch (err) {
       alert("Erreur lors du traitement");
     }
@@ -70,6 +102,7 @@ const AdminEnrollments = () => {
                 <th className="px-3 py-3">Enfant</th>
                 <th className="px-3 py-3">Parent</th>
                 <th className="px-3 py-3">Date Demande</th>
+                <th className="px-3 py-3">Niveau / Classe</th>
                 <th className="px-3 py-3">Statut</th>
                 <th className="px-3 py-3 text-center">Actions</th>
               </tr>
@@ -89,6 +122,10 @@ const AdminEnrollments = () => {
                   </td>
                   <td className="px-3 py-3 text-sm text-gray-500">
                     {new Date(req.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-3 py-3 text-sm">
+                    <span className="font-medium">{req.niveau}</span>
+                    {req.classe && <span className="text-gray-400"> — {req.classe}</span>}
                   </td>
                   <td className="px-3 py-3">
                     <span className={`admin-badge ${
@@ -124,6 +161,42 @@ const AdminEnrollments = () => {
           )}
         </div>
       </div>
+
+      {/* Modal d'approbation avec sélection de classe */}
+      {approveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-[var(--radius-lg)] p-6 w-full max-w-md shadow-2xl">
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Valider l'inscription</h2>
+            <p className="text-sm text-gray-500 mb-6">Assigner une classe à l'élève :</p>
+            
+            <select
+              value={selectedClasse}
+              onChange={(e) => setSelectedClasse(e.target.value)}
+              className="w-full border border-gray-200 p-3 rounded-[var(--radius)] outline-none mb-6"
+            >
+              <option value="">Sans classe (pas de classroom)</option>
+              {classes.map((cl) => (
+                <option key={cl.idClasse} value={cl.idClasse}>{cl.libelle} {cl.cycle ? `(${cl.cycle.libelle})` : ''}</option>
+              ))}
+            </select>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setApproveModal(null); setSelectedClasse(''); }}
+                className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmApprove}
+                className="flex-1 bg-green-600 text-white py-2.5 rounded-[var(--radius)] font-semibold hover:bg-green-700 transition"
+              >
+                Valider
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,10 +4,9 @@ import prisma from '../lib/prisma';
 // 1. Un parent soumet une demande d'inscription
 export const submitEnrollment = async (req: Request, res: Response) => {
   try {
-    const { nom, prenom, dateNaissance, lieuNaissance, sexe } = req.body;
-    const userId = (req as any).user.id; // ID provenant du JWT
+    const { nom, prenom, dateNaissance, lieuNaissance, sexe, niveau, classe, photoURL } = req.body;
+    const userId = (req as any).user.id;
 
-    // Trouver le profil Parent associé à l'utilisateur
     const parent = await prisma.parents.findUnique({ where: { userId } });
     if (!parent) return res.status(403).json({ error: "Profil parent non trouvé" });
 
@@ -18,7 +17,9 @@ export const submitEnrollment = async (req: Request, res: Response) => {
         dateNaissance: new Date(dateNaissance),
         lieuNaissance,
         sexe: parseInt(sexe),
-        niveau: req.body.niveau,
+        niveau,
+        classe: classe || null,
+        photoURL: photoURL || null,
         parentId: parent.id
       }
     });
@@ -32,7 +33,7 @@ export const submitEnrollment = async (req: Request, res: Response) => {
 // 2. L'Admin valide ou refuse la demande
 export const processEnrollment = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { status, adminNotes } = req.body; // status: 'APPROVED' ou 'REJECTED'
+  const { status, adminNotes, classroomId } = req.body; // status: 'APPROVED' ou 'REJECTED'
 
   try {
     const request = await prisma.enrollmentRequest.findUnique({ 
@@ -43,6 +44,9 @@ export const processEnrollment = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Demande introuvable ou déjà traitée" });
     }
 
+    // Récupérer l'année académique active pour Frequente
+    const activeAnnee = await prisma.anneeAcademique.findFirst({ where: { active: true } });
+
     // Transaction : Mise à jour de la demande + Création de l'élève si approuvé
     const result = await prisma.$transaction(async (tx) => {
       const updatedReq = await tx.enrollmentRequest.update({
@@ -51,18 +55,31 @@ export const processEnrollment = async (req: Request, res: Response) => {
       });
 
       if (status === 'APPROVED') {
-        await tx.eleve.create({
+        const eleve = await tx.eleve.create({
           data: {
             nom: request.nom,
             prenom: request.prenom,
             dateNaissance: request.dateNaissance,
             lieuNaissance: request.lieuNaissance,
             sexe: request.sexe,
+            photoURL: request.photoURL,
             parentId: request.parentId,
-            niveau:        request.niveau,
+            niveau: request.niveau,
+            classroomId: classroomId ? parseInt(classroomId) : null,
             statut: "Inscrit"
           }
         });
+
+        // Créer l'entrée Frequente (affectation élève → classe)
+        if (classroomId && activeAnnee) {
+          await tx.frequente.create({
+            data: {
+              idEleve: eleve.matricule,
+              idSalle: parseInt(classroomId),
+              idAcademi: activeAnnee.idAcademi,
+            }
+          });
+        }
       }
       return updatedReq;
     });
@@ -109,7 +126,9 @@ export const getMyChildren = async (req: Request, res: Response) => {
             matricule: true,
             nom: true,
             prenom: true,
-            niveau: true
+            niveau: true,
+            photoURL: true,
+            classroomId: true
           }
         }
       }
@@ -121,10 +140,140 @@ export const getMyChildren = async (req: Request, res: Response) => {
   }
 };
 
-// 5. Récupérer toutes les classes
+// 5. Profil complet d'un enfant (pour le parent)
+export const getChildProfile = async (req: Request, res: Response) => {
+  try {
+    const matricule = req.params.matricule as string;
+    const userId = (req as any).user.id;
+
+    const child = await prisma.eleve.findUnique({
+      where: { matricule: parseInt(matricule) },
+      include: {
+        classroom: {
+          include: {
+            cycle: true,
+            responsable: true,
+            cours: {
+              include: {
+                matiere: true,
+                enseignant: true,
+              },
+            },
+          },
+        },
+        salle: true,
+        notes: {
+          include: { matiere: true },
+          orderBy: { dateSaisie: 'desc' },
+        },
+        incidents: {
+          orderBy: { date: 'desc' },
+        },
+        evaluations: {
+          include: { cours: { include: { matiere: true } } },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    if (!child) return res.status(404).json({ error: 'Enfant non trouvé' });
+
+    const parent = await prisma.parents.findUnique({ where: { userId } });
+    if (!parent || child.parentId !== parent.id) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+
+    res.json(child);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur de récupération du profil' });
+  }
+};
+
+// 6. Upload photo enfant (base64)
+export const updateChildPhoto = async (req: Request, res: Response) => {
+  try {
+    const matricule = req.params.matricule as string;
+    const { photoURL } = req.body;
+    const userId = (req as any).user.id;
+
+    const child = await prisma.eleve.findUnique({ where: { matricule: parseInt(matricule) } });
+    if (!child) return res.status(404).json({ error: 'Enfant non trouvé' });
+
+    const parent = await prisma.parents.findUnique({ where: { userId } });
+    if (!parent || child.parentId !== parent.id) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+
+    const updated = await prisma.eleve.update({
+      where: { matricule: parseInt(matricule) },
+      data: { photoURL },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur de mise à jour de la photo' });
+  }
+};
+
+// 7. Mettre à jour les infos scolaires d'un enfant (parent)
+export const updateChildSchoolInfo = async (req: Request, res: Response) => {
+  try {
+    const matricule = req.params.matricule as string;
+    const { niveau, classroomId, salleId } = req.body;
+    const userId = (req as any).user.id;
+
+    const child = await prisma.eleve.findUnique({ where: { matricule: parseInt(matricule) } });
+    if (!child) return res.status(404).json({ error: 'Enfant non trouvé' });
+
+    const parent = await prisma.parents.findUnique({ where: { userId } });
+    if (!parent || child.parentId !== parent.id) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+
+    const updated = await prisma.eleve.update({
+      where: { matricule: parseInt(matricule) },
+      data: {
+        ...(niveau !== undefined && { niveau }),
+        ...(classroomId !== undefined && { classroomId: classroomId ? parseInt(classroomId) : null }),
+        ...(salleId !== undefined && { salleId: salleId ? parseInt(salleId) : null }),
+      },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur de mise à jour des informations scolaires' });
+  }
+};
+
+// 8. Mettre à jour les infos scolaires d'un enfant (admin)
+export const updateChildSchoolInfoAdmin = async (req: Request, res: Response) => {
+  try {
+    const matricule = req.params.matricule as string;
+    const { niveau, classroomId, salleId, statut } = req.body;
+
+    const updated = await prisma.eleve.update({
+      where: { matricule: parseInt(matricule) },
+      data: {
+        ...(niveau !== undefined && { niveau }),
+        ...(classroomId !== undefined && { classroomId: classroomId ? parseInt(classroomId) : null }),
+        ...(salleId !== undefined && { salleId: salleId ? parseInt(salleId) : null }),
+        ...(statut !== undefined && { statut }),
+      },
+    });
+
+    res.json(updated);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur de mise à jour' });
+  }
+};
+
+// 9. Récupérer toutes les classes
 export const getAllClasses = async (req: Request, res: Response) => {
   try {
-    const classes = await prisma.classe.findMany({ orderBy: { libelle: 'asc' } });
+    const classes = await prisma.classe.findMany({
+      include: { cycle: true },
+      orderBy: { libelle: 'asc' }
+    });
     res.json(classes);
   } catch (error) {
     res.status(500).json({ error: "Erreur de récupération des classes" });

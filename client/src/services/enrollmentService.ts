@@ -20,9 +20,9 @@ export const enrollmentService = {
   },
 
   // Valider/Refuser (Admin)
-  process: async (id: number, status: 'APPROVED' | 'REJECTED', notes: string) => {
+  process: async (id: number, status: 'APPROVED' | 'REJECTED', notes: string, classroomId?: string) => {
     const token = localStorage.getItem('token');
-    return axios.patch(`${API_URL}/${id}/process`, { status, adminNotes: notes }, {
+    return axios.patch(`${API_URL}/${id}/process`, { status, adminNotes: notes, classroomId }, {
       headers: { Authorization: `Bearer ${token}` }
     });
   }
