@@ -3,14 +3,16 @@ import prisma from '../lib/prisma';
 
 export const createMatiere = async (req: Request, res: Response) => {
   try {
-    const { nom, code, idClasse } = req.body;
+    const { nom, code, classIds } = req.body;
     const matiere = await prisma.matiere.create({
       data: {
         nom,
         code: code ?? null,
-        idClasse: idClasse ? Number(idClasse) : null,
+        classes: classIds?.length
+          ? { create: classIds.map((id: number) => ({ idClasse: Number(id) })) }
+          : undefined,
       },
-      include: { classe: { include: { cycle: true } } },
+      include: { classes: { include: { classe: { include: { cycle: true } } } } },
     });
     res.status(201).json(matiere);
   } catch (error: any) {
@@ -26,7 +28,7 @@ export const getMatieres = async (req: Request, res: Response) => {
   const matieres = await prisma.matiere.findMany({
     include: {
       _count: { select: { livres: true, cours: true } },
-      classe: { include: { cycle: true } },
+      classes: { include: { classe: { include: { cycle: true } } } },
     },
     orderBy: { nom: 'asc' }
   });
@@ -36,15 +38,20 @@ export const getMatieres = async (req: Request, res: Response) => {
 export const updateMatiere = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nom, code, idClasse } = req.body;
+    const { nom, code, classIds } = req.body;
     const matiere = await prisma.matiere.update({
       where: { id: Number(id) },
       data: {
         ...(nom && { nom }),
         ...(code !== undefined && { code }),
-        idClasse: idClasse !== undefined ? (idClasse ? Number(idClasse) : null) : undefined,
+        classes: classIds !== undefined
+          ? {
+              deleteMany: {},
+              create: classIds.map((id: number) => ({ idClasse: Number(id) })),
+            }
+          : undefined,
       },
-      include: { classe: { include: { cycle: true } } },
+      include: { classes: { include: { classe: { include: { cycle: true } } } } },
     });
     res.json(matiere);
   } catch (error) {

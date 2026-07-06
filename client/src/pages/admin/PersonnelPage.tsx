@@ -34,8 +34,7 @@ interface Matiere {
   id: number;
   nom: string;
   code?: string;
-  idClasse?: number | null;
-  classe?: { idClasse: number; libelle: string } | null;
+  classes: { idClasse: number; classe?: { idClasse: number; libelle: string } }[];
 }
 
 const StatCard = ({ title, value, icon, color }: any) => (
@@ -208,7 +207,7 @@ const PersonnelPage = () => {
   const selectedSalle = salles.find(s => s.idSalle === Number(affectData.salleId));
   const classeId = selectedSalle?.idClasse ?? selectedSalle?.classe?.idClasse;
   const filteredMatieres = classeId
-    ? matieres.filter(m => m.idClasse === classeId)
+    ? matieres.filter(m => m.classes?.some((mc: any) => (mc.classe?.idClasse ?? mc.idClasse) === classeId))
     : matieres;
 
   // Réinitialiser les matières sélectionnées quand la salle change

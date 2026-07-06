@@ -10,8 +10,7 @@ interface Matiere {
   id: number;
   nom: string;
   code?: string | null;
-  idClasse?: number | null;
-  classe?: { idClasse: number; libelle: string; cycle?: { libelle: string } } | null;
+  classes: { classe: { idClasse: number; libelle: string; cycle?: { libelle: string } } }[];
   _count?: { livres: number; cours: number };
 }
 
@@ -35,13 +34,13 @@ const MatierePage = () => {
   const [name, setName] = useState('');
   const [searchMat, setSearchMat] = useState('');
   const [classes, setClasses] = useState<{ idClasse: number; libelle: string }[]>([]);
-  const [newClasseId, setNewClasseId] = useState('');
+  const [newClassIds, setNewClassIds] = useState<number[]>([]);
 
   // Edit modal
   const [editingMat, setEditingMat] = useState<Matiere | null>(null);
   const [editNom, setEditNom] = useState('');
   const [editCode, setEditCode] = useState('');
-  const [editClasseId, setEditClasseId] = useState('');
+  const [editClassIds, setEditClassIds] = useState<number[]>([]);
   const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
 
   const loadMatieres = async () => {
@@ -63,9 +62,9 @@ const MatierePage = () => {
 
   const handleAdd = async () => {
     if (!name.trim()) return;
-    await matiereService.create(name, { idClasse: newClasseId ? Number(newClasseId) : undefined });
+    await matiereService.create(name, { classIds: newClassIds.length ? newClassIds : undefined });
     setName('');
-    setNewClasseId('');
+    setNewClassIds([]);
     loadMatieres();
   };
 
@@ -81,7 +80,7 @@ const MatierePage = () => {
     setEditingMat(m);
     setEditNom(m.nom);
     setEditCode(m.code || '');
-    setEditClasseId(m.idClasse?.toString() || '');
+    setEditClassIds(m.classes?.map((mc: any) => mc.classe?.idClasse ?? mc.idClasse).filter(Boolean) || []);
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -91,7 +90,7 @@ const MatierePage = () => {
       await matiereService.update(editingMat.id, {
         nom: editNom,
         code: editCode || null,
-        idClasse: editClasseId ? Number(editClasseId) : null,
+        classIds: editClassIds,
       });
       setEditingMat(null);
       loadMatieres();
@@ -170,13 +169,21 @@ const MatierePage = () => {
                   />
                 </div>
                 <div className="admin-field">
-                  <label>Classe</label>
-                  <select value={newClasseId} onChange={e => setNewClasseId(e.target.value)}>
-                    <option value="">Toutes les classes</option>
-                    {classes.map(cl => (
-                      <option key={cl.idClasse} value={cl.idClasse}>{cl.libelle}</option>
-                    ))}
-                  </select>
+                  <label>Classes</label>
+                  <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto border border-gray-200 rounded-[var(--radius)] p-2">
+                    {classes.length === 0 ? (
+                      <span className="text-xs text-gray-400">Aucune classe</span>
+                    ) : (
+                      classes.map(cl => (
+                        <label key={cl.idClasse} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 px-1.5 py-0.5 rounded">
+                          <input type="checkbox" checked={newClassIds.includes(cl.idClasse)}
+                            onChange={() => setNewClassIds(prev => prev.includes(cl.idClasse) ? prev.filter(id => id !== cl.idClasse) : [...prev, cl.idClasse])}
+                            className="rounded border-gray-300" />
+                          {cl.libelle}
+                        </label>
+                      ))
+                    )}
+                  </div>
                 </div>
                 <div className="admin-field justify-end">
                   <label>&nbsp;</label>
@@ -195,7 +202,11 @@ const MatierePage = () => {
                   <div>
                     <span className="text-sm font-medium text-gray-700">{m.nom}</span>
                     {m.code && <span className="text-xs text-gray-400 ml-2">({m.code})</span>}
-                    {m.classe && <span className="text-xs text-gray-400 ml-2"><School size={10} className="inline" /> {m.classe.libelle}</span>}
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      {m.classes && m.classes.length > 0
+                        ? m.classes.map((mc: any) => mc.classe?.libelle).filter(Boolean).join(', ')
+                        : <span className="text-gray-300">Toutes les classes</span>}
+                    </div>
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
                     <button onClick={() => openEdit(m)} className="text-blue-400 hover:text-blue-600">
@@ -284,13 +295,21 @@ const MatierePage = () => {
                 <input type="text" value={editCode} onChange={e => setEditCode(e.target.value)} placeholder="ex: MATH-01" />
               </div>
               <div className="admin-field">
-                <label>Classe</label>
-                <select value={editClasseId} onChange={e => setEditClasseId(e.target.value)}>
-                  <option value="">Toutes les classes</option>
-                  {classes.map(cl => (
-                    <option key={cl.idClasse} value={cl.idClasse}>{cl.libelle}</option>
-                  ))}
-                </select>
+                <label>Classes</label>
+                <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto border border-gray-200 rounded-[var(--radius)] p-2">
+                  {classes.length === 0 ? (
+                    <span className="text-xs text-gray-400">Aucune classe</span>
+                  ) : (
+                    classes.map(cl => (
+                      <label key={cl.idClasse} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 px-1.5 py-0.5 rounded">
+                        <input type="checkbox" checked={editClassIds.includes(cl.idClasse)}
+                          onChange={() => setEditClassIds(prev => prev.includes(cl.idClasse) ? prev.filter(id => id !== cl.idClasse) : [...prev, cl.idClasse])}
+                          className="rounded border-gray-300" />
+                        {cl.libelle}
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditingMat(null)}

@@ -215,18 +215,18 @@ model Eleve {
 }
 
 model Classe {
-  idClasse      Int       @id @default(autoincrement())
-  libelle       String    @db.VarChar(100)
+  idClasse      Int             @id @default(autoincrement())
+  libelle       String          @db.VarChar(100)
   idCycle       Int
-  cycle         Cycle     @relation(fields: [idCycle], references: [idCycle],onDelete: Restrict)
+  cycle         Cycle           @relation(fields: [idCycle], references: [idCycle],onDelete: Restrict)
   responsableId Int?
-  responsable   Personnel? @relation(fields: [responsableId], references: [id],onDelete: SetNull)
+  responsable   Personnel?      @relation(fields: [responsableId], references: [id],onDelete: SetNull)
   students      Eleve[]
   salles        Salle[]
   cours         Cours[]
   epreuves      Epreuve[]
   frequences    Frequente[]
-  matieres      Matiere[]
+  matieres      MatiereClasse[]
 
   @@map("Classe")
 }
@@ -390,14 +390,23 @@ model Livre {
 // --- EMPLOI DU TEMPS ---
 model Matiere {
   id        Int      @id @default(autoincrement())
-  nom       String   @unique // ex: Mathématiques, Histoire-Géo
-  code      String?  // ex: MATH-01
-  idClasse  Int?
-  classe    Classe?  @relation(fields: [idClasse], references: [idClasse], onDelete: SetNull)
+  nom       String   @unique
+  code      String?
+  classes   MatiereClasse[]
   cours     Cours[]
-  livres    Livre[]  // Lien avec la bibliothèque (Section 12 du PDF)
-  notes     Note[]   // Lien avec les notes (Section 8 du PDF)
-  epreuves  Epreuve[]  // ← ajouter
+  livres    Livre[]
+  notes     Note[]
+  epreuves  Epreuve[]
+}
+
+model MatiereClasse {
+  idMatiere Int
+  matiere   Matiere  @relation(fields: [idMatiere], references: [id])
+  idClasse  Int
+  classe    Classe   @relation(fields: [idClasse], references: [idClasse])
+
+  @@id([idMatiere, idClasse])
+  @@map("MatiereClasse")
 }
 
 model EmploiDuTemps {

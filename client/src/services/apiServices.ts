@@ -31,7 +31,7 @@ export const personnelService = {
 
 export const matiereService = {
   getAll: () => api.get('/matieres'),
-  create: (nom: string, options?: { code?: string; idClasse?: number }) => api.post('/matieres', { nom, ...options }),
+  create: (nom: string, options?: { code?: string; classIds?: number[] }) => api.post('/matieres', { nom, ...options }),
   update: (id: number, data: any) => api.put(`/matieres/${id}`, data),
   delete: (id: number) => api.delete(`/matieres/${id}`)
 };
