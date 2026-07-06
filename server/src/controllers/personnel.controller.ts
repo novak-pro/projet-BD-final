@@ -166,17 +166,28 @@ export const retirerPromotion = async (req: Request, res: Response) => {
 // Affecter un enseignant à une salle avec des matières
 export const affecterEnseignantSalle = async (req: Request, res: Response) => {
   try {
-    const { personnelId, salleId, matiereIds } = req.body;
+    const { personnelId, salleId, classeId, matiereIds } = req.body;
 
-    if (!personnelId || !salleId || !matiereIds || !Array.isArray(matiereIds) || matiereIds.length === 0) {
-      return res.status(400).json({ error: "Champs requis: personnelId, salleId, matiereIds (tableau)" });
+    if (!personnelId || !matiereIds || !Array.isArray(matiereIds) || matiereIds.length === 0) {
+      return res.status(400).json({ error: "Champs requis: personnelId, matiereIds (tableau)" });
     }
 
     const enseignant = await prisma.personnel.findUnique({ where: { id: Number(personnelId) } });
     if (!enseignant) return res.status(404).json({ error: "Enseignant non trouvé" });
 
-    const salle = await prisma.salle.findUnique({ where: { idSalle: Number(salleId) } });
-    if (!salle) return res.status(404).json({ error: "Salle non trouvée" });
+    let idClasse = classeId ? Number(classeId) : null;
+    let idSalle = salleId ? Number(salleId) : null;
+
+    // Si une salle est fournie, récupérer sa classe
+    if (idSalle) {
+      const salle = await prisma.salle.findUnique({ where: { idSalle: Number(salleId) } });
+      if (!salle) return res.status(404).json({ error: "Salle non trouvée" });
+      idClasse = salle.idClasse ?? idClasse;
+    }
+
+    if (!idClasse) {
+      return res.status(400).json({ error: "Une classe est requise (via salleId ou classeId)" });
+    }
 
     // Créer une entrée Cours pour chaque matière
     const coursList = await Promise.all(
@@ -184,22 +195,22 @@ export const affecterEnseignantSalle = async (req: Request, res: Response) => {
         prisma.cours.create({
           data: {
             enseignantId: Number(personnelId),
-            idSalle: Number(salleId),
-            idClasse: salle.idClasse,  // ← lier la classe via la salle
+            idSalle: idSalle,
+            idClasse: idClasse,
             idMatiere: Number(matiereId),
             coefficient: 1.0,
           },
-          include: { matiere: true, salle: true },
+          include: { matiere: true, salle: true, classe: true },
         })
       )
     );
 
     // Notifier l'enseignant
     const matieresList = coursList.map(c => c.matiere.nom).join(', ');
-    const salleLibelle = coursList[0]?.salle?.libelle ?? `salle #${salleId}`;
+    const classeLibelle = coursList[0]?.classe?.libelle ?? `classe #${idClasse}`;
     await prisma.message.create({
       data: {
-        content: `Vous avez été affecté à ${salleLibelle} pour enseigner les matières suivantes : ${matieresList}.`,
+        content: `Vous avez été affecté à la classe ${classeLibelle} pour enseigner : ${matieresList}.`,
         type: 'PERSONAL',
         status: 'SENT',
         senderId: (req as any).user.id,

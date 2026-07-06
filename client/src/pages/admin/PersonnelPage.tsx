@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { personnelService, matiereService } from '../../services/apiServices';
 import api from '../../services/axiosInstance';
-import { Users, BookOpen, GraduationCap, Edit, UserX, X, AlertTriangle, Search, ShieldCheck, UserCheck, Award, DoorOpen } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, Edit, UserX, X, AlertTriangle, Search, ShieldCheck, UserCheck, Award, DoorOpen, School } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
@@ -25,6 +25,8 @@ interface Personnel {
 interface Salle {
   idSalle: number;
   libelle: string;
+  idClasse?: number | null;
+  classe?: { idClasse: number; libelle: string } | null;
   titulaire: { id: number } | null;
 }
 
@@ -32,6 +34,8 @@ interface Matiere {
   id: number;
   nom: string;
   code?: string;
+  idClasse?: number | null;
+  classe?: { idClasse: number; libelle: string } | null;
 }
 
 const StatCard = ({ title, value, icon, color }: any) => (
@@ -198,6 +202,18 @@ const PersonnelPage = () => {
     } catch (err: any) {
       notifyError(err?.response?.data?.error || "Erreur lors de l'affectation");
     }
+  };
+
+  // Filtrer les matières selon la classe de la salle sélectionnée
+  const selectedSalle = salles.find(s => s.idSalle === Number(affectData.salleId));
+  const classeId = selectedSalle?.idClasse ?? selectedSalle?.classe?.idClasse;
+  const filteredMatieres = classeId
+    ? matieres.filter(m => m.idClasse === classeId)
+    : matieres;
+
+  // Réinitialiser les matières sélectionnées quand la salle change
+  const handleSalleChange = (salleId: string) => {
+    setAffectData({ ...affectData, salleId, matiereIds: [] });
   };
 
   // Grouper les cours par salle pour l'affichage
@@ -435,22 +451,31 @@ const PersonnelPage = () => {
                 ))}
               </select>
               <select required className="w-full border border-gray-200 p-3 rounded-[var(--radius)] outline-none focus:border-[var(--accent)]"
-                value={affectData.salleId} onChange={e => setAffectData({ ...affectData, salleId: e.target.value })}>
+                value={affectData.salleId} onChange={e => handleSalleChange(e.target.value)}>
                 <option value="">Choisir une salle...</option>
                 {salles.map(s => (
-                  <option key={s.idSalle} value={s.idSalle}>{s.libelle}</option>
+                  <option key={s.idSalle} value={s.idSalle}>{s.libelle} {s.classe ? `(${s.classe.libelle})` : ''}</option>
                 ))}
               </select>
               <div>
-                <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">Matières enseignées</label>
+                <label className="text-xs font-bold text-gray-400 uppercase mb-2 block">
+                  Matières à enseigner
+                  {classeId && <span className="font-normal text-gray-400 ml-1">— {selectedSalle?.classe?.libelle || selectedSalle?.libelle || ''}</span>}
+                </label>
                 <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-[var(--radius)] p-2 space-y-1">
-                  {matieres.map(m => (
-                    <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1.5 rounded">
-                      <input type="checkbox" checked={affectData.matiereIds.includes(m.id)}
-                        onChange={() => handleToggleMatiere(m.id)} className="rounded border-gray-300" />
-                      {m.nom} {m.code && <span className="text-gray-400 text-xs">({m.code})</span>}
-                    </label>
-                  ))}
+                  {filteredMatieres.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-4">
+                      {classeId ? 'Aucune matière liée à cette classe' : 'Sélectionnez d\'abord une salle'}
+                    </p>
+                  ) : (
+                    filteredMatieres.map(m => (
+                      <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-gray-50 p-1.5 rounded">
+                        <input type="checkbox" checked={affectData.matiereIds.includes(m.id)}
+                          onChange={() => handleToggleMatiere(m.id)} className="rounded border-gray-300" />
+                        {m.nom} {m.code && <span className="text-gray-400 text-xs">({m.code})</span>}
+                      </label>
+                    ))
+                  )}
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
