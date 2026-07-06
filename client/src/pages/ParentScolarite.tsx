@@ -5,26 +5,14 @@ import { useTranslation } from '../i18n/LanguageContext';
 import api from '../services/axiosInstance';
 import { notifySuccess, notifyError } from '../utils/notifications';
 
-const niveauOptions = [
-  { value: 'Niveau 1', label: 'Niveau 1' },
-  { value: 'Niveau 2', label: 'Niveau 2' },
-  { value: 'Niveau 3', label: 'Niveau 3' },
-];
-
-const classeOptions = ['SIL', 'CP', 'CE1', 'CE2', 'CM1', 'CM2'];
-
-const niveauClasseMap: Record<string, string[]> = {
-  'Niveau 1': ['SIL', 'CP'],
-  'Niveau 2': ['CE1', 'CE2'],
-  'Niveau 3': ['CM1', 'CM2'],
-};
-
 const ParentScolarite = () => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     nom: '', prenom: '', dateNaissance: '', lieuNaissance: '', sexe: '0', niveau: '', classe: '',
     photoURL: '', recuPDF: '', modePaiement: ''
   });
+  const [cycles, setCycles] = useState<{ idCycle: number; libelle: string }[]>([]);
+  const [classes, setClasses] = useState<{ idClasse: number; libelle: string; idCycle: number | null }[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [recuPreview, setRecuPreview] = useState<string | null>(null);
@@ -34,12 +22,26 @@ const ParentScolarite = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const recuRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadRequests(); loadProcedure(); }, []);
+  useEffect(() => { loadRequests(); loadProcedure(); loadCycles(); loadClasses(); }, []);
 
   const loadProcedure = async () => {
     try {
       const res = await api.get('/procedure');
       if (res.data?.contenu) setProcedure(res.data.contenu);
+    } catch { /* ignore */ }
+  };
+
+  const loadCycles = async () => {
+    try {
+      const res = await api.get('/enrollments/cycles');
+      setCycles(Array.isArray(res.data) ? res.data : []);
+    } catch { /* ignore */ }
+  };
+
+  const loadClasses = async () => {
+    try {
+      const res = await api.get('/enrollments/classes');
+      setClasses(Array.isArray(res.data) ? res.data : []);
     } catch { /* ignore */ }
   };
 
@@ -72,22 +74,24 @@ const ParentScolarite = () => {
     reader.readAsDataURL(file);
   };
 
-  const availableClasses = formData.niveau ? niveauClasseMap[formData.niveau] || [] : [];
+  const selectedCycleId = formData.niveau ? Number(formData.niveau) : null;
+  const availableClasses = selectedCycleId
+    ? classes.filter(c => c.idCycle === selectedCycleId)
+    : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError('');
 
-    if (formData.niveau && formData.classe) {
-      const allowed = niveauClasseMap[formData.niveau];
-      if (allowed && !allowed.includes(formData.classe)) {
-        setValidationError(`La classe "${formData.classe}" ne correspond pas au ${formData.niveau}. Les classes autorisées sont : ${allowed.join(', ')}.`);
-        return;
-      }
-    }
+    const selectedCycle = cycles.find(c => c.idCycle === selectedCycleId);
+    const selectedClasse = classes.find(c => c.idClasse === Number(formData.classe));
 
     try {
-      await enrollmentService.submit(formData);
+      await enrollmentService.submit({
+        ...formData,
+        niveau: selectedCycle?.libelle || '',
+        classe: selectedClasse?.libelle || '',
+      });
       notifySuccess("Demande envoyée !");
       setPhotoPreview(null);
       setRecuPreview(null);
@@ -177,9 +181,9 @@ const ParentScolarite = () => {
         <select className="border border-gray-200 p-2 rounded-[var(--radius)] outline-none text-sm"
           value={formData.niveau}
           onChange={(e) => { setFormData({...formData, niveau: e.target.value, classe: '' }); setValidationError(''); }}>
-          <option value="">Niveau (ex: Niveau 1, Niveau 2...)</option>
-          {niveauOptions.map(n => (
-            <option key={n.value} value={n.value}>{n.label}</option>
+          <option value="">Cycle</option>
+          {cycles.map(c => (
+            <option key={c.idCycle} value={c.idCycle}>{c.libelle}</option>
           ))}
         </select>
 
@@ -189,7 +193,7 @@ const ParentScolarite = () => {
           disabled={!formData.niveau}>
           <option value="">Choisir une classe</option>
           {availableClasses.map(cl => (
-            <option key={cl} value={cl}>{cl}</option>
+            <option key={cl.idClasse} value={cl.idClasse}>{cl.libelle}</option>
           ))}
         </select>
 

@@ -56,6 +56,8 @@ interface EnrollmentRequest {
   niveau: string;
   classe: string | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  recuPDF: string | null;
+  modePaiement: string | null;
   parent: { nom: string; prenom: string; telephone: string };
   createdAt: string;
 }
@@ -634,7 +636,8 @@ export default function StudentList() {
                     <th className="px-3 py-3">Enfant</th>
                     <th className="px-3 py-3">Parent</th>
                     <th className="px-3 py-3">Date</th>
-                    <th className="px-3 py-3">Niveau / Classe</th>
+                    <th className="px-3 py-3">Cycle / Classe</th>
+                    <th className="px-3 py-3">Paiement</th>
                     <th className="px-3 py-3">Statut</th>
                     <th className="px-3 py-3 text-center">Actions</th>
                   </tr>
@@ -654,6 +657,23 @@ export default function StudentList() {
                       <td className="px-3 py-3 text-sm">
                         <span className="font-medium">{req.niveau}</span>
                         {req.classe && <span className="text-gray-400"> — {req.classe}</span>}
+                      </td>
+                      <td className="px-3 py-3 text-sm">
+                        <div className="flex flex-col gap-1">
+                          {req.modePaiement ? (
+                            <span className="text-xs font-medium text-gray-600">
+                              {req.modePaiement === 'CASH' ? 'Cash école' : 'Virement'}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                          )}
+                          {req.recuPDF ? (
+                            <button onClick={() => window.open(req.recuPDF!, '_blank')}
+                              className="text-xs text-blue-600 underline text-left">Voir la facture</button>
+                          ) : (
+                            <span className="text-xs text-amber-600 font-medium">Aucune facture</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-3 py-3">
                         <span className={`admin-badge ${req.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : req.status === 'APPROVED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
