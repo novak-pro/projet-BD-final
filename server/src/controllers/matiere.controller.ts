@@ -25,14 +25,27 @@ export const createMatiere = async (req: Request, res: Response) => {
 };
 
 export const getMatieres = async (req: Request, res: Response) => {
-  const matieres = await prisma.matiere.findMany({
-    include: {
-      _count: { select: { livres: true, cours: true } },
-      classes: { include: { classe: { include: { cycle: true } } } },
-    },
-    orderBy: { nom: 'asc' }
-  });
-  res.json(matieres);
+  try {
+    const matieres = await prisma.matiere.findMany({
+      include: {
+        _count: { select: { livres: true, cours: true } },
+        classes: { include: { classe: { include: { cycle: true } } } },
+      },
+      orderBy: { nom: 'asc' }
+    });
+    res.json(matieres);
+  } catch {
+    try {
+      // Fallback si la table MatiereClasse n'existe pas
+      const matieres = await prisma.matiere.findMany({
+        include: { _count: { select: { livres: true, cours: true } } },
+        orderBy: { nom: 'asc' }
+      });
+      res.json(matieres);
+    } catch (error) {
+      res.status(500).json({ error: "Erreur de récupération des matières" });
+    }
+  }
 };
 
 export const updateMatiere = async (req: Request, res: Response) => {

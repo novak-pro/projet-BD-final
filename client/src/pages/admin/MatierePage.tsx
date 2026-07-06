@@ -44,8 +44,10 @@ const MatierePage = () => {
   const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
 
   const loadMatieres = async () => {
-    const res = await matiereService.getAll();
-    setMatieres(res.data);
+    try {
+      const res = await matiereService.getAll();
+      setMatieres(res.data);
+    } catch { setMatieres([]); }
   };
 
   const loadEpreuves = async () => {

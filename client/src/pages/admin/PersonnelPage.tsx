@@ -34,7 +34,7 @@ interface Matiere {
   id: number;
   nom: string;
   code?: string;
-  classes: { idClasse: number; classe?: { idClasse: number; libelle: string } }[];
+  classes?: { idClasse: number; classe?: { idClasse: number; libelle: string } }[];
 }
 
 const StatCard = ({ title, value, icon, color }: any) => (
@@ -86,14 +86,12 @@ const PersonnelPage = () => {
 
   const loadData = async () => {
     try {
-      const [pRes, sRes, mRes] = await Promise.all([
-        personnelService.getAll(),
-        api.get('/salles'),
-        matiereService.getAll(),
-      ]);
-      setPersonnel(pRes.data);
-      setSalles(sRes.data);
-      setMatieres(mRes.data);
+      const pRes = await personnelService.getAll().catch(() => null);
+      const sRes = await api.get('/salles').catch(() => null);
+      const mRes = await matiereService.getAll().catch(() => null);
+      if (pRes) setPersonnel(pRes.data);
+      if (sRes) setSalles(sRes.data);
+      if (mRes) setMatieres(mRes.data);
     } catch (err) {
       console.error("Erreur chargement", err);
     }
