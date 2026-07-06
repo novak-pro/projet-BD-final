@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Building2, Plus, Search, Home, Users, MapPin, Edit3, X, Check, Trash2, AlertTriangle, UserCheck } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { notifySuccess, notifyError } from '../../utils/notifications';
 
 const statusConfig: Record<string, { color: string; label: string }> = {
   DISPONIBLE: { color: "bg-green-100 text-green-700 border-green-200", label: "Disponible" },
@@ -107,7 +108,7 @@ const AdminInfrastructure = () => {
       setShowCreateModal(false);
       setNewSalle({ libelle: '', position: '', capacite: '', idClasse: '', enseignantTitulaireId: '' });
       fetchSalles();
-    } catch { alert("Erreur lors de la création"); }
+    } catch { notifyError("Erreur lors de la création"); }
   };
 
   const openEditModal = (s: Salle) => {
@@ -136,14 +137,14 @@ const AdminInfrastructure = () => {
       });
       setEditingSalle(null);
       fetchSalles();
-    } catch { alert("Erreur lors de la mise à jour"); }
+    } catch { notifyError("Erreur lors de la mise à jour"); }
   };
 
   const handleUpdateEtat = async (id: number, etat: string) => {
     try {
       await api.patch(`/salles/${id}/etat`, { etat });
       fetchSalles();
-    } catch { alert("Erreur de mise à jour"); }
+    } catch { notifyError("Erreur de mise à jour"); }
   };
 
   const handleUpdatePosition = async (id: number) => {
@@ -151,7 +152,7 @@ const AdminInfrastructure = () => {
       await api.patch(`/salles/${id}/position`, { position: editPosValue });
       setEditingPos(null);
       fetchSalles();
-    } catch { alert("Erreur de mise à jour"); }
+    } catch { notifyError("Erreur de mise à jour"); }
   };
 
   const handleDelete = async () => {
@@ -160,7 +161,7 @@ const AdminInfrastructure = () => {
       await api.delete(`/salles/${deletingId}`);
       setDeletingId(null);
       fetchSalles();
-    } catch { alert("Erreur de suppression"); }
+    } catch { notifyError("Erreur de suppression"); }
   };
 
   return (

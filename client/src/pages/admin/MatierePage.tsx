@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
 import { matiereService, epreuveService } from '../../services/apiServices';
-import { BookOpen, Plus, Trash2, FileText, Download, Search, Edit2, X } from 'lucide-react';
+import api from '../../services/axiosInstance';
+import { BookOpen, Plus, Trash2, FileText, Download, Search, Edit2, X, School } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { notifySuccess, notifyError } from '../../utils/notifications';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface Matiere {
   id: number;
   nom: string;
   code?: string | null;
+  idClasse?: number | null;
+  classe?: { idClasse: number; libelle: string; cycle?: { libelle: string } } | null;
   _count?: { livres: number; cours: number };
 }
 
@@ -29,11 +34,15 @@ const MatierePage = () => {
   const [epreuves, setEpreuves] = useState<EpreuveItem[]>([]);
   const [name, setName] = useState('');
   const [searchMat, setSearchMat] = useState('');
+  const [classes, setClasses] = useState<{ idClasse: number; libelle: string }[]>([]);
+  const [newClasseId, setNewClasseId] = useState('');
 
   // Edit modal
   const [editingMat, setEditingMat] = useState<Matiere | null>(null);
   const [editNom, setEditNom] = useState('');
   const [editCode, setEditCode] = useState('');
+  const [editClasseId, setEditClasseId] = useState('');
+  const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
 
   const loadMatieres = async () => {
     const res = await matiereService.getAll();
@@ -45,36 +54,51 @@ const MatierePage = () => {
     setEpreuves(res.data);
   };
 
+  const loadClasses = async () => {
+    try {
+      const res = await api.get('/enrollments/classes');
+      setClasses(Array.isArray(res.data) ? res.data : []);
+    } catch {}
+  };
+
   const handleAdd = async () => {
     if (!name.trim()) return;
-    await matiereService.create(name);
+    await matiereService.create(name, { idClasse: newClasseId ? Number(newClasseId) : undefined });
     setName('');
+    setNewClasseId('');
     loadMatieres();
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm('Supprimer cette matière ?')) return;
-    await matiereService.delete(id);
-    loadMatieres();
+  const handleDelete = (id: number) => {
+    setConfirmState({open:true, onConfirm:async () => {
+      await matiereService.delete(id);
+      loadMatieres();
+      setConfirmState(prev => ({...prev, open: false}));
+    }, message:"Supprimer cette matière ?"});
   };
 
   const openEdit = (m: Matiere) => {
     setEditingMat(m);
     setEditNom(m.nom);
     setEditCode(m.code || '');
+    setEditClasseId(m.idClasse?.toString() || '');
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMat) return;
     try {
-      await matiereService.update(editingMat.id, { nom: editNom, code: editCode || null });
+      await matiereService.update(editingMat.id, {
+        nom: editNom,
+        code: editCode || null,
+        idClasse: editClasseId ? Number(editClasseId) : null,
+      });
       setEditingMat(null);
       loadMatieres();
-    } catch { alert("Erreur lors de la modification"); }
+    } catch { notifyError("Erreur lors de la modification"); }
   };
 
-  useEffect(() => { loadMatieres(); }, []);
+  useEffect(() => { loadMatieres(); loadClasses(); }, []);
   useEffect(() => { if (tab === 'epreuves') loadEpreuves(); }, [tab]);
 
   const filteredMatieres = matieres.filter(m =>
@@ -82,6 +106,17 @@ const MatierePage = () => {
   );
 
   return (
+    <>
+      <ConfirmModal
+        open={confirmState.open}
+        title="Confirmation"
+        message={confirmState.message}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState(prev => ({...prev, open: false}))}
+        variant="danger"
+        confirmLabel="Oui"
+        cancelLabel="Non"
+      />
     <div className="space-y-6">
       <div className="admin-card">
         <div className="admin-card-header">
@@ -124,7 +159,7 @@ const MatierePage = () => {
                   />
                 </div>
               </div>
-              <div className="admin-form-row" style={{ gridTemplateColumns: '1fr auto' }}>
+              <div className="admin-form-row" style={{ gridTemplateColumns: '1fr 1fr auto' }}>
                 <div className="admin-field">
                   <label>Nouvelle matière</label>
                   <input
@@ -133,6 +168,15 @@ const MatierePage = () => {
                     placeholder="Nom de la matière"
                     onKeyDown={e => e.key === 'Enter' && handleAdd()}
                   />
+                </div>
+                <div className="admin-field">
+                  <label>Classe</label>
+                  <select value={newClasseId} onChange={e => setNewClasseId(e.target.value)}>
+                    <option value="">Toutes les classes</option>
+                    {classes.map(cl => (
+                      <option key={cl.idClasse} value={cl.idClasse}>{cl.libelle}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="admin-field justify-end">
                   <label>&nbsp;</label>
@@ -151,6 +195,7 @@ const MatierePage = () => {
                   <div>
                     <span className="text-sm font-medium text-gray-700">{m.nom}</span>
                     {m.code && <span className="text-xs text-gray-400 ml-2">({m.code})</span>}
+                    {m.classe && <span className="text-xs text-gray-400 ml-2"><School size={10} className="inline" /> {m.classe.libelle}</span>}
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
                     <button onClick={() => openEdit(m)} className="text-blue-400 hover:text-blue-600">
@@ -238,6 +283,15 @@ const MatierePage = () => {
                 <label>Code</label>
                 <input type="text" value={editCode} onChange={e => setEditCode(e.target.value)} placeholder="ex: MATH-01" />
               </div>
+              <div className="admin-field">
+                <label>Classe</label>
+                <select value={editClasseId} onChange={e => setEditClasseId(e.target.value)}>
+                  <option value="">Toutes les classes</option>
+                  {classes.map(cl => (
+                    <option key={cl.idClasse} value={cl.idClasse}>{cl.libelle}</option>
+                  ))}
+                </select>
+              </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditingMat(null)}
                   className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
@@ -248,6 +302,7 @@ const MatierePage = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

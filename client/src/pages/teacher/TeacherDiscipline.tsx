@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ShieldAlert, AlertTriangle } from 'lucide-react';
 import api from '../../services/axiosInstance';
+import { notifySuccess, notifyError } from '../../utils/notifications';
 
 interface EleveItem {
   matricule: number;
@@ -23,7 +24,7 @@ const TeacherDiscipline = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.eleveId) return alert("Sélectionnez un élève");
+    if (!form.eleveId) return notifyError("Sélectionnez un élève");
     try {
       await api.post('/discipline/incident', {
         eleveId: parseInt(form.eleveId),
@@ -36,7 +37,7 @@ const TeacherDiscipline = () => {
       setMessage("Incident signalé !");
       setForm({ eleveId: '', type: 'RETARD', gravite: 'Faible', pointsDeduits: '1', commentaire: '' });
     } catch {
-      alert("Erreur lors du signalement");
+      notifyError("Erreur lors du signalement");
     }
   };
 

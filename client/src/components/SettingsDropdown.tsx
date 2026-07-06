@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Settings, Sun, Moon, LogOut, Languages, Image } from 'lucide-react';
+import { Settings, Sun, Moon, LogOut, Languages, Image, UserX } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from '../i18n/LanguageContext';
 import { useNavigate } from 'react-router-dom';
@@ -82,6 +82,11 @@ const SettingsDropdown = ({ sidebar }: { sidebar?: boolean }) => {
 
           {role === 'ADMIN_PRINCIPAL' && (
             <>
+              <button onClick={() => { setOpen(false); navigate('/admin/deactivated'); }} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                <UserX size={16} className="text-red-500" />
+                <span className="flex-1 text-left">Comptes désactivés</span>
+              </button>
+              <div className="border-t border-gray-100 my-1" />
               <button onClick={() => fileRef.current?.click()} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                 <Image size={16} className="text-emerald-500" />
                 <span className="flex-1 text-left">{logoUrl ? 'Changer le logo' : 'Ajouter un logo'}</span>

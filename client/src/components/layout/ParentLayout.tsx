@@ -138,10 +138,7 @@ const ParentLayout = () => {
           <Outlet />
         </main>
 
-        <footer className="py-3 px-6 border-t text-xs flex justify-between" style={{ background: 'var(--bg-card)', color: 'var(--text-secondary)', borderColor: 'var(--border-color)' }}>
-          <span>{t('app.copyright')}</span>
-          <span className="font-bold">{t('app.version')}</span>
-        </footer>
+
       </div>
     </div>
   );

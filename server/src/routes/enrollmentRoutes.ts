@@ -8,7 +8,14 @@ import {
   updateChildPhoto,
   updateChildSchoolInfo,
   updateChildSchoolInfoAdmin,
-  getAllClasses 
+  getAllClasses,
+  createClasse,
+  updateClasse,
+  deleteClasse,
+  getCycles,
+  createCycle,
+  updateCycle,
+  deleteCycle,
 } from '../controllers/enrollmentController';
 import { protect, restrictTo, authenticateToken, isAdmin } from '../middlewares/authMiddleware';
 
@@ -36,7 +43,16 @@ router.patch('/child/:matricule/school', authenticateToken, updateChildSchoolInf
 // Mise à jour des infos scolaires (admin)
 router.patch('/child/:matricule/school-admin', authenticateToken, isAdmin, updateChildSchoolInfoAdmin);
 
-// Route pour lister les classes
+// Cycles CRUD
+router.get('/cycles', authenticateToken, getCycles);
+router.post('/cycles', authenticateToken, isAdmin, createCycle);
+router.put('/cycles/:id', authenticateToken, isAdmin, updateCycle);
+router.delete('/cycles/:id', authenticateToken, isAdmin, deleteCycle);
+
+// Classes CRUD
 router.get('/classes', authenticateToken, getAllClasses);
+router.post('/classes', authenticateToken, isAdmin, createClasse);
+router.put('/classes/:id', authenticateToken, isAdmin, updateClasse);
+router.delete('/classes/:id', authenticateToken, isAdmin, deleteClasse);
 
 export default router;

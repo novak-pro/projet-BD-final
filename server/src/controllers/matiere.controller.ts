@@ -3,19 +3,32 @@ import prisma from '../lib/prisma';
 
 export const createMatiere = async (req: Request, res: Response) => {
   try {
-    const { nom } = req.body;
+    const { nom, code, idClasse } = req.body;
     const matiere = await prisma.matiere.create({
-      data: { nom }
+      data: {
+        nom,
+        code: code ?? null,
+        idClasse: idClasse ? Number(idClasse) : null,
+      },
+      include: { classe: { include: { cycle: true } } },
     });
     res.status(201).json(matiere);
-  } catch (error) {
-    res.status(500).json({ error: "Cette matière existe déjà" });
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      res.status(409).json({ error: "Cette matière existe déjà" });
+      return;
+    }
+    res.status(500).json({ error: "Erreur lors de la création de la matière" });
   }
 };
 
 export const getMatieres = async (req: Request, res: Response) => {
   const matieres = await prisma.matiere.findMany({
-    include: { _count: { select: { livres: true, cours: true } } }
+    include: {
+      _count: { select: { livres: true, cours: true } },
+      classe: { include: { cycle: true } },
+    },
+    orderBy: { nom: 'asc' }
   });
   res.json(matieres);
 };
@@ -23,10 +36,15 @@ export const getMatieres = async (req: Request, res: Response) => {
 export const updateMatiere = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { nom, code } = req.body;
+    const { nom, code, idClasse } = req.body;
     const matiere = await prisma.matiere.update({
       where: { id: Number(id) },
-      data: { ...(nom && { nom }), ...(code !== undefined && { code }) },
+      data: {
+        ...(nom && { nom }),
+        ...(code !== undefined && { code }),
+        idClasse: idClasse !== undefined ? (idClasse ? Number(idClasse) : null) : undefined,
+      },
+      include: { classe: { include: { cycle: true } } },
     });
     res.json(matiere);
   } catch (error) {

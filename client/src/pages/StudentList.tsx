@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Search, Edit, Trash2, X, AlertTriangle, Filter, Users, FileText } from 'lucide-react';
+import { Search, Edit, Trash2, X, AlertTriangle, Filter, Users, FileText, School } from 'lucide-react';
 import api from '../services/axiosInstance';
 import { enrollmentService } from '../services/enrollmentService';
 import { useTranslation } from '../i18n/LanguageContext';
+import { notifySuccess, notifyError } from '../utils/notifications';
 
 interface AnneeAcademique {
   idAcademi: number;
@@ -75,7 +76,7 @@ const getCycle = (niveau: string): string => {
 
 export default function StudentList() {
   const { t } = useTranslation();
-  const [tab, setTab] = useState<'eleves' | 'inscriptions'>('eleves');
+  const [tab, setTab] = useState<'eleves' | 'inscriptions' | 'classes' | 'cycles'>('eleves');
 
   // Élèves
   const [students, setStudents] = useState<Student[]>([]);
@@ -97,6 +98,17 @@ export default function StudentList() {
   const [classesList, setClassesList] = useState<Classe[]>([]);
   const [approveModal, setApproveModal] = useState<{ id: number } | null>(null);
   const [selectedClassroomId, setSelectedClassroomId] = useState('');
+  // Classes
+  const [cycles, setCycles] = useState<{ idCycle: number; libelle: string }[]>([]);
+  const [showClasseForm, setShowClasseForm] = useState(false);
+  const [classeForm, setClasseForm] = useState({ libelle: '', idCycle: '' });
+  const [editingClasse, setEditingClasse] = useState<Classe & { cycle?: { idCycle: number; libelle: string } | null; _count?: { students: number } } | null>(null);
+  const [deletingClasse, setDeletingClasse] = useState<Classe | null>(null);
+  // Cycles
+  const [showCycleForm, setShowCycleForm] = useState(false);
+  const [cycleForm, setCycleForm] = useState({ libelle: '', description: '' });
+  const [editingCycle, setEditingCycle] = useState<{ idCycle: number; libelle: string; description?: string | null; _count?: { classes: number } } | null>(null);
+  const [deletingCycle, setDeletingCycle] = useState<{ idCycle: number; libelle: string } | null>(null);
 
   const fetchAnnees = async () => {
     try {
@@ -112,7 +124,15 @@ export default function StudentList() {
     fetchSalles();
     fetchEnrollments();
     fetchAllClasses();
+    fetchCycles();
   }, []);
+
+  const fetchCycles = async () => {
+    try {
+      const res = await api.get('/enrollments/cycles');
+      setCycles(Array.isArray(res.data) ? res.data : []);
+    } catch { console.error('Failed to load cycles'); }
+  };
 
   const fetchStudents = async (anneeId?: string) => {
     try {
@@ -213,7 +233,7 @@ export default function StudentList() {
       });
       setEditingStudent(null);
       fetchStudents(selectedAnneeId || undefined);
-    } catch { alert('Erreur lors de la mise à jour'); }
+    } catch { notifyError('Erreur lors de la mise à jour'); }
   };
 
   const handleDelete = async () => {
@@ -222,29 +242,116 @@ export default function StudentList() {
       await api.delete(`/students/${deletingStudent.matricule}`);
       setDeletingStudent(null);
       fetchStudents(selectedAnneeId || undefined);
-    } catch { alert('Erreur lors de la suppression'); }
+    } catch { notifyError('Erreur lors de la suppression'); }
   };
 
   const handleReject = async (id: number) => {
     const notes = window.prompt("Motif du refus obligatoire :");
-    if (!notes) { alert("Un motif est requis."); return; }
+    if (!notes) { notifyError("Un motif est requis."); return; }
     try {
       await enrollmentService.process(id, 'REJECTED', notes);
-      alert("Demande refusée.");
+      notifySuccess("Demande refusée.");
       fetchEnrollments();
-    } catch { alert("Erreur"); }
+    } catch { notifyError("Erreur"); }
   };
 
   const confirmApprove = async () => {
     if (!approveModal) return;
     try {
       await enrollmentService.process(approveModal.id, 'APPROVED', '', selectedClassroomId);
-      alert("Demande validée — Élève créé.");
+      notifySuccess("Demande validée — Élève créé.");
       setApproveModal(null);
       setSelectedClassroomId('');
       fetchEnrollments();
       fetchStudents(selectedAnneeId || undefined);
-    } catch { alert("Erreur"); }
+    } catch { notifyError("Erreur"); }
+  };
+
+  const handleCreateClasse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!classeForm.libelle.trim()) { notifyError('Le libellé est requis'); return; }
+    try {
+      await api.post('/enrollments/classes', {
+        libelle: classeForm.libelle.trim(),
+        idCycle: classeForm.idCycle || 1,
+      });
+      notifySuccess('Classe créée');
+      setClasseForm({ libelle: '', idCycle: '' });
+      setShowClasseForm(false);
+      fetchClasses();
+    } catch { notifyError('Erreur lors de la création'); }
+  };
+
+  const handleUpdateClasse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingClasse) return;
+    try {
+      await api.put(`/enrollments/classes/${editingClasse.idClasse}`, {
+        libelle: editingClasse.libelle,
+        idCycle: (editingClasse as any).idCycle,
+      });
+      notifySuccess('Classe mise à jour');
+      setEditingClasse(null);
+      fetchClasses();
+    } catch { notifyError('Erreur lors de la mise à jour'); }
+  };
+
+  const handleDeleteClasse = async () => {
+    if (!deletingClasse) return;
+    try {
+      await api.delete(`/enrollments/classes/${deletingClasse.idClasse}`);
+      notifySuccess('Classe supprimée');
+      setDeletingClasse(null);
+      fetchClasses();
+    } catch { notifyError('Impossible de supprimer cette classe'); }
+  };
+
+  const handleCreateCycle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cycleForm.libelle.trim()) { notifyError('Le libellé est requis'); return; }
+    try {
+      const res = await api.post('/enrollments/cycles', {
+        libelle: cycleForm.libelle.trim(),
+        description: cycleForm.description.trim() || null,
+      });
+      notifySuccess('Cycle créé');
+      setCycleForm({ libelle: '', description: '' });
+      setShowCycleForm(false);
+      fetchCycles();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Erreur lors de la création';
+      notifyError(msg);
+    }
+  };
+
+  const handleUpdateCycle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCycle) return;
+    try {
+      await api.put(`/enrollments/cycles/${editingCycle.idCycle}`, {
+        libelle: editingCycle.libelle,
+        description: editingCycle.description || null,
+      });
+      notifySuccess('Cycle mis à jour');
+      setEditingCycle(null);
+      fetchCycles();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Erreur lors de la mise à jour';
+      notifyError(msg);
+    }
+  };
+
+  const handleDeleteCycle = async () => {
+    if (!deletingCycle) return;
+    try {
+      await api.delete(`/enrollments/cycles/${deletingCycle.idCycle}`);
+      notifySuccess('Cycle supprimé');
+      setDeletingCycle(null);
+      fetchCycles();
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Impossible de supprimer ce cycle';
+      notifyError(msg);
+    }
   };
 
   return (
@@ -273,6 +380,22 @@ export default function StudentList() {
             }`}
           >
             <FileText size={16} /> Inscriptions ({requests.filter(r => r.status === 'PENDING').length})
+          </button>
+          <button
+            onClick={() => setTab('classes')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+              tab === 'classes' ? 'bg-[var(--navy)] text-white' : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            <School size={16} /> Classes ({classes.length})
+          </button>
+          <button
+            onClick={() => setTab('cycles')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+              tab === 'cycles' ? 'bg-[var(--navy)] text-white' : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            <School size={16} /> Cycles ({cycles.length})
           </button>
         </div>
 
@@ -561,6 +684,260 @@ export default function StudentList() {
                 <div className="p-10 text-center text-gray-400">Aucune demande d'inscription.</div>
               )}
             </div>
+          </>
+        )}
+        {tab === 'classes' && (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <span className="admin-badge" style={{ background: 'var(--navy)', color: '#fff' }}>
+                {classes.length} classe(s)
+              </span>
+              <button onClick={() => setShowClasseForm(true)}
+                className="inline-flex items-center gap-1 bg-[var(--accent)] text-white px-4 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition">
+                + Nouvelle classe
+              </button>
+            </div>
+
+            {/* Formulaire création */}
+            {showClasseForm && (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+                <form onSubmit={handleCreateClasse} className="flex flex-wrap gap-3 items-end">
+                  <div className="admin-field flex-1 min-w-[200px] mb-0">
+                    <label>Libellé *</label>
+                    <input type="text" required value={classeForm.libelle} onChange={(e) => setClasseForm({ ...classeForm, libelle: e.target.value })}
+                      placeholder="ex: CM2 A" />
+                  </div>
+                  <div className="admin-field min-w-[180px] mb-0">
+                    <label>Cycle</label>
+                    <select value={classeForm.idCycle} onChange={(e) => setClasseForm({ ...classeForm, idCycle: e.target.value })}>
+                      <option value="">Sélectionner...</option>
+                      {cycles.map((c) => (
+                        <option key={c.idCycle} value={c.idCycle}>{c.libelle}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" className="btn-admin justify-center">Créer</button>
+                    <button type="button" onClick={() => { setShowClasseForm(false); setClasseForm({ libelle: '', idCycle: '' }); }}
+                      className="bg-gray-100 text-gray-700 px-4 py-2 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {classes.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-base font-medium">Aucune classe. Créez-en une !</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100">
+                      <th className="px-3 py-3">Libellé</th>
+                      <th className="px-3 py-3">Cycle</th>
+                      <th className="px-3 py-3">Élèves</th>
+                      <th className="px-3 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {classes.map((cl: any) => (
+                      <tr key={cl.idClasse} className="hover:bg-gray-50 transition-colors">
+                        {editingClasse?.idClasse === cl.idClasse ? (
+                          <>
+                            <td className="px-3 py-2">
+                              <input type="text" value={editingClasse.libelle}
+                                onChange={(e) => setEditingClasse({ ...editingClasse, libelle: e.target.value })}
+                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm outline-none focus:border-[var(--accent)]" />
+                            </td>
+                            <td className="px-3 py-2">
+                              <select value={(editingClasse as any).idCycle ?? ''}
+                                onChange={(e) => setEditingClasse({ ...editingClasse, idCycle: Number(e.target.value) } as any)}
+                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm outline-none focus:border-[var(--accent)]">
+                                <option value="">Choisir...</option>
+                                {cycles.map((cy) => (
+                                  <option key={cy.idCycle} value={cy.idCycle}>{cy.libelle}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-3 py-2 text-sm text-gray-600">{cl._count?.students ?? 0}</td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex justify-end gap-1">
+                                <button onClick={handleUpdateClasse} className="p-1.5 text-green-600 hover:bg-green-50 rounded transition" title="Enregistrer">
+                                  <Edit size={15} />
+                                </button>
+                                <button onClick={() => setEditingClasse(null)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded transition" title="Annuler">
+                                  <X size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-3 py-3 text-sm font-medium text-gray-800">{cl.libelle}</td>
+                            <td className="px-3 py-3 text-sm text-gray-600">{cl.cycle?.libelle || '—'}</td>
+                            <td className="px-3 py-3 text-sm text-gray-600">{cl._count?.students ?? '—'}</td>
+                            <td className="px-3 py-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                <button onClick={() => setEditingClasse({ ...cl, idCycle: cl.cycle?.idCycle ?? '' })} className="p-1.5 text-[var(--navy)] hover:bg-[var(--accent-light)] rounded transition" title="Modifier">
+                                  <Edit size={15} />
+                                </button>
+                                <button onClick={() => setDeletingClasse(cl)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Supprimer">
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Modal suppression classe */}
+            {deletingClasse && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-[var(--radius-lg)] p-6 w-full max-w-sm shadow-2xl text-center">
+                  <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                    <AlertTriangle className="text-red-600" size={24} />
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-800 mb-2">Supprimer la classe</h2>
+                  <p className="text-gray-500 text-sm mb-6">
+                    Voulez-vous vraiment supprimer <strong>{deletingClasse.libelle}</strong> ?
+                    <br />Cette action est irréversible.
+                  </p>
+                  <div className="flex gap-3">
+                    <button onClick={() => setDeletingClasse(null)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
+                    <button onClick={handleDeleteClasse} className="flex-1 btn-admin-danger justify-center py-2.5">Supprimer</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        {tab === 'cycles' && (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <span className="admin-badge" style={{ background: 'var(--navy)', color: '#fff' }}>
+                {cycles.length} cycle(s)
+              </span>
+              <button onClick={() => setShowCycleForm(true)}
+                className="inline-flex items-center gap-1 bg-[var(--accent)] text-white px-4 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition">
+                + Nouveau cycle
+              </button>
+            </div>
+
+            {/* Formulaire création */}
+            {showCycleForm && (
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+                <form onSubmit={handleCreateCycle} className="flex flex-wrap gap-3 items-end">
+                  <div className="admin-field flex-1 min-w-[200px] mb-0">
+                    <label>Libellé *</label>
+                    <input type="text" required value={cycleForm.libelle} onChange={(e) => setCycleForm({ ...cycleForm, libelle: e.target.value })}
+                      placeholder="ex: Premier cycle" />
+                  </div>
+                  <div className="admin-field flex-1 min-w-[300px] mb-0">
+                    <label>Description</label>
+                    <textarea value={cycleForm.description} onChange={(e) => setCycleForm({ ...cycleForm, description: e.target.value })}
+                      placeholder="Description du cycle..." rows={2}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-[8px] outline-none text-sm focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] resize-none" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" className="btn-admin justify-center">Créer</button>
+                    <button type="button" onClick={() => { setShowCycleForm(false); setCycleForm({ libelle: '', description: '' }); }}
+                      className="bg-gray-100 text-gray-700 px-4 py-2 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {cycles.length === 0 ? (
+              <div className="text-center py-12 text-gray-400">
+                <p className="text-base font-medium">Aucun cycle. Créez-en un !</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100">
+                      <th className="px-3 py-3">Libellé</th>
+                      <th className="px-3 py-3">Description</th>
+                      <th className="px-3 py-3">Classes</th>
+                      <th className="px-3 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {cycles.map((cy: any) => (
+                      <tr key={cy.idCycle} className="hover:bg-gray-50 transition-colors">
+                        {editingCycle?.idCycle === cy.idCycle ? (
+                          <>
+                            <td className="px-3 py-2">
+                              <input type="text" value={editingCycle.libelle}
+                                onChange={(e) => setEditingCycle({ ...editingCycle, libelle: e.target.value })}
+                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm outline-none focus:border-[var(--accent)]" />
+                            </td>
+                            <td className="px-3 py-2">
+                              <textarea value={editingCycle.description ?? ''}
+                                onChange={(e) => setEditingCycle({ ...editingCycle, description: e.target.value })}
+                                className="w-full px-2 py-1 border border-gray-200 rounded text-sm outline-none focus:border-[var(--accent)] resize-none" rows={2} />
+                            </td>
+                            <td className="px-3 py-2 text-sm text-gray-600">{cy._count?.classes ?? 0}</td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex justify-end gap-1">
+                                <button onClick={handleUpdateCycle} className="p-1.5 text-green-600 hover:bg-green-50 rounded transition" title="Enregistrer">
+                                  <Edit size={15} />
+                                </button>
+                                <button onClick={() => setEditingCycle(null)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded transition" title="Annuler">
+                                  <X size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-3 py-3 text-sm font-medium text-gray-800">{cy.libelle}</td>
+                            <td className="px-3 py-3 text-sm text-gray-600 max-w-[300px] truncate">{cy.description || '—'}</td>
+                            <td className="px-3 py-3 text-sm text-gray-600">{cy._count?.classes ?? '—'}</td>
+                            <td className="px-3 py-3 text-right">
+                              <div className="flex justify-end gap-1">
+                                <button onClick={() => setEditingCycle(cy)} className="p-1.5 text-[var(--navy)] hover:bg-[var(--accent-light)] rounded transition" title="Modifier">
+                                  <Edit size={15} />
+                                </button>
+                                <button onClick={() => setDeletingCycle(cy)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Supprimer">
+                                  <Trash2 size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Modal suppression cycle */}
+            {deletingCycle && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-[var(--radius-lg)] p-6 w-full max-w-sm shadow-2xl text-center">
+                  <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                    <AlertTriangle className="text-red-600" size={24} />
+                  </div>
+                  <h2 className="text-lg font-bold text-gray-800 mb-2">Supprimer le cycle</h2>
+                  <p className="text-gray-500 text-sm mb-6">
+                    Voulez-vous vraiment supprimer <strong>{deletingCycle.libelle}</strong> ?
+                    <br />Cette action est irréversible.
+                  </p>
+                  <div className="flex gap-3">
+                    <button onClick={() => setDeletingCycle(null)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
+                    <button onClick={handleDeleteCycle} className="flex-1 btn-admin-danger justify-center py-2.5">Supprimer</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

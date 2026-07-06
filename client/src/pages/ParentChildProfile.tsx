@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
+import { notifySuccess, notifyError } from '../utils/notifications';
 
 interface ChildProfile {
   matricule: number;
@@ -124,7 +125,7 @@ const ParentChildProfile = () => {
       setEditing(false);
       loadProfile();
     } catch (err) {
-      alert("Erreur de mise à jour");
+      notifyError("Erreur de mise à jour");
     } finally {
       setSaving(false);
     }

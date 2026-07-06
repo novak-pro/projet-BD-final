@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Book, Plus, Edit, Trash2, Search, X, BookOpen } from 'lucide-react';
 import api from '../../services/axiosInstance';
+import { notifySuccess, notifyError } from '../../utils/notifications';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface Livre {
   id: number;
@@ -34,6 +36,7 @@ const BibliothequePage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Livre | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
 
   useEffect(() => {
     loadData();
@@ -75,14 +78,16 @@ const BibliothequePage = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Supprimer ce livre ?")) return;
-    try {
-      await api.delete(`/bibliotheque/${id}`);
-      loadData();
-    } catch (err) {
-      alert("Erreur lors de la suppression");
-    }
+  const handleDelete = (id: number) => {
+    setConfirmState({open:true, onConfirm:async () => {
+      try {
+        await api.delete(`/bibliotheque/${id}`);
+        loadData();
+      } catch (err) {
+        notifyError("Erreur lors de la suppression");
+      }
+      setConfirmState(prev => ({...prev, open: false}));
+    }, message:"Supprimer ce livre ?"});
   };
 
   const handleSubmit = async () => {
@@ -96,7 +101,7 @@ const BibliothequePage = () => {
       setShowModal(false);
       loadData();
     } catch (err) {
-      alert("Erreur lors de l'enregistrement");
+      notifyError("Erreur lors de l'enregistrement");
     }
   };
 
@@ -107,6 +112,17 @@ const BibliothequePage = () => {
   });
 
   return (
+    <>
+      <ConfirmModal
+        open={confirmState.open}
+        title="Confirmation"
+        message={confirmState.message}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState(prev => ({...prev, open: false}))}
+        variant="danger"
+        confirmLabel="Oui"
+        cancelLabel="Non"
+      />
     <div className="admin-card">
       <div className="admin-card-header">
         <h2>
@@ -244,6 +260,7 @@ const BibliothequePage = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

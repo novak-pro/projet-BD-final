@@ -33,7 +33,7 @@ export const getStudentFeeConfig = async (req: Request, res: Response) => {
  */
 export const initiatePayment = async (req: Request, res: Response) => {
   try {
-    const { eleveId, nombreTranches, methode, transactionRef, montant } = req.body;
+    const { eleveId, nombreTranches, methode, transactionRef, montant, recuPDF, modePaiement } = req.body;
     const userId = (req as any).user.id;
 
     // Trouver le profil parent
@@ -45,6 +45,8 @@ export const initiatePayment = async (req: Request, res: Response) => {
         montant: parseFloat(montant),
         nombreTranches: parseInt(nombreTranches),
         methode: methode as PaymentMethod,
+        recuPDF: recuPDF || null,
+        modePaiement: modePaiement || null,
         transactionRef,
         eleveId: parseInt(eleveId),
         parentId: parent.id,

@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { CreditCard, Check, X, Search } from 'lucide-react';
+import { CreditCard, Check, X, Search, Eye, Download } from 'lucide-react';
 import api from '../../services/axiosInstance';
+import { notifySuccess, notifyError } from '../../utils/notifications';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface Payment {
   id: number;
   montant: number;
   nombreTranches: number;
   methode: string;
+  modePaiement: string | null;
+  recuPDF: string | null;
   transactionRef: string;
   status: 'PENDING' | 'VALIDATED' | 'REJECTED';
   createdAt: string;
@@ -18,6 +22,7 @@ const AdminPayments = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [viewRecu, setViewRecu] = useState<{ id: number; url: string; name: string } | null>(null);
 
   useEffect(() => {
     loadPayments();
@@ -39,7 +44,7 @@ const AdminPayments = () => {
       await api.patch(`/payments/${id}/validate`, { status });
       loadPayments();
     } catch (err) {
-      alert("Erreur lors de la validation");
+      notifyError("Erreur lors de la validation");
     }
   };
 
@@ -112,8 +117,8 @@ const AdminPayments = () => {
                 <tr className="text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100">
                   <th className="px-3 py-3">Élève</th>
                   <th className="px-3 py-3">Montant</th>
-                  <th className="px-3 py-3">Méthode</th>
-                  <th className="px-3 py-3">Référence</th>
+                  <th className="px-3 py-3">Mode</th>
+                  <th className="px-3 py-3">Reçu</th>
                   <th className="px-3 py-3">Date</th>
                   <th className="px-3 py-3">Statut</th>
                   <th className="px-3 py-3 text-right">Actions</th>
@@ -124,8 +129,21 @@ const AdminPayments = () => {
                   <tr key={p.id} className="hover:bg-gray-50">
                     <td className="px-3 py-3 text-sm">{p.eleve.prenom} {p.eleve.nom}</td>
                     <td className="px-3 py-3 text-sm font-bold">{p.montant.toLocaleString()} FCFA</td>
-                    <td className="px-3 py-3 text-sm text-gray-500">{p.methode.replace('_', ' ')}</td>
-                    <td className="px-3 py-3 text-sm text-gray-500">{p.transactionRef}</td>
+                    <td className="px-3 py-3 text-sm text-gray-500">
+                      {p.modePaiement === 'CASH' ? 'Cash école' : p.modePaiement === 'VIREMENT' ? 'Virement' : p.methode.replace('_', ' ')}
+                    </td>
+                    <td className="px-3 py-3 text-sm">
+                      {p.recuPDF ? (
+                        <button
+                          onClick={() => setViewRecu({ id: p.id, url: p.recuPDF!, name: `recu-${p.eleve.prenom}-${p.eleve.nom}-${p.id}` })}
+                          className="flex items-center gap-1 text-[var(--navy)] hover:underline text-xs font-medium"
+                        >
+                          <Eye size={14} /> Voir
+                        </button>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-sm text-gray-500">{new Date(p.createdAt).toLocaleDateString('fr-FR')}</td>
                     <td className="px-3 py-3">
                       <span className={`admin-badge ${
@@ -155,6 +173,36 @@ const AdminPayments = () => {
           </div>
         )}
       </div>
+
+      {/* Modal visualisation du reçu */}
+      {viewRecu && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setViewRecu(null)}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h3 className="text-sm font-bold">Reçu de paiement</h3>
+              <div className="flex items-center gap-2">
+                <a
+                  href={viewRecu.url}
+                  download={viewRecu.name}
+                  className="flex items-center gap-1 text-xs bg-[var(--navy)] text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all"
+                >
+                  <Download size={14} /> Télécharger
+                </a>
+                <button onClick={() => setViewRecu(null)} className="p-1 hover:bg-gray-100 rounded-full">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[70vh]">
+              {viewRecu.url.startsWith('data:image') ? (
+                <img src={viewRecu.url} alt="Reçu" className="w-full rounded-lg" />
+              ) : (
+                <iframe src={viewRecu.url} className="w-full h-[60vh] rounded-lg" title="Reçu PDF" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

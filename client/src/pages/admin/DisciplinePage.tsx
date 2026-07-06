@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ShieldAlert, Send, AlertTriangle, Search, History, Scale, Trash2, Check, X, Edit3, Save } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { notifySuccess, notifyError } from '../../utils/notifications';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface Incident {
   id: number;
@@ -23,9 +25,16 @@ interface Eleve {
   soldePoints: number;
 }
 
+interface TypeInfra {
+  id: number;
+  libelle: string;
+  gravite: string;
+  pointsMalus: number;
+}
+
 const DisciplinePage = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'rapport' | 'pending' | 'alertes'>('rapport');
+  const [activeTab, setActiveTab] = useState<'rapport' | 'pending' | 'alertes' | 'types'>('rapport');
 
   // Rapport tab
   const [form, setForm] = useState({ eleveId: '', type: 'RETARD', gravite: 'Faible', points: 2, commentaire: '' });
@@ -37,15 +46,30 @@ const DisciplinePage = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [viewingHistory, setViewingHistory] = useState(false);
 
+  // Types d'infractions tab
+  const [types, setTypes] = useState<TypeInfra[]>([]);
+  const [typeForm, setTypeForm] = useState({ libelle: '', gravite: 'Faible', pointsMalus: 2 });
+  const [editingType, setEditingType] = useState<number | null>(null);
+  const [showTypeForm, setShowTypeForm] = useState(false);
+
   // Pending tab
   const [pendingIncidents, setPendingIncidents] = useState<Incident[]>([]);
   const [editingPending, setEditingPending] = useState<number | null>(null);
   const [editPendingForm, setEditPendingForm] = useState({ commentaire: '', pointsDeduits: 0, gravite: '' });
+  const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
 
   useEffect(() => {
     loadEleves();
     loadPending();
+    loadTypes();
   }, []);
+
+  const loadTypes = async () => {
+    try {
+      const res = await api.get('/discipline/types');
+      setTypes(Array.isArray(res.data) ? res.data : []);
+    } catch { /* ignore */ }
+  };
 
   const loadEleves = async () => {
     try {
@@ -70,17 +94,19 @@ const DisciplinePage = () => {
       setSelectedEleve(eleve);
       setViewingHistory(true);
     } catch (err) {
-      alert("Erreur de récupération de l'historique");
+      notifyError("Erreur de récupération de l'historique");
     }
   };
 
-  const handleDeleteIncident = async (id: number, eleve: Eleve) => {
-    if (!window.confirm("Supprimer cet incident ? Les points seront restitués.")) return;
-    try {
-      await api.delete(`/discipline/incident/${id}`);
-      viewHistory(eleve);
-      loadEleves();
-    } catch { alert("Erreur lors de la suppression"); }
+  const handleDeleteIncident = (id: number, eleve: Eleve) => {
+    setConfirmState({open:true, onConfirm:async () => {
+      try {
+        await api.delete(`/discipline/incident/${id}`);
+        viewHistory(eleve);
+        loadEleves();
+      } catch { notifyError("Erreur lors de la suppression"); }
+      setConfirmState(prev => ({...prev, open: false}));
+    }, message:"Supprimer cet incident ? Les points seront restitués."});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,11 +120,11 @@ const DisciplinePage = () => {
         commentaire: form.commentaire,
         auteur: 'Administrateur'
       });
-      alert("Incident enregistré !");
+      notifySuccess("Incident enregistré !");
       setForm({ eleveId: '', type: 'RETARD', gravite: 'Faible', points: 2, commentaire: '' });
       loadEleves();
     } catch (err) {
-      alert("Erreur lors de l'enregistrement");
+      notifyError("Erreur lors de l'enregistrement");
     }
   };
 
@@ -113,7 +139,7 @@ const DisciplinePage = () => {
       setEditingPending(null);
       loadPending();
       loadEleves();
-    } catch { alert("Erreur lors de l'approbation"); }
+    } catch { notifyError("Erreur lors de l'approbation"); }
   };
 
   const handleRejectPending = async (id: number) => {
@@ -121,7 +147,7 @@ const DisciplinePage = () => {
       await api.put(`/discipline/incident/${id}`, { status: 'REJECTED' });
       setEditingPending(null);
       loadPending();
-    } catch { alert("Erreur"); }
+    } catch { notifyError("Erreur"); }
   };
 
   const handleSaveEditPending = async (id: number) => {
@@ -133,7 +159,43 @@ const DisciplinePage = () => {
       });
       setEditingPending(null);
       loadPending();
-    } catch { alert("Erreur de sauvegarde"); }
+    } catch { notifyError("Erreur de sauvegarde"); }
+  };
+
+  // ---- CRUD Types d'infractions ----
+  const handleCreateType = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await api.post('/discipline/types', typeForm);
+      notifySuccess("Type d'infraction créé !");
+      setTypeForm({ libelle: '', gravite: 'Faible', pointsMalus: 2 });
+      setShowTypeForm(false);
+      loadTypes();
+    } catch { notifyError("Erreur lors de la création"); }
+  };
+
+  const handleUpdateType = async (id: number) => {
+    try {
+      await api.put(`/discipline/types/${id}`, typeForm);
+      setEditingType(null);
+      setTypeForm({ libelle: '', gravite: 'Faible', pointsMalus: 2 });
+      loadTypes();
+    } catch { notifyError("Erreur lors de la mise à jour"); }
+  };
+
+  const handleDeleteType = async (id: number) => {
+    setConfirmState({open:true, onConfirm:async () => {
+      try {
+        await api.delete(`/discipline/types/${id}`);
+        loadTypes();
+      } catch { notifyError("Erreur lors de la suppression"); }
+      setConfirmState(prev => ({...prev, open: false}));
+    }, message:"Supprimer ce type d'infraction ?"});
+  };
+
+  const openEditType = (t: TypeInfra) => {
+    setEditingType(t.id);
+    setTypeForm({ libelle: t.libelle, gravite: t.gravite, pointsMalus: t.pointsMalus });
   };
 
   const filteredEleves = eleves.filter(e =>
@@ -145,6 +207,17 @@ const DisciplinePage = () => {
   const formatDate = (date: string) => new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   return (
+    <>
+      <ConfirmModal
+        open={confirmState.open}
+        title="Confirmation"
+        message={confirmState.message}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState(prev => ({...prev, open: false}))}
+        variant="danger"
+        confirmLabel="Oui"
+        cancelLabel="Non"
+      />
     <div className="space-y-6">
       <div className="admin-card">
         <div className="admin-card-header">
@@ -170,6 +243,10 @@ const DisciplinePage = () => {
           <button onClick={() => { setActiveTab('alertes'); setViewingHistory(false); }}
             className={`pb-3 text-sm font-semibold transition border-b-2 ${activeTab === 'alertes' ? 'border-[var(--accent)] text-[var(--accent)]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
             <AlertTriangle size={14} className="inline mr-1" /> Alertes
+          </button>
+          <button onClick={() => { setActiveTab('types'); setViewingHistory(false); }}
+            className={`pb-3 text-sm font-semibold transition border-b-2 ${activeTab === 'types' ? 'border-[var(--accent)] text-[var(--accent)]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
+            <Scale size={14} className="inline mr-1" /> Types d'infractions
           </button>
         </div>
 
@@ -365,6 +442,116 @@ const DisciplinePage = () => {
           </div>
         )}
 
+        {/* Tab: Types d'infractions */}
+        {activeTab === 'types' && (
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Scale size={20} className="text-indigo-600" />
+                Catalogue des infractions
+              </h3>
+              <button onClick={() => { setShowTypeForm(!showTypeForm); setEditingType(null); setTypeForm({ libelle: '', gravite: 'Faible', pointsMalus: 2 }); }}
+                className="btn-admin text-sm py-1.5 px-3">
+                {showTypeForm ? 'Annuler' : 'Nouvelle infraction'}
+              </button>
+            </div>
+
+            {showTypeForm && (
+              <form onSubmit={handleCreateType} className="bg-white border border-gray-200 rounded-[var(--radius-lg)] p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="admin-field">
+                  <label>Libellé</label>
+                  <input type="text" required value={typeForm.libelle}
+                    onChange={e => setTypeForm({ ...typeForm, libelle: e.target.value })}
+                    placeholder="ex: Retard, Insulte..." />
+                </div>
+                <div className="admin-field">
+                  <label>Gravité</label>
+                  <select value={typeForm.gravite} onChange={e => setTypeForm({ ...typeForm, gravite: e.target.value })}>
+                    <option>Faible</option>
+                    <option>Moyenne</option>
+                    <option>Grave</option>
+                    <option>Très Grave</option>
+                  </select>
+                </div>
+                <div className="admin-field">
+                  <label>Points malus</label>
+                  <input type="number" required value={typeForm.pointsMalus}
+                    onChange={e => setTypeForm({ ...typeForm, pointsMalus: parseInt(e.target.value) || 0 })} />
+                </div>
+                <div className="flex items-end">
+                  <button type="submit" className="btn-admin w-full justify-center py-2">Ajouter</button>
+                </div>
+              </form>
+            )}
+
+            {types.length === 0 ? (
+              <p className="text-gray-500 text-sm">Aucun type d'infraction défini.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100">
+                      <th className="px-3 py-3">Libellé</th>
+                      <th className="px-3 py-3">Gravité</th>
+                      <th className="px-3 py-3">Points malus</th>
+                      <th className="px-3 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {types.map(t => (
+                      <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                        {editingType === t.id ? (
+                          <>
+                            <td className="px-3 py-3">
+                              <input type="text" className="border border-gray-200 p-1 rounded text-sm w-full"
+                                value={typeForm.libelle} onChange={e => setTypeForm({ ...typeForm, libelle: e.target.value })} />
+                            </td>
+                            <td className="px-3 py-3">
+                              <select className="border border-gray-200 p-1 rounded text-sm w-full"
+                                value={typeForm.gravite} onChange={e => setTypeForm({ ...typeForm, gravite: e.target.value })}>
+                                <option>Faible</option>
+                                <option>Moyenne</option>
+                                <option>Grave</option>
+                                <option>Très Grave</option>
+                              </select>
+                            </td>
+                            <td className="px-3 py-3">
+                              <input type="number" className="border border-gray-200 p-1 rounded text-sm w-20"
+                                value={typeForm.pointsMalus} onChange={e => setTypeForm({ ...typeForm, pointsMalus: parseInt(e.target.value) || 0 })} />
+                            </td>
+                            <td className="px-3 py-3 text-right">
+                              <button onClick={() => handleUpdateType(t.id)} className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Sauvegarder"><Save size={15} /></button>
+                              <button onClick={() => setEditingType(null)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded" title="Annuler"><X size={15} /></button>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-3 py-3 text-sm font-medium text-gray-800">{t.libelle}</td>
+                            <td className="px-3 py-3">
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                t.gravite === 'Très Grave' ? 'bg-red-200 text-red-800' :
+                                t.gravite === 'Grave' ? 'bg-red-100 text-red-700' :
+                                t.gravite === 'Moyenne' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {t.gravite}
+                              </span>
+                            </td>
+                            <td className="px-3 py-3 text-sm font-bold text-red-600">-{t.pointsMalus} pts</td>
+                            <td className="px-3 py-3 text-right">
+                              <button onClick={() => openEditType(t)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Modifier"><Edit3 size={15} /></button>
+                              <button onClick={() => handleDeleteType(t.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded" title="Supprimer"><Trash2 size={15} /></button>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Tab: Alertes */}
         {activeTab === 'alertes' && (
           <div className="bg-red-50 border border-red-200 p-6 rounded-[var(--radius-lg)]">
@@ -393,6 +580,7 @@ const DisciplinePage = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

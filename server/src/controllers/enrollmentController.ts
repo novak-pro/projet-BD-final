@@ -4,7 +4,7 @@ import prisma from '../lib/prisma';
 // 1. Un parent soumet une demande d'inscription
 export const submitEnrollment = async (req: Request, res: Response) => {
   try {
-    const { nom, prenom, dateNaissance, lieuNaissance, sexe, niveau, classe, photoURL } = req.body;
+    const { nom, prenom, dateNaissance, lieuNaissance, sexe, niveau, classe, photoURL, recuPDF, modePaiement } = req.body;
     const userId = (req as any).user.id;
 
     const parent = await prisma.parents.findUnique({ where: { userId } });
@@ -20,6 +20,8 @@ export const submitEnrollment = async (req: Request, res: Response) => {
         niveau,
         classe: classe || null,
         photoURL: photoURL || null,
+        recuPDF: recuPDF || null,
+        modePaiement: modePaiement || null,
         parentId: parent.id
       }
     });
@@ -267,15 +269,146 @@ export const updateChildSchoolInfoAdmin = async (req: Request, res: Response) =>
   }
 };
 
-// 9. Récupérer toutes les classes
+// 8.5 Cycles CRUD
+export const getCycles = async (_req: Request, res: Response) => {
+  try {
+    const cycles = await prisma.cycle.findMany({
+      orderBy: { libelle: 'asc' },
+      include: { _count: { select: { classes: true } } },
+    });
+    res.json(cycles);
+  } catch {
+    res.status(500).json({ error: "Erreur de récupération des cycles" });
+  }
+};
+
+export const createCycle = async (req: Request, res: Response) => {
+  try {
+    const { libelle, description } = req.body;
+    if (!libelle) {
+      res.status(400).json({ error: "Le libellé est requis" });
+      return;
+    }
+    const cycle = await prisma.cycle.create({
+      data: { libelle, description: description ?? null },
+    });
+    res.status(201).json(cycle);
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      res.status(409).json({ error: "Ce cycle existe déjà" });
+      return;
+    }
+    res.status(500).json({ error: "Erreur lors de la création" });
+  }
+};
+
+export const updateCycle = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const { libelle, description } = req.body;
+    const cycle = await prisma.cycle.update({
+      where: { idCycle: id },
+      data: {
+        ...(libelle && { libelle }),
+        ...(description !== undefined && { description }),
+      },
+    });
+    res.json(cycle);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la mise à jour" });
+  }
+};
+
+export const deleteCycle = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const cycle = await prisma.cycle.findUnique({
+      where: { idCycle: id },
+      include: { _count: { select: { classes: true } } },
+    });
+    if (!cycle) {
+      res.status(404).json({ error: "Cycle non trouvé" });
+      return;
+    }
+    if (cycle._count.classes > 0) {
+      res.status(400).json({ error: "Impossible de supprimer : des classes sont liées à ce cycle" });
+      return;
+    }
+    await prisma.cycle.delete({ where: { idCycle: id } });
+    res.json({ message: "Cycle supprimé" });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la suppression" });
+  }
+};
+
+// 9. Classes CRUD
 export const getAllClasses = async (req: Request, res: Response) => {
   try {
     const classes = await prisma.classe.findMany({
-      include: { cycle: true },
+      include: { cycle: true, _count: { select: { students: true } } },
       orderBy: { libelle: 'asc' }
     });
     res.json(classes);
   } catch (error) {
     res.status(500).json({ error: "Erreur de récupération des classes" });
+  }
+};
+
+export const createClasse = async (req: Request, res: Response) => {
+  try {
+    const { libelle, idCycle } = req.body;
+    if (!libelle) {
+      res.status(400).json({ error: "Le libellé est requis" });
+      return;
+    }
+    const classe = await prisma.classe.create({
+      data: { libelle, idCycle: Number(idCycle) || 1 },
+      include: { cycle: true },
+    });
+    res.status(201).json(classe);
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      res.status(409).json({ error: "Cette classe existe déjà" });
+      return;
+    }
+    res.status(500).json({ error: "Erreur lors de la création" });
+  }
+};
+
+export const updateClasse = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    const { libelle, idCycle } = req.body;
+    const classe = await prisma.classe.update({
+      where: { idClasse: id },
+      data: { ...(libelle && { libelle }), ...(idCycle && { idCycle: Number(idCycle) }) },
+      include: { cycle: true },
+    });
+    res.json(classe);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la mise à jour" });
+  }
+};
+
+export const deleteClasse = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    // Vérifier si la classe a des élèves ou des salles liées
+    const classe = await prisma.classe.findUnique({
+      where: { idClasse: id },
+      include: { _count: { select: { students: true, salles: true, cours: true } } },
+    });
+    if (!classe) {
+      res.status(404).json({ error: "Classe non trouvée" });
+      return;
+    }
+    if (classe._count.students > 0 || classe._count.salles > 0 || classe._count.cours > 0) {
+      res.status(400).json({ error: "Impossible de supprimer : la classe a des élèves, salles ou cours associés" });
+      return;
+    }
+    await prisma.classe.delete({ where: { idClasse: id } });
+    res.json({ message: "Classe supprimée" });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la suppression" });
   }
 };

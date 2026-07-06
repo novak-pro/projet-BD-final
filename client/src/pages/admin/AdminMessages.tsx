@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Send, MessageSquare, AlertTriangle, CheckCircle, XCircle, Search } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { notifySuccess, notifyError } from '../../utils/notifications';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface Parent {
   id: number;
@@ -49,8 +51,8 @@ const AdminMessages = () => {
     try {
       await api.post('/messages/announcement', { content });
       setContent('');
-      alert('Annonce envoyée à tous les parents');
-    } catch { alert("Erreur d'envoi"); }
+      notifySuccess('Annonce envoyée à tous les parents');
+    } catch { notifyError("Erreur d'envoi"); }
     setSending(false);
   };
 
@@ -61,8 +63,8 @@ const AdminMessages = () => {
       await api.post('/messages/personal', { content, recipientId: selectedParent.id });
       setContent('');
       setSelectedParent(null);
-      alert('Message envoyé');
-    } catch { alert("Erreur d'envoi"); }
+      notifySuccess('Message envoyé');
+    } catch { notifyError("Erreur d'envoi"); }
     setSending(false);
   };
 
@@ -70,7 +72,7 @@ const AdminMessages = () => {
     try {
       await api.patch(`/messages/${id}/moderate`, { status });
       loadPending();
-    } catch { alert("Erreur de modération"); }
+    } catch { notifyError("Erreur de modération"); }
   };
 
   return (

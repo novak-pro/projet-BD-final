@@ -30,7 +30,16 @@ interface CoursDetail {
     libelle: string;
     cycle: { libelle: string };
     students: Eleve[];
-  };
+  } | null;
+  salle?: {
+    libelle: string;
+    classe: {
+      idClasse: number;
+      libelle: string;
+      cycle: { libelle: string };
+      students: Eleve[];
+    } | null;
+  } | null;
   plannings: Planning[];
 }
 
@@ -57,7 +66,8 @@ const CourseDetail = () => {
   if (loading) return <div className="p-10 text-center text-gray-400">Chargement...</div>;
   if (!cours) return null;
 
-  const students = cours.classe.students || [];
+  const effectiveClasse = cours.classe ?? cours.salle?.classe ?? null;
+  const students = effectiveClasse?.students || [];
 
   return (
     <div className="space-y-6">
@@ -77,7 +87,7 @@ const CourseDetail = () => {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800">{cours.matiere.nom}</h2>
-                <p className="text-sm text-gray-500">{cours.classe.libelle} · {cours.classe.cycle?.libelle}</p>
+                <p className="text-sm text-gray-500">{effectiveClasse?.libelle ?? '—'} · {effectiveClasse?.cycle?.libelle ?? ''}</p>
               </div>
             </div>
           </div>
@@ -115,7 +125,7 @@ const CourseDetail = () => {
           <GradesEntry
             eleves={students.map(s => ({ matricule: s.matricule, nom: `${s.prenom} ${s.nom}` }))}
             matiereId={cours.matiere.id}
-            classeId={cours.classe.idClasse}
+            classeId={effectiveClasse?.idClasse ?? 0}
             evaluation="Devoir"
           />
         ) : (

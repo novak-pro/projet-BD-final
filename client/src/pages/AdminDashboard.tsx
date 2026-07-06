@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Check, X, UserCheck, Users, Building2, GraduationCap, Clock, ShieldAlert } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Check, X, UserCheck, Users, Building2, GraduationCap, Clock, ShieldAlert, ArrowRight } from 'lucide-react';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
 
@@ -15,8 +16,15 @@ const StatCard = ({ title, value, icon: Icon, color }: any) => (
   </div>
 );
 
+const quickLinks = [
+  { label: 'Gestion des élèves', desc: 'Consulter et gérer les élèves inscrits', icon: Users, path: '/admin/students', color: '#1B2A4A' },
+  { label: 'Gestion du personnel', desc: 'Enseignants, surveillants et administratifs', icon: GraduationCap, path: '/admin/personnel', color: '#4A7DC9' },
+  { label: 'Infrastructures', desc: 'Salles de classe et bâtiments', icon: Building2, path: '/admin/infrastructure', color: '#2C4A7C' },
+];
+
 const AdminDashboard = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [pendingUsers, setPendingUsers] = useState<any[]>([]);
   const [stats, setStats] = useState({ totalEleves: 0, totalEnseignants: 0, totalSalles: 0, pendingUsers: 0 });
   const [loading, setLoading] = useState(true);
@@ -54,6 +62,26 @@ const AdminDashboard = () => {
         <StatCard title={t('nav.personnel')} value={stats.totalEnseignants.toLocaleString()} icon={GraduationCap} color="#4A7DC9" />
         <StatCard title={t('nav.infrastructure')} value={stats.totalSalles.toLocaleString()} icon={Building2} color="#2C4A7C" />
         <StatCard title={t('auth.register')} value={stats.pendingUsers} icon={Clock} color="#dc2626" />
+      </div>
+
+      {/* Accès rapides */}
+      <div className="grid grid-cols-3 gap-4">
+        {quickLinks.map((link) => (
+          <button
+            key={link.path}
+            onClick={() => navigate(link.path)}
+            className="admin-card text-left cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 group"
+          >
+            <div className="flex items-start justify-between">
+              <div className="admin-stat-icon" style={{ background: `${link.color}15`, color: link.color }}>
+                <link.icon size={22} />
+              </div>
+              <ArrowRight size={16} className="text-gray-300 group-hover:text-[var(--navy)] group-hover:translate-x-1 transition-all" />
+            </div>
+            <h3 className="font-bold text-sm mt-3" style={{ color: 'var(--text-primary)' }}>{link.label}</h3>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{link.desc}</p>
+          </button>
+        ))}
       </div>
 
       <div className="admin-card">

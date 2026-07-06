@@ -49,17 +49,24 @@ export const updatePersonnel = async (req: Request, res: Response) => {
   }
 };
 
-export const deletePersonnel = async (req: Request, res: Response) => {
+export const deactivatePersonnel = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
-    const person = await prisma.personnel.findUnique({ where: { id } });
+    const person = await prisma.personnel.findUnique({
+      where: { id },
+      include: { user: { select: { id: true } } },
+    });
     if (!person) return res.status(404).json({ error: "Personnel non trouvé" });
 
-    await prisma.user.delete({ where: { id: person.userId } });
-    res.status(204).send();
+    await prisma.user.update({
+      where: { id: person.user.id },
+      data: { status: 'DISABLED' },
+    });
+
+    res.json({ message: "Compte désactivé" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Erreur lors de la suppression" });
+    res.status(500).json({ error: "Erreur lors de la désactivation" });
   }
 };
 
@@ -94,6 +101,23 @@ export const promouvoirTitulaire = async (req: Request, res: Response) => {
       include: { titulaire: { select: { id: true, nom: true, prenom: true } } },
     });
 
+    // Notifier l'enseignant
+    const enseignant = await prisma.personnel.findUnique({
+      where: { id: Number(personnelId) },
+      include: { user: { select: { id: true } } },
+    });
+    if (enseignant?.user) {
+      await prisma.message.create({
+        data: {
+          content: `Vous avez été promu titulaire de la salle "${salle.libelle ?? salleId}". En tant que titulaire, vous êtes responsable de cette salle et devez assurer le suivi des élèves qui y sont affectés.`,
+          type: 'PERSONAL',
+          status: 'SENT',
+          senderId: (req as any).user.id,
+          recipientId: enseignant.user.id,
+        },
+      });
+    }
+
     res.json({ message: "Enseignant promu titulaire", salle: updated });
   } catch (error) {
     console.error(error);
@@ -114,6 +138,23 @@ export const retirerPromotion = async (req: Request, res: Response) => {
       where: { idSalle: salle.idSalle },
       data: { enseignantTitulaireId: null },
     });
+
+    // Notifier l'enseignant
+    const enseignant = await prisma.personnel.findUnique({
+      where: { id: Number(personnelId) },
+      include: { user: { select: { id: true } } },
+    });
+    if (enseignant?.user) {
+      await prisma.message.create({
+        data: {
+          content: `Votre promotion en tant que titulaire de la salle "${salle.libelle}" a été retirée.`,
+          type: 'PERSONAL',
+          status: 'SENT',
+          senderId: (req as any).user.id,
+          recipientId: enseignant.user.id,
+        },
+      });
+    }
 
     res.json({ message: "Promotion retirée" });
   } catch (error) {
@@ -144,6 +185,7 @@ export const affecterEnseignantSalle = async (req: Request, res: Response) => {
           data: {
             enseignantId: Number(personnelId),
             idSalle: Number(salleId),
+            idClasse: salle.idClasse,  // ← lier la classe via la salle
             idMatiere: Number(matiereId),
             coefficient: 1.0,
           },
@@ -151,6 +193,19 @@ export const affecterEnseignantSalle = async (req: Request, res: Response) => {
         })
       )
     );
+
+    // Notifier l'enseignant
+    const matieresList = coursList.map(c => c.matiere.nom).join(', ');
+    const salleLibelle = coursList[0]?.salle?.libelle ?? `salle #${salleId}`;
+    await prisma.message.create({
+      data: {
+        content: `Vous avez été affecté à ${salleLibelle} pour enseigner les matières suivantes : ${matieresList}.`,
+        type: 'PERSONAL',
+        status: 'SENT',
+        senderId: (req as any).user.id,
+        recipientId: enseignant.userId,
+      },
+    });
 
     res.status(201).json({ message: "Affectation réussie", cours: coursList });
   } catch (error) {

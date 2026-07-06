@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { personnelService, matiereService } from '../../services/apiServices';
 import api from '../../services/axiosInstance';
-import { Users, BookOpen, GraduationCap, Edit, Trash2, X, AlertTriangle, Search, ShieldCheck, UserCheck, Award, DoorOpen } from 'lucide-react';
+import { Users, BookOpen, GraduationCap, Edit, UserX, X, AlertTriangle, Search, ShieldCheck, UserCheck, Award, DoorOpen } from 'lucide-react';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { notifySuccess, notifyError } from '../../utils/notifications';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface Personnel {
   id: number;
@@ -75,6 +77,7 @@ const PersonnelPage = () => {
 
   // Delete
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
 
   useEffect(() => { loadData(); }, []);
 
@@ -128,18 +131,18 @@ const PersonnelPage = () => {
       setEditModal(false);
       loadData();
     } catch (err: any) {
-      alert(err?.response?.data?.error || "Erreur");
+      notifyError(err?.response?.data?.error || "Erreur");
     }
   };
 
-  // --- Delete ---
-  const handleDelete = async () => {
+  // --- Deactivate ---
+  const handleDeactivate = async () => {
     if (deletingId === null) return;
     try {
-      await personnelService.delete(deletingId);
+      await personnelService.deactivate(deletingId);
       setDeletingId(null);
       loadData();
-    } catch { alert("Erreur lors de la suppression"); }
+    } catch { notifyError("Erreur lors de la désactivation"); }
   };
 
   // --- Promotion titulaire ---
@@ -157,16 +160,18 @@ const PersonnelPage = () => {
       setPromoSalleId('');
       loadData();
     } catch (err: any) {
-      alert(err?.response?.data?.error || "Erreur");
+      notifyError(err?.response?.data?.error || "Erreur");
     }
   };
 
-  const handleRetirerPromotion = async (p: Personnel) => {
-    if (!window.confirm(`Retirer la promotion titulaire de ${p.nom} ${p.prenom} ?`)) return;
-    try {
-      await personnelService.retirerPromotion(p.id);
-      loadData();
-    } catch { alert("Erreur"); }
+  const handleRetirerPromotion = (p: Personnel) => {
+    setConfirmState({open:true, onConfirm:async () => {
+      try {
+        await personnelService.retirerPromotion(p.id);
+        loadData();
+      } catch { notifyError("Erreur"); }
+      setConfirmState(prev => ({...prev, open: false}));
+    }, message:`Retirer la promotion titulaire de ${p.nom} ${p.prenom} ?`});
   };
 
   const handleToggleMatiere = (id: number) => {
@@ -191,7 +196,7 @@ const PersonnelPage = () => {
       setAffectData({ personnelId: '', salleId: '', matiereIds: [] });
       loadData();
     } catch (err: any) {
-      alert(err?.response?.data?.error || "Erreur lors de l'affectation");
+      notifyError(err?.response?.data?.error || "Erreur lors de l'affectation");
     }
   };
 
@@ -211,6 +216,17 @@ const PersonnelPage = () => {
   };
 
   return (
+    <>
+      <ConfirmModal
+        open={confirmState.open}
+        title="Confirmation"
+        message={confirmState.message}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState(prev => ({...prev, open: false}))}
+        variant="danger"
+        confirmLabel="Oui"
+        cancelLabel="Non"
+      />
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
@@ -326,8 +342,8 @@ const PersonnelPage = () => {
                             </button>
                           )
                         )}
-                        <button onClick={() => setDeletingId(p.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Supprimer">
-                          <Trash2 size={15} />
+                        <button onClick={() => setDeletingId(p.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition" title="Désactiver">
+                            <UserX size={15} />
                         </button>
                       </div>
                     </td>
@@ -447,23 +463,24 @@ const PersonnelPage = () => {
         </div>
       )}
 
-      {/* Delete confirmation */}
+      {/* Deactivate confirmation */}
       {deletingId !== null && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-[var(--radius-lg)] p-6 w-full max-w-sm shadow-2xl text-center">
             <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
               <AlertTriangle className="text-red-600" size={24} />
             </div>
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Supprimer</h2>
-            <p className="text-gray-500 text-sm mb-6">Êtes-vous sûr de vouloir supprimer ce membre du personnel ?<br />Toutes ses données seront perdues.</p>
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Désactiver</h2>
+            <p className="text-gray-500 text-sm mb-6">Êtes-vous sûr de vouloir désactiver ce compte ?<br />L'utilisateur ne pourra plus se connecter.</p>
             <div className="flex gap-3">
               <button onClick={() => setDeletingId(null)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
-              <button onClick={handleDelete} className="flex-1 btn-admin-danger justify-center py-2.5">Supprimer</button>
+              <button onClick={handleDeactivate} className="flex-1 btn-admin-danger justify-center py-2.5">Désactiver</button>
             </div>
           </div>
         </div>
       )}
     </div>
+    </>
   );
 };
 

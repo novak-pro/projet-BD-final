@@ -53,6 +53,12 @@ enum PaymentStatus {
   VALIDATED
   REJECTED
 }
+
+enum AnneeStatut {
+  PREVUE
+  EN_COURS
+  TERMINEE
+}
 enum SalleEtat {
   DISPONIBLE
   EN_SERVICE
@@ -160,6 +166,8 @@ model EnrollmentRequest {
   niveau        String           @db.VarChar(20)
   classe        String?          @db.VarChar(20)   // ex: "CP", "CE1" — souhait du parent
   photoURL      String?          // Photo de l'enfant soumise lors de l'inscription
+  recuPDF       String?          // PDF du reçu de paiement (base64)
+  modePaiement  String?          // "CASH" | "VIREMENT" — mode de paiement hors-ligne
   status        EnrollmentStatus @default(PENDING)
   adminNotes    String?
 
@@ -218,6 +226,7 @@ model Classe {
   cours         Cours[]
   epreuves      Epreuve[]
   frequences    Frequente[]
+  matieres      Matiere[]
 
   @@map("Classe")
 }
@@ -241,9 +250,10 @@ model Salle {
 }
 
 model Cycle {
-  idCycle Int      @id @default(autoincrement())
-  libelle String   @db.VarChar(255)
-  classes Classe[]
+  idCycle     Int      @id @default(autoincrement())
+  libelle     String   @db.VarChar(255)
+  description String?  @db.Text
+  classes     Classe[]
 
   @@map("Cycle")
 }
@@ -294,6 +304,16 @@ model Incident {
   status        String       @default("APPROVED") // APPROVED | PENDING | REJECTED
 }
 
+// Catalogue d'infractions paramétrable par l'admin
+model TypeInfraction {
+  id           Int     @id @default(autoincrement())
+  libelle      String  @unique  // ex: "Retard", "Insulte", "Bagarre"
+  gravite      String  // "Faible", "Moyenne", "Grave", "Très Grave"
+  pointsMalus  Int     @default(0)
+
+  @@map("TypeInfraction")
+}
+
 model Evaluation {
   idEval       Int      @id @default(autoincrement())
   note         Float
@@ -318,11 +338,20 @@ model FeeConfig {
   // Relation optionnelle : on pourrait lier cela à la table Classe plus tard
 }
 
+model ProcedureInscription {
+  id      Int    @id @default(autoincrement())
+  contenu String // Contenu HTML de la procédure d'inscription
+
+  @@map("ProcedureInscription")
+}
+
 model Payment {
   id              Int           @id @default(autoincrement())
   montant         Float
   nombreTranches  Int           // Combien de tranches le parent paie
   methode         PaymentMethod
+  recuPDF         String?       // PDF du reçu de paiement (base64)
+  modePaiement    String?       // "CASH" | "VIREMENT" — mode de paiement hors-ligne
   transactionRef  String?       // ID reçu d'Orange/MTN
   status          PaymentStatus @default(PENDING)
   adminNotes      String?
@@ -360,12 +389,14 @@ model Livre {
 
 // --- EMPLOI DU TEMPS ---
 model Matiere {
-  id      Int      @id @default(autoincrement())
-  nom     String   @unique // ex: Mathématiques, Histoire-Géo
-  code    String?  // ex: MATH-01
-  cours   Cours[]
-  livres  Livre[]  // Lien avec la bibliothèque (Section 12 du PDF)
-  notes   Note[]   // Lien avec les notes (Section 8 du PDF)
+  id        Int      @id @default(autoincrement())
+  nom       String   @unique // ex: Mathématiques, Histoire-Géo
+  code      String?  // ex: MATH-01
+  idClasse  Int?
+  classe    Classe?  @relation(fields: [idClasse], references: [idClasse], onDelete: SetNull)
+  cours     Cours[]
+  livres    Livre[]  // Lien avec la bibliothèque (Section 12 du PDF)
+  notes     Note[]   // Lien avec les notes (Section 8 du PDF)
   epreuves  Epreuve[]  // ← ajouter
 }
 
@@ -432,6 +463,7 @@ model AnneeAcademique {
   dateDebut  DateTime     @db.Date
   dateFin    DateTime     @db.Date
   active     Boolean      @default(false)
+  statut     AnneeStatut  @default(PREVUE)
 
   trimestres Trimestre[]
   frequences Frequente[]
@@ -442,6 +474,8 @@ model AnneeAcademique {
 model Trimestre {
   idTrimestre Int          @id @default(autoincrement())
   libelle     String       // ex: "Trimestre 1"
+  dateDebut   DateTime?    @db.Date
+  dateFin     DateTime?    @db.Date
   idAcademi   Int
   annee       AnneeAcademique @relation(fields: [idAcademi], references: [idAcademi], onDelete: Cascade)
 
@@ -453,6 +487,8 @@ model Trimestre {
 model Session {
   idSession   Int       @id @default(autoincrement())
   libelle     String    // ex: "Session 1 - Devoirs"
+  dateDebut   DateTime? @db.Date
+  dateFin     DateTime? @db.Date
   idTrimestre Int
   trimestre   Trimestre @relation(fields: [idTrimestre], references: [idTrimestre], onDelete: Cascade)
 

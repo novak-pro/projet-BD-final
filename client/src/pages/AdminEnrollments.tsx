@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { enrollmentService } from '../services/enrollmentService';
 import api from '../services/axiosInstance';
+import { notifySuccess, notifyError } from '../utils/notifications';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface ClasseItem {
   idClasse: number;
@@ -59,12 +61,12 @@ const AdminEnrollments = () => {
   const handleAction = async (id: number, status: 'APPROVED' | 'REJECTED', classroomId?: string) => {
     if (status === 'REJECTED') {
       const notes = window.prompt("Motif du refus obligatoire :");
-      if (!notes) { alert("Un motif est requis."); return; }
+      if (!notes) { notifyError("Un motif est requis."); return; }
       try {
         await enrollmentService.process(id, status, notes);
-        alert("Demande refusée.");
+        notifySuccess("Demande refusée.");
         fetchRequests();
-      } catch (err) { alert("Erreur"); }
+      } catch (err) { notifyError("Erreur"); }
       return;
     }
 
@@ -75,12 +77,12 @@ const AdminEnrollments = () => {
     if (!approveModal) return;
     try {
       await enrollmentService.process(approveModal.id, 'APPROVED', '', selectedClasse);
-      alert("Demande validée — Élève créé avec sa classe.");
+      notifySuccess("Demande validée — Élève créé avec sa classe.");
       setApproveModal(null);
       setSelectedClasse('');
       fetchRequests();
     } catch (err) {
-      alert("Erreur lors du traitement");
+      notifyError("Erreur lors du traitement");
     }
   };
 

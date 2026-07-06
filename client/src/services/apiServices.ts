@@ -1,44 +1,41 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
-const getAuthHeader = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+import api from './axiosInstance';
 
 export const paymentService = {
-  create: (data: any) => axios.post(`${API_URL}/payments`, data, getAuthHeader()),
-  getHistory: (parentId: number) => axios.get(`${API_URL}/payments/history/${parentId}`, getAuthHeader())
+  create: (data: any) => api.post('/payments', data),
+  getHistory: (parentId: number) => api.get(`/payments/history/${parentId}`)
 };
 
 export const disciplineService = {
-  reportIncident: (data: any) => axios.post(`${API_URL}/discipline/incident`, data, getAuthHeader()),
-  getEleveIncidents: (id: number) => axios.get(`${API_URL}/discipline/eleve/${id}`, getAuthHeader())
+  reportIncident: (data: any) => api.post('/discipline/incident', data),
+  getEleveIncidents: (id: number) => api.get(`/discipline/eleve/${id}`)
 };
 
 export const noteService = {
-  saveBulk: (data: any) => axios.post(`${API_URL}/notes/bulk`, data, getAuthHeader())
+  saveBulk: (data: any) => api.post('/notes/bulk', data)
 };
 
 export const salleService = {
-  getAll: () => axios.get(`${API_URL}/salles`, getAuthHeader()),
-  updateStatus: (id: number, etat: string) => axios.patch(`${API_URL}/salles/${id}/etat`, { etat }, getAuthHeader())
+  getAll: () => api.get('/salles'),
+  updateStatus: (id: number, etat: string) => api.patch(`/salles/${id}/etat`, { etat })
 };
 
 export const personnelService = {
-  getAll: () => axios.get(`${API_URL}/personnel`, getAuthHeader()),
-  update: (id: number, data: any) => axios.put(`${API_URL}/personnel/${id}`, data, getAuthHeader()),
-  delete: (id: number) => axios.delete(`${API_URL}/personnel/${id}`, getAuthHeader()),
-  promouvoirTitulaire: (data: any) => axios.post(`${API_URL}/personnel/promouvoir-titulaire`, data, getAuthHeader()),
-  retirerPromotion: (personnelId: number) => axios.delete(`${API_URL}/personnel/retirer-promotion/${personnelId}`, getAuthHeader()),
-  affecterSalle: (data: any) => axios.post(`${API_URL}/personnel/affecter-salle`, data, getAuthHeader()),
-  getCours: (personnelId: number) => axios.get(`${API_URL}/personnel/${personnelId}/cours`, getAuthHeader()),
+  getAll: () => api.get('/personnel'),
+  update: (id: number, data: any) => api.put(`/personnel/${id}`, data),
+  deactivate: (id: number) => api.post(`/personnel/${id}/deactivate`),
+  promouvoirTitulaire: (data: any) => api.post('/personnel/promouvoir-titulaire', data),
+  retirerPromotion: (personnelId: number) => api.delete(`/personnel/retirer-promotion/${personnelId}`),
+  affecterSalle: (data: any) => api.post('/personnel/affecter-salle', data),
+  getCours: (personnelId: number) => api.get(`/personnel/${personnelId}/cours`),
 };
 
 export const matiereService = {
-  getAll: () => axios.get(`${API_URL}/matieres`, getAuthHeader()),
-  create: (nom: string) => axios.post(`${API_URL}/matieres`, { nom }, getAuthHeader()),
-  update: (id: number, data: any) => axios.put(`${API_URL}/matieres/${id}`, data, getAuthHeader()),
-  delete: (id: number) => axios.delete(`${API_URL}/matieres/${id}`, getAuthHeader())
+  getAll: () => api.get('/matieres'),
+  create: (nom: string, options?: { code?: string; idClasse?: number }) => api.post('/matieres', { nom, ...options }),
+  update: (id: number, data: any) => api.put(`/matieres/${id}`, data),
+  delete: (id: number) => api.delete(`/matieres/${id}`)
 };
 
 export const epreuveService = {
-  getAll: () => axios.get(`${API_URL}/epreuves`, getAuthHeader())
+  getAll: () => api.get('/epreuves')
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import api from '../../services/axiosInstance';
+import { notifySuccess, notifyError } from '../../utils/notifications';
 
 const EpreuvePage = () => {
   const [form, setForm] = useState({
@@ -30,13 +31,13 @@ const EpreuvePage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.corrigeUrl) return alert("Le corrigé est obligatoire !");
+    if (!form.corrigeUrl) return notifyError("Le corrigé est obligatoire !");
     try {
       await api.post('/epreuves', { ...form, idMatiere: Number(form.idMatiere), idClasse: Number(form.idClasse) });
       setMessage("Épreuve déposée avec succès !");
       setForm({ idMatiere: '', idClasse: '', evaluation: '', anneeAcad: '', auteur: '', sujetUrl: '', corrigeUrl: '' });
     } catch (err) {
-      alert("Erreur lors du dépôt");
+      notifyError("Erreur lors du dépôt");
     }
   };
 

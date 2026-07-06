@@ -17,7 +17,7 @@
   --gray-light: #e5e7eb;
   --bg-page: #f0f2f5;
   --bg-card: #ffffff;
-  --text-primary: #0d0d0d;
+  --text-primary: #1B2A4A;
   --text-secondary: #6b7280;
   --border-color: #e5e7eb;
   --shadow: 0 4px 24px rgba(27,42,74,0.1);
@@ -70,6 +70,21 @@ body {
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+/* ── Theme-aware text overrides ── */
+.text-gray-400,
+.text-gray-500,
+.text-gray-600,
+.text-gray-700,
+.text-gray-800 {
+  color: var(--text-primary) !important;
+}
+.text-gray-400 {
+  color: var(--text-secondary) !important;
+}
+[style*="color: var(--navy)"] {
+  color: var(--text-primary) !important;
 }
 
 /* ── Admin Layout (JK IT model) ── */

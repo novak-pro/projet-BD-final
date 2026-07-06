@@ -147,6 +147,64 @@ export const updateIncident = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
+// ---- CRUD TypeInfraction ----
+
+export const getTypeInfractions = async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const types = await prisma.typeInfraction.findMany({ orderBy: { id: 'asc' } });
+    res.json(types);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur de récupération des types d'infraction" });
+  }
+};
+
+export const createTypeInfraction = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { libelle, gravite, pointsMalus } = req.body;
+    if (!libelle || !gravite) {
+      res.status(400).json({ error: "Champs requis : libelle, gravite" });
+      return;
+    }
+    const type = await prisma.typeInfraction.create({
+      data: { libelle, gravite, pointsMalus: Number(pointsMalus) || 0 },
+    });
+    res.status(201).json(type);
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      res.status(409).json({ error: "Ce libellé existe déjà" });
+      return;
+    }
+    res.status(500).json({ error: "Erreur lors de la création" });
+  }
+};
+
+export const updateTypeInfraction = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const id = Number(req.params.id);
+    const { libelle, gravite, pointsMalus } = req.body;
+    const type = await prisma.typeInfraction.update({
+      where: { id },
+      data: { ...(libelle && { libelle }), ...(gravite && { gravite }), ...(pointsMalus !== undefined && { pointsMalus: Number(pointsMalus) }) },
+    });
+    res.json(type);
+  } catch (error: any) {
+    if (error?.code === 'P2002') {
+      res.status(409).json({ error: "Ce libellé existe déjà" });
+      return;
+    }
+    res.status(500).json({ error: "Erreur lors de la mise à jour" });
+  }
+};
+
+export const deleteTypeInfraction = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    await prisma.typeInfraction.delete({ where: { id: Number(req.params.id) } });
+    res.json({ message: "Type d'infraction supprimé" });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la suppression" });
+  }
+};
+
 export const deleteIncident = async (req: AuthRequest, res: Response): Promise<void> => {
   const { id } = req.params;
   try {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Save } from 'lucide-react';
 import api from '../../services/axiosInstance';
+import { notifySuccess, notifyError } from '../../utils/notifications';
 
 interface Eleve {
   matricule: number;
@@ -30,14 +31,14 @@ const GradesEntry = ({ eleves, matiereId, classeId, evaluation }: GradesEntryPro
       valeur: parseFloat(n.valeur)
     })).filter(n => !isNaN(n.valeur));
 
-    if (notes.length === 0) return alert("Veuillez saisir au moins une note");
+    if (notes.length === 0) return notifyError("Veuillez saisir au moins une note");
 
     setSaving(true);
     try {
       await api.post('/notes/bulk', { idMatiere: matiereId, idClasse: classeId, evaluation, notes });
-      alert("Notes enregistrees avec succes !");
+      notifySuccess("Notes enregistrees avec succes !");
     } catch (err) {
-      alert("Erreur lors de l'enregistrement des notes");
+      notifyError("Erreur lors de l'enregistrement des notes");
     } finally {
       setSaving(false);
     }

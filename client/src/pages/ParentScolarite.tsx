@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Camera, User, AlertCircle } from 'lucide-react';
+import { FileText, Camera, User, AlertCircle, AlertTriangle, X, Upload } from 'lucide-react';
 import { enrollmentService } from '../services/enrollmentService';
 import { useTranslation } from '../i18n/LanguageContext';
+import api from '../services/axiosInstance';
+import { notifySuccess, notifyError } from '../utils/notifications';
 
 const niveauOptions = [
   { value: 'Niveau 1', label: 'Niveau 1' },
@@ -21,14 +23,25 @@ const ParentScolarite = () => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     nom: '', prenom: '', dateNaissance: '', lieuNaissance: '', sexe: '0', niveau: '', classe: '',
-    photoURL: ''
+    photoURL: '', recuPDF: '', modePaiement: ''
   });
   const [requests, setRequests] = useState<any[]>([]);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [recuPreview, setRecuPreview] = useState<string | null>(null);
   const [validationError, setValidationError] = useState('');
+  const [procedure, setProcedure] = useState<string>('');
+  const [showProcedure, setShowProcedure] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const recuRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadRequests(); }, []);
+  useEffect(() => { loadRequests(); loadProcedure(); }, []);
+
+  const loadProcedure = async () => {
+    try {
+      const res = await api.get('/procedure');
+      if (res.data?.contenu) setProcedure(res.data.contenu);
+    } catch { /* ignore */ }
+  };
 
   const loadRequests = async () => {
     const res = await enrollmentService.getAll();
@@ -43,6 +56,18 @@ const ParentScolarite = () => {
       const dataUrl = reader.result as string;
       setPhotoPreview(dataUrl);
       setFormData(prev => ({ ...prev, photoURL: dataUrl }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRecuChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      setRecuPreview(file.name);
+      setFormData(prev => ({ ...prev, recuPDF: dataUrl }));
     };
     reader.readAsDataURL(file);
   };
@@ -63,11 +88,12 @@ const ParentScolarite = () => {
 
     try {
       await enrollmentService.submit(formData);
-      alert("Demande envoyée !");
+      notifySuccess("Demande envoyée !");
       setPhotoPreview(null);
-      setFormData({ nom: '', prenom: '', dateNaissance: '', lieuNaissance: '', sexe: '0', niveau: '', classe: '', photoURL: '' });
+      setRecuPreview(null);
+      setFormData({ nom: '', prenom: '', dateNaissance: '', lieuNaissance: '', sexe: '0', niveau: '', classe: '', photoURL: '', recuPDF: '', modePaiement: '' });
       loadRequests();
-    } catch (err) { alert("Erreur lors de l'envoi"); }
+    } catch (err) { notifyError("Erreur lors de l'envoi"); }
   };
 
   return (
@@ -78,8 +104,37 @@ const ParentScolarite = () => {
           Scolarité : Inscription de mon enfant
         </h2>
       </div>
-      
-      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+
+      <div className="flex gap-4">
+        <button
+          type="button"
+          onClick={() => setShowProcedure(true)}
+          className="flex items-center gap-1.5 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-2 rounded-lg text-xs font-bold hover:bg-amber-100 transition-colors shrink-0 self-start"
+          title="Voir la procédure d'inscription"
+        >
+          <AlertTriangle size={16} />
+          Procédure
+        </button>
+      </div>
+
+      {/* Modal procédure */}
+      {showProcedure && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowProcedure(false)}>
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-y-auto shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Procédure d'inscription</h3>
+              <button onClick={() => setShowProcedure(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="text-sm leading-relaxed whitespace-pre-line">
+              {procedure || "Aucune procédure définie par l'administration."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4 mt-4">
         <div className="col-span-2 flex items-center gap-4 mb-2">
           <div className="relative">
             <div className="w-16 h-16 rounded-full border-2 border-gray-200 overflow-hidden bg-gray-100 flex items-center justify-center">
@@ -119,7 +174,6 @@ const ParentScolarite = () => {
           <option value="1">Garçon</option>
         </select>
 
-        {/* NIVEAU */}
         <select className="border border-gray-200 p-2 rounded-[var(--radius)] outline-none text-sm"
           value={formData.niveau}
           onChange={(e) => { setFormData({...formData, niveau: e.target.value, classe: '' }); setValidationError(''); }}>
@@ -129,7 +183,6 @@ const ParentScolarite = () => {
           ))}
         </select>
 
-        {/* CLASSE */}
         <select className="border border-gray-200 p-2 rounded-[var(--radius)] outline-none text-sm"
           value={formData.classe}
           onChange={(e) => { setFormData({...formData, classe: e.target.value }); setValidationError(''); }}
@@ -139,6 +192,36 @@ const ParentScolarite = () => {
             <option key={cl} value={cl}>{cl}</option>
           ))}
         </select>
+
+        {/* Reçu PDF */}
+        <div className="col-span-2 flex items-center gap-3 p-3 bg-gray-50 border border-dashed border-gray-300 rounded-[var(--radius)]">
+          <div className="flex-1">
+            <p className="text-xs font-bold text-gray-600 mb-1">Reçu de paiement (facture)</p>
+            {recuPreview ? (
+              <p className="text-xs text-gray-500 flex items-center gap-1">
+                <Upload size={12} /> {recuPreview}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-400">Téléchargez le reçu de paiement (PDF ou image)</p>
+            )}
+          </div>
+          <button type="button" onClick={() => recuRef.current?.click()}
+            className="text-xs bg-[var(--navy)] text-white px-3 py-1.5 rounded-lg hover:brightness-110 transition-all">
+            {recuPreview ? 'Changer' : 'Parcourir'}
+          </button>
+          <input ref={recuRef} type="file" accept=".pdf,image/*" onChange={handleRecuChange} className="hidden" />
+        </div>
+
+        {/* Mode de paiement */}
+        <div className="col-span-2">
+          <select className="border border-gray-200 p-2 rounded-[var(--radius)] outline-none text-sm w-full"
+            value={formData.modePaiement}
+            onChange={(e) => setFormData({...formData, modePaiement: e.target.value})}>
+            <option value="">Mode de paiement</option>
+            <option value="CASH">Paiement par cash à l'école</option>
+            <option value="VIREMENT">Virement bancaire</option>
+          </select>
+        </div>
 
         {validationError && (
           <div className="col-span-2 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-[var(--radius)] text-sm text-red-700">
@@ -170,6 +253,9 @@ const ParentScolarite = () => {
                   <p className="text-sm text-gray-500">
                     {req.niveau}{req.classe ? ` — ${req.classe}` : ''} — Soumis le {new Date(req.createdAt).toLocaleDateString()}
                   </p>
+                  {req.modePaiement && (
+                    <p className="text-xs text-gray-400">Paiement : {req.modePaiement === 'CASH' ? 'Cash école' : 'Virement'}</p>
+                  )}
                 </div>
               </div>
               <span className={`px-3 py-1 rounded-full text-xs ${

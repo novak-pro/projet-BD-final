@@ -105,7 +105,15 @@ export const getMessages = async (req: Request, res: Response) => {
 
     if (role === 'PERSONNEL') {
       const myMessages = await prisma.message.findMany({
-        where: { senderId: id },
+        where: {
+          OR: [
+            { senderId: id },
+            { recipientId: id },
+          ],
+        },
+        include: {
+          sender: { select: { id: true, email: true } },
+        },
         orderBy: { createdAt: 'desc' },
       });
       return res.json(myMessages);

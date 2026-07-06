@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { CalendarDays, Clock, MapPin, User as UserIcon, Plus, Trash2, X, Edit2, DoorOpen } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { notifySuccess, notifyError } from '../../utils/notifications';
+import ConfirmModal from '../../components/ConfirmModal';
 
 interface PlanningEntry {
   id: number;
@@ -50,6 +52,7 @@ const PlanningPage = () => {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [coursList, setCoursList] = useState<Cours[]>([]);
   const [form, setForm] = useState({ idCours: '', idSalle: '', jour: 'LUNDI', heureDebut: '08:00', heureFin: '10:00' });
+  const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
 
   useEffect(() => { loadInitial(); }, []);
 
@@ -141,16 +144,18 @@ const PlanningPage = () => {
       setShowModal(false);
       loadPlannings();
     } catch (err: any) {
-      alert(err.response?.data?.error || "Erreur");
+      notifyError(err.response?.data?.error || "Erreur");
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!window.confirm("Supprimer ce créneau ?")) return;
-    try {
-      await api.delete(`/planning/${id}`);
-      loadPlannings();
-    } catch (err) { console.error("Erreur suppression", err); }
+  const handleDelete = (id: number) => {
+    setConfirmState({open:true, onConfirm:async () => {
+      try {
+        await api.delete(`/planning/${id}`);
+        loadPlannings();
+      } catch (err) { console.error("Erreur suppression", err); }
+      setConfirmState(prev => ({...prev, open: false}));
+    }, message:"Supprimer ce créneau ?"});
   };
 
   const getPlanningsByJour = (jour: string) => plannings.filter(p => p.jour === jour);
@@ -159,6 +164,17 @@ const PlanningPage = () => {
   const classeLibelle = selectedClasse ? classes.find(c => c.idClasse === Number(selectedClasse))?.libelle : '';
 
   return (
+    <>
+      <ConfirmModal
+        open={confirmState.open}
+        title="Confirmation"
+        message={confirmState.message}
+        onConfirm={confirmState.onConfirm}
+        onCancel={() => setConfirmState(prev => ({...prev, open: false}))}
+        variant="danger"
+        confirmLabel="Oui"
+        cancelLabel="Non"
+      />
     <div className="admin-card">
       <div className="admin-card-header">
         <h2>
@@ -303,6 +319,7 @@ const PlanningPage = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
 

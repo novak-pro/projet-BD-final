@@ -1,29 +1,12 @@
-import axios from 'axios';
+import api from './axiosInstance';
 
-const API_URL = 'http://localhost:5000/api/enrollments';
+const BASE = '/enrollments';
 
 export const enrollmentService = {
-  // Envoyer une demande (Parent)
-  submit: async (data: any) => {
-    const token = localStorage.getItem('token');
-    return axios.post(API_URL, data, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-  },
+  submit: async (data: any) => api.post(BASE, data),
 
-  // Récupérer les demandes (Admin ou Parent selon le token)
-  getAll: async () => {
-    const token = localStorage.getItem('token');
-    return axios.get(API_URL, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-  },
+  getAll: async () => api.get(BASE),
 
-  // Valider/Refuser (Admin)
-  process: async (id: number, status: 'APPROVED' | 'REJECTED', notes: string, classroomId?: string) => {
-    const token = localStorage.getItem('token');
-    return axios.patch(`${API_URL}/${id}/process`, { status, adminNotes: notes, classroomId }, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-  }
+  process: async (id: number, status: 'APPROVED' | 'REJECTED', notes: string, classroomId?: string) =>
+    api.patch(`${BASE}/${id}/process`, { status, adminNotes: notes, classroomId }),
 };

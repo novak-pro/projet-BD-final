@@ -5,7 +5,10 @@ export const getMesCours = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id;
 
-    const personnel = await prisma.personnel.findUnique({ where: { userId } });
+    const personnel = await prisma.personnel.findUnique({
+      where: { userId },
+      include: { salleTitulaire: true },
+    });
     if (!personnel) return res.status(403).json({ error: "Profil enseignant non trouvé" });
 
     const cours = await prisma.cours.findMany({
@@ -18,6 +21,16 @@ export const getMesCours = async (req: Request, res: Response) => {
             cycle: true,
           },
         },
+        salle: {
+          include: {
+            classe: {
+              include: {
+                _count: { select: { students: true } },
+                cycle: true,
+              },
+            },
+          },
+        },
         plannings: {
           include: { salle: true },
           orderBy: [{ jour: 'asc' }, { heureDebut: 'asc' }],
@@ -26,7 +39,7 @@ export const getMesCours = async (req: Request, res: Response) => {
       orderBy: { idCours: 'asc' },
     });
 
-    res.json(cours);
+    res.json({ cours, salleTitulaire: personnel.salleTitulaire });
   } catch (error) {
     res.status(500).json({ error: "Erreur de récupération des cours" });
   }
@@ -57,6 +70,28 @@ export const getCoursDetail = async (req: Request, res: Response) => {
                 evaluations: {
                   where: { idCours: coursId },
                   orderBy: { createdAt: 'desc' },
+                },
+              },
+            },
+          },
+        },
+        salle: {
+          include: {
+            classe: {
+              include: {
+                cycle: true,
+                students: {
+                  orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+                  include: {
+                    notes: {
+                      include: { matiere: true },
+                      orderBy: { dateSaisie: 'desc' },
+                    },
+                    evaluations: {
+                      where: { idCours: coursId },
+                      orderBy: { createdAt: 'desc' },
+                    },
+                  },
                 },
               },
             },
@@ -95,13 +130,26 @@ export const getMesEleves = async (req: Request, res: Response) => {
             },
           },
         },
+        salle: {
+          include: {
+            classe: {
+              include: {
+                students: {
+                  orderBy: [{ nom: 'asc' }, { prenom: 'asc' }],
+                  select: { matricule: true, nom: true, prenom: true, photoURL: true },
+                },
+              },
+            },
+          },
+        },
       },
     });
 
     const studentsMap = new Map<number, { matricule: number; nom: string; prenom: string; photoURL: string | null }>();
     for (const c of cours) {
-      if (!c.classe) continue;
-      for (const s of c.classe.students) {
+      const cls = c.classe ?? c.salle?.classe ?? null;
+      if (!cls) continue;
+      for (const s of cls.students) {
         if (!studentsMap.has(s.matricule)) {
           studentsMap.set(s.matricule, s);
         }

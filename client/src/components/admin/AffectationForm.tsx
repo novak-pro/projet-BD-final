@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { notifySuccess, notifyError } from '../../utils/notifications';
 const AffectationForm = ({ personels, matieres, classes }) => {
   const [formData, setFormData] = useState({
     personnelId: '',
@@ -12,9 +13,9 @@ const AffectationForm = ({ personels, matieres, classes }) => {
     e.preventDefault();
     try {
       await axios.post('/api/admin/personnel/affecter', formData);
-      alert("Enseignant affecté avec succès !");
+      notifySuccess("Enseignant affecté avec succès !");
     } catch (err) {
-      alert("Erreur lors de l'affectation");
+      notifyError("Erreur lors de l'affectation");
     }
   };
 

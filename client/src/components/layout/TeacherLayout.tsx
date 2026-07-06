@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import LanguageSwitcher from '../LanguageSwitcher';
 import SettingsDropdown from '../SettingsDropdown';
+import InboxDropdown from '../InboxDropdown';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useLogo } from '../../contexts/LogoContext';
 
@@ -75,6 +76,7 @@ const TeacherLayout = () => {
             <h1>{t('teacher.title')}</h1>
           </div>
           <div className="admin-topbar-actions">
+            <InboxDropdown />
             <LanguageSwitcher />
             <div className="flex items-center gap-3 pl-4" style={{ borderLeft: '1px solid var(--border-color)' }}>
               <div className="text-right hidden sm:block">
@@ -92,10 +94,7 @@ const TeacherLayout = () => {
           <Outlet />
         </main>
 
-        <footer className="py-3 px-6 border-t text-xs flex justify-between" style={{ background: 'var(--bg-card)', color: 'var(--text-secondary)', borderColor: 'var(--border-color)' }}>
-          <span>{t('app.copyright')}</span>
-          <span className="font-bold">{t('app.version')}</span>
-        </footer>
+
       </div>
     </div>
   );

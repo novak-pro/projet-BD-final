@@ -3,21 +3,26 @@ import { ClipboardList, BookOpen, Users, GraduationCap, ChevronRight } from 'luc
 import api from '../../services/axiosInstance';
 import GradesEntry from '../../components/teacher/GradesEntry';
 
+interface ClasseInfo {
+  idClasse: number;
+  libelle: string;
+  cycle: { libelle: string } | null;
+  _count: { students: number };
+  students?: Array<{ matricule: number; nom: string; prenom: string }>;
+}
+
 interface CoursItem {
   idCours: number;
   coefficient: number;
   matiere: { id: number; nom: string };
-  classe: {
-    idClasse: number;
-    libelle: string;
-    cycle: { libelle: string };
-    _count: { students: number };
-    students?: Array<{ matricule: number; nom: string; prenom: string }>;
-  };
+  classe: ClasseInfo | null;
+  salle?: { libelle: string; classe: ClasseInfo | null } | null;
 }
 
 const evaluationOptions = ['Devoir', 'Interrogation', 'Examen Trimestriel'];
 const trimestreOptions = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
+
+const getClasse = (c: CoursItem): ClasseInfo | null => c.classe ?? c.salle?.classe ?? null;
 
 const TeacherGrades = () => {
   const [cours, setCours] = useState<CoursItem[]>([]);
@@ -28,13 +33,17 @@ const TeacherGrades = () => {
 
   useEffect(() => {
     api.get('/cours/mes-cours')
-      .then((res: any) => setCours(res.data))
+      .then((res: any) => {
+        const data = res.data;
+        setCours(Array.isArray(data) ? data : (data.cours || []));
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   const handleSelectCours = async (c: CoursItem) => {
-    if (!c.classe.students) {
+    const cls = getClasse(c);
+    if (!cls?.students) {
       try {
         const res = await api.get(`/cours/${c.idCours}`);
         setSelectedCours(res.data);
@@ -70,27 +79,31 @@ const TeacherGrades = () => {
           <>
             <p className="text-sm text-gray-500 mb-4">Sélectionnez un cours pour saisir les notes :</p>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {cours.map(c => (
-                <button
-                  key={c.idCours}
-                  onClick={() => handleSelectCours(c)}
-                  className="text-left bg-white border border-gray-200 rounded-[var(--radius-lg)] p-4 hover:border-[var(--accent)] hover:shadow-sm transition-all flex items-start gap-3"
-                >
-                  <div className="w-10 h-10 rounded-lg bg-[var(--navy)]/10 flex items-center justify-center shrink-0">
-                    <BookOpen size={18} className="text-[var(--navy)]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-800 text-sm">{c.matiere.nom}</p>
-                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                      <GraduationCap size={11} /> {c.classe.libelle}
-                    </p>
-                    <p className="text-xs text-gray-400 flex items-center gap-1">
-                      <Users size={11} /> {c.classe._count.students} élèves
-                    </p>
-                  </div>
-                  <ChevronRight size={16} className="text-gray-300 shrink-0 mt-1" />
-                </button>
-              ))}
+              {cours.map(c => {
+                const cls = getClasse(c);
+                const afficheClasse = cls?.libelle ?? c.salle?.libelle ?? 'Salle inconnue';
+                return (
+                  <button
+                    key={c.idCours}
+                    onClick={() => handleSelectCours(c)}
+                    className="text-left bg-white border border-gray-200 rounded-[var(--radius-lg)] p-4 hover:border-[var(--accent)] hover:shadow-sm transition-all flex items-start gap-3"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-[var(--navy)]/10 flex items-center justify-center shrink-0">
+                      <BookOpen size={18} className="text-[var(--navy)]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-800 text-sm">{c.matiere.nom}</p>
+                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                        <GraduationCap size={11} /> {afficheClasse}
+                      </p>
+                      <p className="text-xs text-gray-400 flex items-center gap-1">
+                        <Users size={11} /> {cls?._count?.students ?? 0} élèves
+                      </p>
+                    </div>
+                    <ChevronRight size={16} className="text-gray-300 shrink-0 mt-1" />
+                  </button>
+                );
+              })}
             </div>
           </>
         ) : (
@@ -104,7 +117,7 @@ const TeacherGrades = () => {
 
             <div className="bg-gray-50 rounded-[var(--radius)] p-4 mb-6">
               <p className="font-bold text-gray-800">{selectedCours.matiere.nom}</p>
-              <p className="text-sm text-gray-500">{selectedCours.classe.libelle} · {selectedCours.classe.cycle?.libelle}</p>
+              <p className="text-sm text-gray-500">{selectedCours.classe?.libelle ?? selectedCours.salle?.classe?.libelle ?? '—'} · {selectedCours.classe?.cycle?.libelle ?? selectedCours.salle?.classe?.cycle?.libelle ?? ''}</p>
             </div>
 
             <div className="admin-form-row mb-6">
@@ -123,9 +136,9 @@ const TeacherGrades = () => {
             </div>
 
             <GradesEntry
-              eleves={(selectedCours.classe.students || []).map(s => ({ matricule: s.matricule, nom: `${s.prenom} ${s.nom}` }))}
+              eleves={(selectedCours.classe?.students || selectedCours.salle?.classe?.students || []).map(s => ({ matricule: s.matricule, nom: `${s.prenom} ${s.nom}` }))}
               matiereId={selectedCours.matiere.id}
-              classeId={selectedCours.classe.idClasse}
+              classeId={selectedCours.classe?.idClasse ?? selectedCours.salle?.classe?.idClasse ?? 0}
               evaluation={`${evaluation} - ${trimestre}`}
             />
           </>

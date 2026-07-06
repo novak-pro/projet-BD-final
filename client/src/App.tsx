@@ -24,6 +24,7 @@ import BibliothequePage    from './pages/admin/BibliothequePage';
 import AdminPayments       from './pages/admin/AdminPayments';
 import AdminMessages       from './pages/admin/AdminMessages';
 import AdminAcademique     from './pages/admin/AdminAcademique';
+import AdminDeactivatedAccounts from './pages/admin/AdminDeactivatedAccounts';
 
 // Pages enseignant
 import EpreuvePage       from './pages/teacher/EpreuvePage';
@@ -41,10 +42,12 @@ import ParentDiscipline from './pages/ParentDiscipline';
 import ParentBulletins from './pages/ParentBulletins';
 import ParentPlanning from './pages/ParentPlanning';
 import ParentChildProfile from './pages/ParentChildProfile';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <Router>
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
       <Routes>
 
         {/* ── Pages publiques ── */}
@@ -68,6 +71,7 @@ function App() {
             <Route path="/admin/bibliotheque"   element={<BibliothequePage />} />
             <Route path="/admin/messages"      element={<AdminMessages />} />
             <Route path="/admin/academique"    element={<AdminAcademique />} />
+            <Route path="/admin/deactivated"   element={<AdminDeactivatedAccounts />} />
 
             <Route path="/students"             element={<StudentList />} />
           </Route>

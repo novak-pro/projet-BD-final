@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { FileText } from 'lucide-react';
 import api from '../services/axiosInstance';
+import { notifySuccess, notifyError } from '../utils/notifications';
+import ConfirmModal from '../components/ConfirmModal';
 
 interface FeeConfig {
   id: number;
@@ -11,10 +14,20 @@ interface FeeConfig {
 const AdminFeeConfig = () => {
   const [configs, setConfigs] = useState<FeeConfig[]>([]);
   const [formData, setFormData] = useState({ niveau: '', montantTotal: '', montantTranche: '' });
+  const [procedure, setProcedure] = useState('');
+  const [procedureLoading, setProcedureLoading] = useState(false);
 
   useEffect(() => {
     fetchConfigs();
+    loadProcedure();
   }, []);
+
+  const loadProcedure = async () => {
+    try {
+      const res = await api.get('/procedure');
+      if (res.data?.contenu) setProcedure(res.data.contenu);
+    } catch { /* ignore */ }
+  };
 
   const fetchConfigs = async () => {
     try {
@@ -32,16 +45,53 @@ const AdminFeeConfig = () => {
         montantTotal: parseFloat(formData.montantTotal),
         montantTranche: parseFloat(formData.montantTranche)
       });
-      alert("Tarif enregistré !");
+      notifySuccess("Tarif enregistré !");
       setFormData({ niveau: '', montantTotal: '', montantTranche: '' });
       fetchConfigs();
     } catch (err) {
-      alert("Erreur lors de l'enregistrement");
+      notifyError("Erreur lors de l'enregistrement");
+    }
+  };
+
+  const saveProcedure = async () => {
+    setProcedureLoading(true);
+    try {
+      await api.put('/procedure', { contenu: procedure });
+      notifySuccess('Procédure enregistrée !');
+    } catch {
+      notifyError("Erreur lors de l'enregistrement de la procédure");
+    } finally {
+      setProcedureLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Procédure d'inscription */}
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <h2>
+            <FileText size={18} style={{ color: 'var(--navy)' }} />
+            Procédure d'inscription
+          </h2>
+          <p className="text-xs text-gray-400">Ce texte sera affiché aux parents lors de l'inscription</p>
+        </div>
+        <div className="admin-form">
+          <textarea
+            value={procedure}
+            onChange={(e) => setProcedure(e.target.value)}
+            className="w-full border border-gray-200 p-3 rounded-[var(--radius)] outline-none text-sm min-h-[200px] resize-y"
+            placeholder="Décrivez la procédure d'inscription (étapes, documents requis, frais...)"
+          />
+          <div className="mt-3">
+            <button onClick={saveProcedure} disabled={procedureLoading} className="btn-admin">
+              {procedureLoading ? 'Enregistrement...' : 'Enregistrer la procédure'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Configuration des tarifs */}
       <div className="admin-card">
         <div className="admin-card-header">
           <h2>Configuration des Pensions par Niveau</h2>
