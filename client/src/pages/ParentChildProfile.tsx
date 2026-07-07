@@ -71,18 +71,6 @@ const ParentChildProfile = () => {
     if (!matricule) return;
     loadProfile();
     api.get('/enrollments/classes').then(res => setClasses(res.data)).catch(() => {});
-
-    // Poll every 5s for live updates while tab is visible
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') loadProfile();
-    }, 5000);
-    const onVisible = () => { if (document.visibilityState === 'visible') loadProfile(); };
-    document.addEventListener('visibilitychange', onVisible);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
   }, [matricule]);
 
   const loadProfile = () => {

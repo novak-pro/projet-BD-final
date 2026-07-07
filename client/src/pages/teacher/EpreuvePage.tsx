@@ -11,6 +11,10 @@ const EpreuvePage = () => {
   const [corrigeFile, setCorrigeFile] = useState<File | null>(null);
   const [matieres, setMatieres] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+  const selectedClasseId = form.idClasse ? Number(form.idClasse) : null;
+  const filteredMatieres = selectedClasseId
+    ? matieres.filter(m => m.classes?.some((mc: any) => Number(mc.idClasse) === selectedClasseId))
+    : matieres;
   const [message, setMessage] = useState('');
   const [activeAnnee, setActiveAnnee] = useState<any>(null);
   const [trimestres, setTrimestres] = useState<string[]>([]);
@@ -117,12 +121,12 @@ const EpreuvePage = () => {
             <label>Matière</label>
             <select value={form.idMatiere} onChange={e => setForm({...form, idMatiere: e.target.value})} required>
               <option value="">Choisir...</option>
-              {matieres.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
+              {filteredMatieres.map(m => <option key={m.id} value={m.id}>{m.nom}</option>)}
             </select>
           </div>
           <div className="admin-field">
             <label>Classe</label>
-            <select value={form.idClasse} onChange={e => setForm({...form, idClasse: e.target.value})} required>
+            <select value={form.idClasse} onChange={e => setForm({...form, idClasse: e.target.value, idMatiere: ''})} required>
               <option value="">Choisir...</option>
               {classes.map(c => <option key={c.idClasse} value={c.idClasse}>{c.libelle}</option>)}
             </select>

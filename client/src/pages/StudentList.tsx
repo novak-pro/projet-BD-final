@@ -23,6 +23,7 @@ interface Student {
   photoURL: string | null;
   statut: string;
   niveau: string;
+  soldePoints: number;
   classroom?: { idClasse: number; libelle: string } | null;
   salle?: { idSalle: number; libelle: string; capacite?: number | null } | null;
   frequences?: FrequenteEntry[];
@@ -33,7 +34,7 @@ interface FrequenteEntry {
   idEleve: number;
   idSalle: number;
   idAcademi: number;
-  classe: { idClasse: number; libelle: string };
+  classe: { idClasse: number; libelle: string; cycle: { idCycle: number; libelle: string } };
   annee: { idAcademi: number; libelle: string; active: boolean };
 }
 
@@ -63,19 +64,7 @@ interface EnrollmentRequest {
   createdAt: string;
 }
 
-const cycles = ['Premier cycle', 'Deuxieme cycle', 'Troisieme cycle'];
-const cycleOptions = [
-  { value: '', label: 'Tous les cycles' },
-  ...cycles.map(c => ({ value: c, label: c })),
-];
 
-const getCycle = (niveau: string): string => {
-  const n = niveau?.toLowerCase() || '';
-  if (/^(cp|ce|cm|sil)/i.test(n)) return 'Premier cycle';
-  if (/^[3-6]e/i.test(n)) return 'Deuxieme cycle';
-  if (/^(2nde|1ere|tle|terminale)/i.test(n)) return 'Troisieme cycle';
-  return '';
-};
 
 export default function StudentList() {
   const { t } = useTranslation();
@@ -198,7 +187,7 @@ export default function StudentList() {
     const q = search.toLowerCase();
     const matchSearch = !search || (s.nom || '').toLowerCase().includes(q) || (s.prenom || '').toLowerCase().includes(q);
     const matchClasse = !selectedClasse || s.frequences?.some(f => f.classe.idClasse === parseInt(selectedClasse));
-    const matchCycle = !selectedCycle || getCycle(s.niveau) === selectedCycle;
+    const matchCycle = !selectedCycle || s.niveau === selectedCycle;
     return matchSearch && matchClasse && matchCycle;
   });
 
@@ -482,8 +471,9 @@ export default function StudentList() {
                   onChange={(e) => setSelectedCycle(e.target.value)}
                   className="px-3 py-2 border border-gray-200 rounded-[8px] outline-none text-sm appearance-none bg-white focus:border-[var(--accent)]"
                 >
-                  {cycleOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  <option value="">Tous les cycles</option>
+                  {cycles.map((c) => (
+                    <option key={c.idCycle} value={c.libelle}>{c.libelle}</option>
                   ))}
                 </select>
               </div>
@@ -505,11 +495,12 @@ export default function StudentList() {
                       <th className="px-3 py-3">{t('student.matricule')}</th>
                       <th className="px-3 py-3">{t('student.lastname')}</th>
                       <th className="px-3 py-3">{t('student.firstname')}</th>
-                      <th className="px-3 py-3">{t('student.level')}</th>
+                      <th className="px-3 py-3">Langue</th>
+                      <th className="px-3 py-3">Cycle</th>
                       <th className="px-3 py-3">{t('student.class')}</th>
                       <th className="px-3 py-3">{t('student.birthDate')}</th>
                       <th className="px-3 py-3">{t('student.room')}</th>
-                      <th className="px-3 py-3">Année académique</th>
+                      <th className="px-3 py-3">Solde de points</th>
                       <th className="px-3 py-3 text-right">{t('common.actions')}</th>
                     </tr>
                   </thead>
@@ -519,14 +510,15 @@ export default function StudentList() {
                         <td className="px-3 py-3 text-sm font-medium text-gray-800">{s.matricule}</td>
                         <td className="px-3 py-3 text-sm text-gray-600">{s.nom}</td>
                         <td className="px-3 py-3 text-sm text-gray-600">{s.prenom}</td>
+                        <td className="px-3 py-3 text-sm text-gray-600">{s.langue || '—'}</td>
                         <td className="px-3 py-3 text-sm text-gray-600">{s.niveau || '—'}</td>
                         <td className="px-3 py-3 text-sm text-gray-600">{getStudentClass(s)}</td>
                         <td className="px-3 py-3 text-sm text-gray-600">
                           {s.dateNaissance ? new Date(s.dateNaissance).toLocaleDateString('fr-FR') : '—'}
                         </td>
                         <td className="px-3 py-3 text-sm text-gray-600">{s.salle?.libelle || '—'}</td>
-                        <td className="px-3 py-3 text-sm text-gray-600">
-                          {s.frequences?.[0]?.annee?.libelle || '—'}
+                        <td className="px-3 py-3 text-sm font-medium text-center" style={{ color: (s.soldePoints ?? 20) < 10 ? '#dc2626' : '#16a34a' }}>
+                          {s.soldePoints ?? 20}
                         </td>
                         <td className="px-3 py-3 text-right">
                           <div className="flex justify-end gap-1">
@@ -587,8 +579,13 @@ export default function StudentList() {
                       </div>
                     </div>
                     <div className="admin-field">
-                      <label>{t('student.level')} *</label>
-                      <input type="text" required value={editForm.niveau} onChange={(e) => setEditForm({ ...editForm, niveau: e.target.value })} placeholder="ex: SIL, CP, CE1..." />
+                      <label>Cycle *</label>
+                      <select required value={editForm.niveau} onChange={(e) => setEditForm({ ...editForm, niveau: e.target.value })}>
+                        <option value="">Choisir un cycle...</option>
+                        {cycles.map(c => (
+                          <option key={c.idCycle} value={c.libelle}>{c.libelle}</option>
+                        ))}
+                      </select>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="admin-field">

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Users, GraduationCap, Clock, Hash } from 'lucide-react';
+import { ArrowLeft, BookOpen, Users, Clock, Hash } from 'lucide-react';
 import api from '../../services/axiosInstance';
-import GradesEntry from '../../components/teacher/GradesEntry';
 
 interface Planning {
   id: number;
@@ -53,7 +52,6 @@ const CourseDetail = () => {
   const navigate = useNavigate();
   const [cours, setCours] = useState<CoursDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showGrades, setShowGrades] = useState(false);
 
   useEffect(() => {
     if (!idCours) return;
@@ -113,23 +111,9 @@ const CourseDetail = () => {
       <div className="admin-card">
         <div className="admin-card-header">
           <h2>Liste des élèves ({students.length})</h2>
-          <button
-            onClick={() => setShowGrades(!showGrades)}
-            className="btn-admin text-sm"
-          >
-            {showGrades ? 'Voir la liste' : 'Saisir les notes'}
-          </button>
         </div>
 
-        {showGrades ? (
-          <GradesEntry
-            eleves={students.map(s => ({ matricule: s.matricule, nom: `${s.prenom} ${s.nom}` }))}
-            matiereId={cours.matiere.id}
-            classeId={effectiveClasse?.idClasse ?? 0}
-            evaluation="Devoir"
-          />
-        ) : (
-          <div className="overflow-x-auto">
+        <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100">
@@ -179,7 +163,6 @@ const CourseDetail = () => {
               <div className="p-8 text-center text-gray-400">Aucun élève dans cette classe.</div>
             )}
           </div>
-        )}
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ const ParentScolarite = () => {
     photoURL: '', recuPDF: '', modePaiement: ''
   });
   const [cycles, setCycles] = useState<{ idCycle: number; libelle: string }[]>([]);
-  const [classes, setClasses] = useState<{ idClasse: number; libelle: string; idCycle: number | null }[]>([]);
+  const [classes, setClasses] = useState<{ idClasse: number; libelle: string; cycle: { idCycle: number; libelle: string } | null }[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [recuPreview, setRecuPreview] = useState<string | null>(null);
@@ -78,7 +78,7 @@ const ParentScolarite = () => {
 
   const selectedCycleId = formData.niveau ? Number(formData.niveau) : null;
   const availableClasses = selectedCycleId
-    ? classes.filter(c => c.idCycle === selectedCycleId)
+    ? classes.filter(c => c.cycle?.idCycle === selectedCycleId)
     : [];
 
   const handleSubmit = async (e: React.FormEvent) => {

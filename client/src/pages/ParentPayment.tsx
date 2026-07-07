@@ -34,6 +34,7 @@ const ParentPayment = () => {
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [config, setConfig] = useState<FeeConfig | null>(null);
+  const [configError, setConfigError] = useState('');
   const [tranches, setTranches] = useState<number>(1);
   const [modePaiement, setModePaiement] = useState<string>('');
   const [recuPDF, setRecuPDF] = useState<string>('');
@@ -50,9 +51,13 @@ const ParentPayment = () => {
 
   useEffect(() => {
     if (!selectedChild) return;
+    setConfig(null);
+    setConfigError('');
     api.get(`/payments/config/${selectedChild}`)
       .then((res) => setConfig(res.data))
-      .catch(() => console.error('Impossible de charger la configuration'));
+      .catch(() => {
+        setConfigError('Aucun tarif configuré pour le niveau de cet enfant. Veuillez contacter l\'administration.');
+      });
   }, [selectedChild]);
 
   useEffect(() => {
@@ -68,6 +73,7 @@ const ParentPayment = () => {
   const resetForm = () => {
     setSelectedChild('');
     setConfig(null);
+    setConfigError('');
     setTranches(1);
     setModePaiement('');
     setRecuPDF('');
@@ -132,6 +138,12 @@ const ParentPayment = () => {
               ))}
             </select>
           </div>
+
+          {configError && (
+            <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-[var(--radius)] text-sm text-amber-700">
+              <span>⚠️</span> {configError}
+            </div>
+          )}
 
           {config && (
             <>
