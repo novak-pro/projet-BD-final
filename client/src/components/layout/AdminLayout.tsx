@@ -24,7 +24,7 @@ const AdminLayout = () => {
     { icon: <ClipboardList size={18} />,   label: t('nav.bulletins'),     path: '/admin/bulletins' },
     { icon: <Calendar size={18} />,        label: t('nav.schedule'),      path: '/admin/planning' },
     { icon: <ShieldCheck size={18} />,     label: t('nav.discipline'),    path: '/admin/discipline' },
-    { icon: <GraduationCap size={18} />,   label: t('nav.finance'),       path: '/admin/finance' },
+    { icon: <GraduationCap size={18} />,   label: 'Scolarité',       path: '/admin/finance' },
     { icon: <CreditCard size={18} />,      label: t('nav.payments'),      path: '/admin/paiements' },
     { icon: <BookOpen size={18} />,        label: t('nav.library'),       path: '/admin/bibliotheque' },
     { icon: <Calendar size={18} />,        label: 'Années académiques',  path: '/admin/academique' },

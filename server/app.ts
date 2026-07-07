@@ -37,6 +37,7 @@ import coursRoutes from './src/routes/coursRoutes';
 import academiqueRoutes from './src/routes/academiqueRoutes';
 import userRoutes from './src/routes/userRoutes';
 import procedureRoutes from './src/routes/procedureRoutes';
+import scolariteRoutes from './src/routes/scolariteRoutes';
 
 // ── Déclaration des routes ──
 app.use('/api/auth',        authRoutes);
@@ -58,5 +59,6 @@ app.use('/api/cours',       coursRoutes);
 app.use('/api/academique',  academiqueRoutes);
 app.use('/api/users',       userRoutes);
 app.use('/api/procedure',   procedureRoutes);
+app.use('/api/scolarite',   scolariteRoutes);
 
 export default app;

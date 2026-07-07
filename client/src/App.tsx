@@ -24,6 +24,7 @@ import BibliothequePage    from './pages/admin/BibliothequePage';
 import AdminPayments       from './pages/admin/AdminPayments';
 import AdminMessages       from './pages/admin/AdminMessages';
 import AdminAcademique     from './pages/admin/AdminAcademique';
+import AdminScolarite      from './pages/admin/AdminScolarite';
 import AdminDeactivatedAccounts from './pages/admin/AdminDeactivatedAccounts';
 
 // Pages enseignant
@@ -59,7 +60,7 @@ function App() {
         <Route element={<ProtectedRoute allowedRoles={['ADMIN_PRINCIPAL']} />}>
           <Route element={<AdminLayout />}>
             <Route path="/admin"                element={<AdminDashboard />} />
-            <Route path="/admin/finance"        element={<AdminFeeConfig />} />
+            <Route path="/admin/finance"        element={<AdminScolarite />} />
             <Route path="/admin/paiements"      element={<AdminPayments />} />
             <Route path="/admin/infrastructure" element={<AdminInfrastructure />} />
             <Route path="/admin/matieres"       element={<MatierePage />} />

@@ -227,6 +227,7 @@ model Classe {
   epreuves      Epreuve[]
   frequences    Frequente[]
   matieres      MatiereClasse[]
+  scolarite     Scolarite?
 
   @@map("Classe")
 }
@@ -328,6 +329,29 @@ model Evaluation {
 }
 
 
+
+model Scolarite {
+  id                Int       @id @default(autoincrement())
+  montantInscription Float
+  montantPension    Float
+  nombreTranches    Int
+  classeId          Int       @unique
+  classe            Classe    @relation(fields: [classeId], references: [idClasse], onDelete: Cascade)
+  tranches          Tranche[]
+
+  @@map("Scolarite")
+}
+
+model Tranche {
+  id          Int       @id @default(autoincrement())
+  libelle     String
+  montant     Float
+  dateLimite  DateTime  @db.Date
+  scolariteId Int
+  scolarite   Scolarite @relation(fields: [scolariteId], references: [id], onDelete: Cascade)
+
+  @@map("Tranche")
+}
 
 model FeeConfig {
   id            Int      @id @default(autoincrement())

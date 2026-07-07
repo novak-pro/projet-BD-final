@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CreditCard, Clock, Upload } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CreditCard, Clock, Upload, Calendar } from 'lucide-react';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../utils/notifications';
@@ -10,11 +10,21 @@ interface Child {
   nom: string;
   prenom: string;
   niveau: string;
+  classroomId: number | null;
 }
 
-interface FeeConfig {
-  montantTotal: number;
-  montantTranche: number;
+interface Tranche {
+  id: number;
+  libelle: string;
+  montant: number;
+  dateLimite: string;
+}
+
+interface Scolarite {
+  montantInscription: number;
+  montantPension: number;
+  nombreTranches: number;
+  tranches: Tranche[];
 }
 
 interface Payment {
@@ -33,13 +43,13 @@ const ParentPayment = () => {
   const { t } = useTranslation();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<string>('');
-  const [config, setConfig] = useState<FeeConfig | null>(null);
-  const [configError, setConfigError] = useState('');
-  const [tranches, setTranches] = useState<number>(1);
+  const [scolarite, setScolarite] = useState<Scolarite | null>(null);
+  const [scolariteError, setScolariteError] = useState('');
+  const [selectedTranches, setSelectedTranches] = useState<number>(1);
   const [modePaiement, setModePaiement] = useState<string>('');
   const [recuPDF, setRecuPDF] = useState<string>('');
   const [recuName, setRecuName] = useState<string>('');
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [myPayments, setMyPayments] = useState<Payment[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -50,31 +60,36 @@ const ParentPayment = () => {
   }, []);
 
   useEffect(() => {
-    if (!selectedChild) return;
-    setConfig(null);
-    setConfigError('');
-    api.get(`/payments/config/${selectedChild}`)
-      .then((res) => setConfig(res.data))
-      .catch(() => {
-        setConfigError('Aucun tarif configuré pour le niveau de cet enfant. Veuillez contacter l\'administration.');
-      });
-  }, [selectedChild]);
+    if (!selectedChild) { setScolarite(null); setScolariteError(''); return; }
+    setScolarite(null);
+    setScolariteError('');
+    setSelectedTranches(1);
+    const child = children.find(c => String(c.matricule) === selectedChild);
+    if (!child?.classroomId) {
+      setScolariteError("Cet enfant n'a pas de classe assignée. Contactez l'administration.");
+      return;
+    }
+    api.get(`/scolarite/classe/${child.classroomId}`)
+      .then((res) => setScolarite(res.data))
+      .catch(() => setScolariteError("Aucune scolarité configurée pour la classe de cet enfant."));
+  }, [selectedChild, children]);
 
   useEffect(() => {
     setLoadingHistory(true);
     api.get('/payments/my-payments')
       .then((res) => setMyPayments(res.data))
-      .catch(() => console.error('Impossible de charger l\'historique'))
+      .catch(() => {})
       .finally(() => setLoadingHistory(false));
   }, []);
 
-  const totalAmount = config ? config.montantTranche * tranches : 0;
+  const pensionParTranche = scolarite ? Math.round(scolarite.montantPension / scolarite.nombreTranches) : 0;
+  const totalAmount = pensionParTranche * selectedTranches;
 
   const resetForm = () => {
     setSelectedChild('');
-    setConfig(null);
-    setConfigError('');
-    setTranches(1);
+    setScolarite(null);
+    setScolariteError('');
+    setSelectedTranches(1);
     setModePaiement('');
     setRecuPDF('');
     setRecuName('');
@@ -96,11 +111,11 @@ const ParentPayment = () => {
     if (!modePaiement) { notifyError('Veuillez sélectionner un mode de paiement'); return; }
     if (!recuPDF) { notifyError('Veuillez joindre le reçu de paiement'); return; }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
       await api.post('/payments/initiate', {
         eleveId: selectedChild,
-        nombreTranches: tranches,
+        nombreTranches: selectedTranches,
         methode: 'CARTE_BANCAIRE',
         transactionRef: `OFFLINE-${Date.now()}`,
         montant: totalAmount,
@@ -109,10 +124,10 @@ const ParentPayment = () => {
       });
       notifySuccess('Demande de paiement envoyée avec succès !');
       resetForm();
-    } catch (err) {
+    } catch {
       notifyError('Erreur lors de l\'envoi du paiement.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -139,21 +154,49 @@ const ParentPayment = () => {
             </select>
           </div>
 
-          {configError && (
+          {scolariteError && (
             <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-[var(--radius)] text-sm text-amber-700">
-              <span>⚠️</span> {configError}
+              <span>⚠️</span> {scolariteError}
             </div>
           )}
 
-          {config && (
+          {scolarite && (
             <>
+              <div className="bg-gray-50 p-4 rounded-[var(--radius)] border border-gray-200 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Frais d'inscription</span>
+                  <span className="font-bold">{scolarite.montantInscription.toLocaleString()} FCFA</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Pension annuelle</span>
+                  <span className="font-bold">{scolarite.montantPension.toLocaleString()} FCFA</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Par tranche ({scolarite.nombreTranches}x)</span>
+                  <span className="font-bold">{pensionParTranche.toLocaleString()} FCFA</span>
+                </div>
+                <hr className="border-gray-200" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Échéancier</span>
+                  <span />
+                </div>
+                {scolarite.tranches.map(t => (
+                  <div key={t.id} className="flex items-center gap-2 text-xs text-gray-600">
+                    <Calendar size={12} />
+                    <span className="font-medium">{t.libelle} :</span>
+                    <span>{t.montant.toLocaleString()} FCFA</span>
+                    <span className="text-gray-400">— {new Date(t.dateLimite).toLocaleDateString('fr-FR')}</span>
+                  </div>
+                ))}
+              </div>
+
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Nombre de tranches à payer</label>
-                <div className="flex gap-4">
-                  {[1, 2, 3].map((num) => (
-                    <button key={num} type="button" onClick={() => setTranches(num)}
+                <div className="flex gap-2">
+                  {Array.from({ length: scolarite.nombreTranches }, (_, i) => i + 1).map((num) => (
+                    <button key={num} type="button" onClick={() => setSelectedTranches(num)}
                       className={`flex-1 py-3 rounded-[var(--radius)] font-bold transition-all ${
-                        tranches === num ? 'bg-[var(--navy)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        selectedTranches === num ? 'bg-[var(--navy)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}>
                       {num} {num > 1 ? 'Tranches' : 'Tranche'}
                     </button>
@@ -168,7 +211,6 @@ const ParentPayment = () => {
                 </span>
               </div>
 
-              {/* Mode de paiement hors-ligne */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Mode de paiement</label>
                 <div className="grid grid-cols-2 gap-3">
@@ -179,13 +221,12 @@ const ParentPayment = () => {
                           ? 'border-[var(--accent)] bg-[var(--accent-light)] text-[var(--navy)]'
                           : 'border-gray-100 text-gray-400 hover:border-gray-300'
                       }`}>
-                      {m === 'CASH' ? 'Cash à l\'école' : 'Virement bancaire'}
+                      {m === 'CASH' ? "Cash à l'école" : 'Virement bancaire'}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Upload reçu */}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">Reçu de paiement</label>
                 <div className="flex items-center gap-3 p-4 bg-gray-50 border border-dashed border-gray-300 rounded-[var(--radius)]">
@@ -203,7 +244,7 @@ const ParentPayment = () => {
                 </div>
               </div>
 
-              <SubmitBtn loading={loading} text="Envoyer la demande de paiement" loadingText="Traitement en cours..." className="w-full btn-admin justify-center text-base py-4" />
+              <SubmitBtn loading={submitting} text="Envoyer la demande de paiement" loadingText="Traitement en cours..." className="w-full btn-admin justify-center text-base py-4" />
             </>
           )}
         </form>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Camera, User, AlertCircle, AlertTriangle, X, Upload } from 'lucide-react';
+import { FileText, Camera, User, AlertCircle, AlertTriangle, X, Upload, Info, Calendar } from 'lucide-react';
 import { enrollmentService } from '../services/enrollmentService';
 import { useTranslation } from '../i18n/LanguageContext';
 import api from '../services/axiosInstance';
@@ -21,10 +21,12 @@ const ParentScolarite = () => {
   const [validationError, setValidationError] = useState('');
   const [procedure, setProcedure] = useState<string>('');
   const [showProcedure, setShowProcedure] = useState(false);
+  const [scolarites, setScolarites] = useState<any[]>([]);
+  const [showScolariteInfo, setShowScolariteInfo] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const recuRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadRequests(); loadProcedure(); loadCycles(); loadClasses(); }, []);
+  useEffect(() => { loadRequests(); loadProcedure(); loadCycles(); loadClasses(); loadScolarites(); }, []);
 
   const loadProcedure = async () => {
     try {
@@ -37,6 +39,13 @@ const ParentScolarite = () => {
     try {
       const res = await api.get('/enrollments/cycles');
       setCycles(Array.isArray(res.data) ? res.data : []);
+    } catch { /* ignore */ }
+  };
+
+  const loadScolarites = async () => {
+    try {
+      const res = await api.get('/scolarite');
+      setScolarites(Array.isArray(res.data) ? res.data : []);
     } catch { /* ignore */ }
   };
 
@@ -123,7 +132,62 @@ const ParentScolarite = () => {
           <AlertTriangle size={16} />
           Procédure
         </button>
+        <button
+          type="button"
+          onClick={() => setShowScolariteInfo(true)}
+          className="flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 px-3 py-2 rounded-lg text-xs font-bold hover:bg-blue-100 transition-colors shrink-0 self-start"
+          title="Voir les informations sur la scolarité"
+        >
+          <Info size={16} />
+          Info Scolarité
+        </button>
       </div>
+
+      {/* Modal scolarité */}
+      {showScolariteInfo && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowScolariteInfo(false)}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Informations Scolarité</h3>
+              <button onClick={() => setShowScolariteInfo(false)} className="p-1 hover:bg-gray-100 rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            {scolarites.length === 0 ? (
+              <p className="text-sm text-gray-400">Aucune information disponible.</p>
+            ) : (
+              <div className="space-y-4">
+                {scolarites.map((s: any) => (
+                  <div key={s.id} className="border border-gray-100 rounded-[var(--radius)] p-4 bg-gray-50">
+                    <h4 className="font-bold text-sm text-[var(--navy)] mb-2">{s.classe?.libelle || `Classe #${s.classeId}`}</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="text-gray-500">Frais d'inscription</div>
+                      <div className="font-semibold">{Number(s.montantInscription).toLocaleString()} FCFA</div>
+                      <div className="text-gray-500">Pension annuelle</div>
+                      <div className="font-semibold">{Number(s.montantPension).toLocaleString()} FCFA</div>
+                      <div className="text-gray-500">Tranches</div>
+                      <div className="font-semibold">{s.nombreTranches}x</div>
+                    </div>
+                    {s.tranches?.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs font-bold text-gray-600 mb-2">Échéancier</p>
+                        {s.tranches.map((t: any) => (
+                          <div key={t.id} className="flex items-center gap-2 text-xs text-gray-600 mb-1">
+                            <Calendar size={12} />
+                            <span className="font-medium">{t.libelle} :</span>
+                            <span>{Number(t.montant).toLocaleString()} FCFA</span>
+                            <span className="text-gray-400">— {new Date(t.dateLimite).toLocaleDateString('fr-FR')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal procédure */}
       {showProcedure && (
