@@ -37,7 +37,7 @@ const DisciplinePage = () => {
   const [activeTab, setActiveTab] = useState<'rapport' | 'pending' | 'alertes' | 'types'>('rapport');
 
   // Rapport tab
-  const [form, setForm] = useState({ eleveId: '', type: 'RETARD', gravite: 'Faible', points: 2, commentaire: '' });
+  const [form, setForm] = useState({ eleveId: '', type: '', gravite: 'Faible', points: 2, commentaire: '' });
   const [eleves, setEleves] = useState<Eleve[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -121,7 +121,7 @@ const DisciplinePage = () => {
         auteur: 'Administrateur'
       });
       notifySuccess("Incident enregistré !");
-      setForm({ eleveId: '', type: 'RETARD', gravite: 'Faible', points: 2, commentaire: '' });
+      setForm({ eleveId: '', type: '', gravite: 'Faible', points: 2, commentaire: '' });
       loadEleves();
     } catch (err) {
       notifyError("Erreur lors de l'enregistrement");
@@ -275,9 +275,10 @@ const DisciplinePage = () => {
                   <div>
                     <label className="text-xs font-bold text-gray-400 uppercase">Type d'incident</label>
                     <select className="w-full border border-gray-200 p-2 mt-1 rounded-[var(--radius)] outline-none text-sm focus:border-[var(--accent)]" value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-                      <option value="RETARD">Retard</option>
-                      <option value="ABSENCE_INJUSTIFIEE">Absence injustifiée</option>
-                      <option value="COMPORTEMENT">Indiscipline</option>
+                      <option value="">Choisir...</option>
+                      {types.map(t => (
+                        <option key={t.id} value={t.libelle}>{t.libelle}</option>
+                      ))}
                       <option value="AUTRE">Autre</option>
                     </select>
                   </div>

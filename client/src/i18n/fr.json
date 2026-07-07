@@ -1,5 +1,5 @@
 {
-  "app.title": "EduManager Pro - ERP Scolaire",
+  "app.title": "École Excellence - ERP Scolaire",
   "app.version": "Version 1.0.0",
 
   "nav.dashboard": "Tableau de Bord",
@@ -27,7 +27,7 @@
   "parent.children": "Mes enfants",
   "parent.profile": "Profil enfant",
 
-  "admin.title": "Admin EduManager",
+  "admin.title": "Admin École Excellence",
   "teacher.title": "Espace Enseignant",
 
   "auth.login": "Connexion",
@@ -147,7 +147,7 @@
   "admin.administrator": "Administrateur",
   "admin.dashboardShort": "Tableau de Bord",
 
-  "app.copyright": "© 2024 EduManager Pro - ERP Scolaire",
+  "app.copyright": "© 2024 École Excellence - ERP Scolaire",
 
   "lang.fr": "Français",
   "lang.en": "English"

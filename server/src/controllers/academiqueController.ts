@@ -57,6 +57,33 @@ export const getAllAnnees = async (req: Request, res: Response) => {
   }
 };
 
+export const getActiveAnnee = async (req: Request, res: Response) => {
+  try {
+    let annee = await prisma.anneeAcademique.findFirst({
+      where: { active: true },
+      include: {
+        trimestres: {
+          orderBy: { idTrimestre: 'asc' },
+        },
+      },
+    });
+    if (!annee) {
+      annee = await prisma.anneeAcademique.findFirst({
+        where: { statut: 'EN_COURS' },
+        include: {
+          trimestres: {
+            orderBy: { idTrimestre: 'asc' },
+          },
+        },
+      });
+    }
+    if (!annee) return res.status(404).json({ error: "Aucune année académique active" });
+    res.json(annee);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur de récupération" });
+  }
+};
+
 export const createAnnee = async (req: Request, res: Response) => {
   try {
     const { libelle, dateDebut, dateFin } = req.body;

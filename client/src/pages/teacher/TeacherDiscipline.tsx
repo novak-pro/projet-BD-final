@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldAlert, AlertTriangle } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 
@@ -9,16 +9,25 @@ interface EleveItem {
   prenom: string;
 }
 
+interface TypeInfra {
+  id: number;
+  libelle: string;
+}
+
 const TeacherDiscipline = () => {
   const [eleves, setEleves] = useState<EleveItem[]>([]);
+  const [types, setTypes] = useState<TypeInfra[]>([]);
   const [form, setForm] = useState({
-    eleveId: '', type: 'RETARD', gravite: 'Faible', pointsDeduits: '1', commentaire: ''
+    eleveId: '', type: '', gravite: 'Faible', pointsDeduits: '1', commentaire: ''
   });
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     api.get('/cours/mes-eleves')
       .then((res: any) => setEleves(res.data))
+      .catch(() => {});
+    api.get('/discipline/types')
+      .then((res: any) => setTypes(Array.isArray(res.data) ? res.data : []))
       .catch(() => {});
   }, []);
 
@@ -35,7 +44,7 @@ const TeacherDiscipline = () => {
         auteur: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').nom || 'Enseignant' : 'Enseignant',
       });
       setMessage("Incident signalé !");
-      setForm({ eleveId: '', type: 'RETARD', gravite: 'Faible', pointsDeduits: '1', commentaire: '' });
+      setForm({ eleveId: '', type: '', gravite: 'Faible', pointsDeduits: '1', commentaire: '' });
     } catch {
       notifyError("Erreur lors du signalement");
     }
@@ -68,10 +77,11 @@ const TeacherDiscipline = () => {
           <div className="admin-form-row">
             <div className="admin-field">
               <label>Type d'incident</label>
-              <select value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-                <option value="RETARD">Retard</option>
-                <option value="ABSENCE_INJUSTIFIEE">Absence injustifiée</option>
-                <option value="COMPORTEMENT">Comportement</option>
+              <select value={form.type} onChange={e => setForm({...form, type: e.target.value})} required>
+                <option value="">Choisir...</option>
+                {types.map(t => (
+                  <option key={t.id} value={t.libelle}>{t.libelle}</option>
+                ))}
                 <option value="AUTRE">Autre</option>
               </select>
             </div>

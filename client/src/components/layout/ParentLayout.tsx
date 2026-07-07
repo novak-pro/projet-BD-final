@@ -54,7 +54,7 @@ const ParentLayout = () => {
             )}
           </div>
           <div>
-            <h2>EduManager</h2>
+            <h2>École Excellence</h2>
             <span>{t('parent.title')}</span>
           </div>
         </div>

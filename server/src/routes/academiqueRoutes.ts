@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  getAllAnnees, createAnnee, updateAnnee, deleteAnnee, setActiveAnnee,
+  getAllAnnees, getActiveAnnee, createAnnee, updateAnnee, deleteAnnee, setActiveAnnee,
   createTrimestre, updateTrimestre, deleteTrimestre,
   createSession, updateSession, deleteSession,
   duplicateAnnee, generateTrimestres,
@@ -8,6 +8,9 @@ import {
 import { protect, restrictTo } from '../middlewares/authMiddleware';
 
 const router = Router();
+
+// Année active (accessible à tout utilisateur authentifié)
+router.get('/annees/active', protect, getActiveAnnee);
 
 // Années académiques
 router.get('/annees', protect, restrictTo('ADMIN_PRINCIPAL'), getAllAnnees);

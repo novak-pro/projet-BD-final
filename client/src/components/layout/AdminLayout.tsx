@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen,
-  Calendar, GraduationCap, ShieldCheck, CreditCard, Menu, X, Building2, MessageSquare, FileText
+  Calendar, GraduationCap, ShieldCheck, CreditCard, Menu, X, Building2, MessageSquare, FileText, ClipboardList
 } from 'lucide-react';
 import LanguageSwitcher from '../LanguageSwitcher';
 import SettingsDropdown from '../SettingsDropdown';
@@ -21,6 +21,7 @@ const AdminLayout = () => {
     { icon: <GraduationCap size={18} />,   label: t('nav.personnel'),     path: '/admin/personnel' },
     { icon: <Building2 size={18} />,       label: t('nav.infrastructure'), path: '/admin/infrastructure' },
     { icon: <BookOpen size={18} />,        label: t('nav.subjects'),      path: '/admin/matieres' },
+    { icon: <ClipboardList size={18} />,   label: t('nav.bulletins'),     path: '/admin/bulletins' },
     { icon: <Calendar size={18} />,        label: t('nav.schedule'),      path: '/admin/planning' },
     { icon: <ShieldCheck size={18} />,     label: t('nav.discipline'),    path: '/admin/discipline' },
     { icon: <GraduationCap size={18} />,   label: t('nav.finance'),       path: '/admin/finance' },
@@ -46,7 +47,7 @@ const AdminLayout = () => {
             )}
           </div>
           <div>
-            <h2>EduManager</h2>
+            <h2>École Excellence</h2>
             <span>{t('admin.title')}</span>
           </div>
         </div>

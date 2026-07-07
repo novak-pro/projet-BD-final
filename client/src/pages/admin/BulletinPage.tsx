@@ -25,21 +25,36 @@ interface Classe {
   libelle: string;
 }
 
+interface Trimestre {
+  idTrimestre: number;
+  libelle: string;
+}
+
 const BulletinPage = () => {
   const { t } = useTranslation();
   const [classe, setClasse] = useState("");
-  const [evaluation, setEvaluation] = useState("Contrôle continu");
+  const [trimestreId, setTrimestreId] = useState<number | ''>('');
   const [classes, setClasses] = useState<Classe[]>([]);
+  const [trimestres, setTrimestres] = useState<Trimestre[]>([]);
   const [bulletins, setBulletins] = useState<Bulletin[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Détail modal
   const [detailStudent, setDetailStudent] = useState<Bulletin | null>(null);
 
-  useEffect(() => { loadClasses(); }, []);
+  useEffect(() => { loadClasses(); loadTrimestres(); }, []);
+
+  const loadTrimestres = async () => {
+    try {
+      const res = await api.get('/academique/annees/active');
+      if (res.data?.trimestres) setTrimestres(res.data.trimestres);
+    } catch { console.error("Erreur chargement trimestres"); }
+  };
+
+  const evaluation = trimestres.find(t => t.idTrimestre === trimestreId)?.libelle ?? '';
 
   useEffect(() => {
-    if (classe) loadBulletins();
+    if (classe && evaluation) loadBulletins();
   }, [classe, evaluation]);
 
   const loadClasses = async () => {
@@ -84,10 +99,11 @@ const BulletinPage = () => {
           Bulletins & Performance
         </h2>
         <div className="flex items-center gap-3">
-          <select className="border border-gray-200 rounded-[var(--radius)] py-1.5 px-3 text-sm outline-none focus:border-[var(--accent)]" value={evaluation} onChange={e => setEvaluation(e.target.value)}>
-            <option value="Contrôle continu">Contrôle continu</option>
-            <option value="Examen Trimestriel">Examen Trimestriel</option>
-            <option value="Examen Final">Examen Final</option>
+          <select className="border border-gray-200 rounded-[var(--radius)] py-1.5 px-3 text-sm outline-none focus:border-[var(--accent)]" value={trimestreId} onChange={e => setTrimestreId(e.target.value ? Number(e.target.value) : '')}>
+            <option value="">Sélectionner un trimestre</option>
+            {trimestres.map(t => (
+              <option key={t.idTrimestre} value={t.idTrimestre}>{t.libelle}</option>
+            ))}
           </select>
           <select className="border border-gray-200 rounded-[var(--radius)] py-1.5 px-3 text-sm outline-none focus:border-[var(--accent)]" value={classe} onChange={e => setClasse(e.target.value)}>
             <option value="">Sélectionner une classe</option>

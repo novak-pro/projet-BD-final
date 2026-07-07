@@ -16,7 +16,7 @@ const BrandHeader = ({ subtitle }: BrandHeaderProps) => {
           <GraduationCap size={44} className="text-white" />
         )}
       </div>
-      <h1 className="text-3xl font-bold text-white tracking-tight">EduManager</h1>
+      <h1 className="text-3xl font-bold text-white tracking-tight">École Excellence</h1>
       <p className="text-sm text-white/60 mt-2">{subtitle}</p>
     </div>
   );

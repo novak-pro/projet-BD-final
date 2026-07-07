@@ -19,8 +19,12 @@ interface CoursItem {
   salle?: { libelle: string; classe: ClasseInfo | null } | null;
 }
 
-const evaluationOptions = ['Devoir', 'Interrogation', 'Examen Trimestriel'];
-const trimestreOptions = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
+interface Trimestre {
+  idTrimestre: number;
+  libelle: string;
+  dateDebut: string;
+  dateFin: string;
+}
 
 const getClasse = (c: CoursItem): ClasseInfo | null => c.classe ?? c.salle?.classe ?? null;
 
@@ -28,8 +32,8 @@ const TeacherGrades = () => {
   const [cours, setCours] = useState<CoursItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCours, setSelectedCours] = useState<CoursItem | null>(null);
-  const [evaluation, setEvaluation] = useState('Devoir');
-  const [trimestre, setTrimestre] = useState('Trimestre 1');
+  const [trimestreId, setTrimestreId] = useState<number | ''>('');
+  const [trimestres, setTrimestres] = useState<Trimestre[]>([]);
 
   useEffect(() => {
     api.get('/cours/mes-cours')
@@ -39,6 +43,12 @@ const TeacherGrades = () => {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+    api.get('/academique/annees/active')
+      .then((res: any) => {
+        const annee = res.data;
+        if (annee?.trimestres) setTrimestres(annee.trimestres);
+      })
+      .catch(() => {});
   }, []);
 
   const handleSelectCours = async (c: CoursItem) => {
@@ -52,6 +62,8 @@ const TeacherGrades = () => {
     }
     setSelectedCours(c);
   };
+
+  const selectedTrimestre = trimestres.find(t => t.idTrimestre === trimestreId);
 
   if (loading) return <div className="p-10 text-center text-gray-400">Chargement...</div>;
 
@@ -122,25 +134,24 @@ const TeacherGrades = () => {
 
             <div className="admin-form-row mb-6">
               <div className="admin-field">
-                <label>Type d'évaluation</label>
-                <select value={evaluation} onChange={e => setEvaluation(e.target.value)}>
-                  {evaluationOptions.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-              <div className="admin-field">
                 <label>Trimestre</label>
-                <select value={trimestre} onChange={e => setTrimestre(e.target.value)}>
-                  {trimestreOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                <select value={trimestreId} onChange={e => setTrimestreId(e.target.value ? Number(e.target.value) : '')}>
+                  <option value="">Sélectionner un trimestre</option>
+                  {trimestres.map(t => (
+                    <option key={t.idTrimestre} value={t.idTrimestre}>{t.libelle}</option>
+                  ))}
                 </select>
               </div>
             </div>
 
-            <GradesEntry
-              eleves={(selectedCours.classe?.students || selectedCours.salle?.classe?.students || []).map(s => ({ matricule: s.matricule, nom: `${s.prenom} ${s.nom}` }))}
-              matiereId={selectedCours.matiere.id}
-              classeId={selectedCours.classe?.idClasse ?? selectedCours.salle?.classe?.idClasse ?? 0}
-              evaluation={`${evaluation} - ${trimestre}`}
-            />
+            {trimestreId && selectedTrimestre && (
+              <GradesEntry
+                eleves={(selectedCours.classe?.students || selectedCours.salle?.classe?.students || []).map(s => ({ matricule: s.matricule, nom: `${s.prenom} ${s.nom}` }))}
+                matiereId={selectedCours.matiere.id}
+                classeId={selectedCours.classe?.idClasse ?? selectedCours.salle?.classe?.idClasse ?? 0}
+                evaluation={selectedTrimestre.libelle}
+              />
+            )}
           </>
         )}
       </div>

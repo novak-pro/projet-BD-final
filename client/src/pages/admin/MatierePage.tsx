@@ -26,6 +26,9 @@ interface EpreuveItem {
   classe: { idClasse: number; libelle: string };
 }
 
+const backendBase = api.defaults.baseURL?.replace('/api', '') || '';
+const fileUrl = (path: string | null) => path?.startsWith('/uploads/') ? `${backendBase}${path}` : path || '';
+
 const MatierePage = () => {
   const { t } = useTranslation();
   const [tab, setTab] = useState<'matieres' | 'epreuves'>('matieres');
@@ -256,7 +259,7 @@ const MatierePage = () => {
                       <td className="p-3 text-sm text-gray-400">{new Date(ep.createdAt).toLocaleDateString('fr-FR')}</td>
                       <td className="p-3 text-center">
                         {ep.sujetUrl ? (
-                          <a href={ep.sujetUrl} target="_blank" rel="noopener noreferrer"
+                          <a href={fileUrl(ep.sujetUrl)} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800">
                             <Download size={14} /> Voir
                           </a>
@@ -264,7 +267,7 @@ const MatierePage = () => {
                       </td>
                       <td className="p-3 text-center">
                         {ep.corrigeUrl ? (
-                          <a href={ep.corrigeUrl} target="_blank" rel="noopener noreferrer"
+                          <a href={fileUrl(ep.corrigeUrl)} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-xs text-green-600 hover:text-green-800">
                             <Download size={14} /> Corrigé
                           </a>
