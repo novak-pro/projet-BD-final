@@ -3,6 +3,7 @@ import { CreditCard, Clock, Upload } from 'lucide-react';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../utils/notifications';
+import SubmitBtn from '../components/SubmitBtn';
 
 interface Child {
   matricule: number;
@@ -190,10 +191,7 @@ const ParentPayment = () => {
                 </div>
               </div>
 
-              <button type="submit" disabled={loading}
-                className="w-full btn-admin justify-center text-base py-4 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                {loading ? 'Traitement en cours...' : 'Envoyer la demande de paiement'}
-              </button>
+              <SubmitBtn loading={loading} text="Envoyer la demande de paiement" loadingText="Traitement en cours..." className="w-full btn-admin justify-center text-base py-4" />
             </>
           )}
         </form>

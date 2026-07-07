@@ -4,6 +4,7 @@ import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
+import SubmitBtn from '../../components/SubmitBtn';
 
 interface PlanningEntry {
   id: number;
@@ -53,6 +54,7 @@ const PlanningPage = () => {
   const [coursList, setCoursList] = useState<Cours[]>([]);
   const [form, setForm] = useState({ idCours: '', idSalle: '', jour: 'LUNDI', heureDebut: '08:00', heureFin: '10:00' });
   const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { loadInitial(); }, []);
 
@@ -134,6 +136,7 @@ const PlanningPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       const payload = { ...form, idCours: Number(form.idCours), idSalle: Number(form.idSalle) };
       if (editingId) {
@@ -145,6 +148,8 @@ const PlanningPage = () => {
       loadPlannings();
     } catch (err: any) {
       notifyError(err.response?.data?.error || "Erreur");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -311,9 +316,7 @@ const PlanningPage = () => {
                   <input type="time" className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm outline-none focus:border-[var(--accent)]" value={form.heureFin} onChange={e => setForm({...form, heureFin: e.target.value})} required />
                 </div>
               </div>
-              <button type="submit" className="w-full py-2.5 rounded-lg text-white font-semibold text-sm hover:brightness-110 transition-all" style={{ background: 'var(--navy)' }}>
-                {editingId ? 'Modifier le créneau' : 'Ajouter le créneau'}
-              </button>
+              <SubmitBtn loading={submitting} text={editingId ? 'Modifier le créneau' : 'Ajouter le créneau'} className="w-full" />
             </form>
           </div>
         </div>

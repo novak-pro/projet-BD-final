@@ -3,6 +3,7 @@ import { Building2, Plus, Search, Home, Users, MapPin, Edit3, X, Check, Trash2, 
 import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
+import SubmitBtn from '../../components/SubmitBtn';
 
 const statusConfig: Record<string, { color: string; label: string }> = {
   DISPONIBLE: { color: "bg-green-100 text-green-700 border-green-200", label: "Disponible" },
@@ -66,6 +67,7 @@ const AdminInfrastructure = () => {
 
   // Delete
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { fetchSalles(); fetchClasses(); fetchEnseignants(); }, []);
 
@@ -96,6 +98,7 @@ const AdminInfrastructure = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await api.post('/salles', {
         libelle: newSalle.libelle,
@@ -109,6 +112,7 @@ const AdminInfrastructure = () => {
       setNewSalle({ libelle: '', position: '', capacite: '', idClasse: '', enseignantTitulaireId: '' });
       fetchSalles();
     } catch { notifyError("Erreur lors de la création"); }
+    finally { setSubmitting(false); }
   };
 
   const openEditModal = (s: Salle) => {
@@ -126,6 +130,7 @@ const AdminInfrastructure = () => {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSalle) return;
+    setSubmitting(true);
     try {
       await api.put(`/salles/${editingSalle.idSalle}`, {
         libelle: editForm.libelle,
@@ -138,6 +143,7 @@ const AdminInfrastructure = () => {
       setEditingSalle(null);
       fetchSalles();
     } catch { notifyError("Erreur lors de la mise à jour"); }
+    finally { setSubmitting(false); }
   };
 
   const handleUpdateEtat = async (id: number, etat: string) => {
@@ -323,7 +329,7 @@ const AdminInfrastructure = () => {
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreateModal(false)}
                   className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
-                <button type="submit" className="flex-1 btn-admin justify-center">Créer</button>
+                <SubmitBtn loading={submitting} text="Créer" className="flex-1" />
               </div>
             </form>
           </div>
@@ -381,7 +387,7 @@ const AdminInfrastructure = () => {
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditingSalle(null)}
                   className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
-                <button type="submit" className="flex-1 btn-admin justify-center">Enregistrer</button>
+                <SubmitBtn loading={submitting} text="Enregistrer" className="flex-1" />
               </div>
             </form>
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Upload, CheckCircle, AlertCircle, XCircle, Clock, File, X } from 'lucide-react';
+import { FileText, Upload, CheckCircle, AlertCircle, XCircle, Clock, File, X, Loader2 } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 
@@ -15,6 +15,7 @@ const EpreuvePage = () => {
   const [activeAnnee, setActiveAnnee] = useState<any>(null);
   const [trimestres, setTrimestres] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const sujetRef = useRef<HTMLInputElement>(null);
   const corrigeRef = useRef<HTMLInputElement>(null);
 
@@ -49,6 +50,7 @@ const EpreuvePage = () => {
     if (!sujetFile) return notifyError("Veuillez sélectionner le fichier du sujet (PDF).");
     if (!corrigeFile) return notifyError("Veuillez sélectionner le fichier du corrigé (PDF).");
 
+    setSubmitting(true);
     const data = new FormData();
     data.append('sujet', sujetFile);
     data.append('corrige', corrigeFile);
@@ -69,6 +71,8 @@ const EpreuvePage = () => {
     } catch (err: any) {
       const msg = err?.response?.data?.error || "Erreur lors du dépôt";
       notifyError(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -193,8 +197,9 @@ const EpreuvePage = () => {
           </div>
         </div>
 
-        <button type="submit" className="btn-admin w-full justify-center py-3">
-          Valider le dépôt
+        <button type="submit" disabled={submitting} className="btn-admin w-full justify-center py-3">
+          {submitting ? <Loader2 size={18} className="animate-spin" /> : null}
+          {submitting ? 'Envoi en cours...' : 'Valider le dépôt'}
         </button>
       </form>
     </div>

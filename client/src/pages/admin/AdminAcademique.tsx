@@ -4,6 +4,7 @@ import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
+import SubmitBtn from '../../components/SubmitBtn';
 
 interface Session {
   idSession: number;
@@ -76,6 +77,7 @@ const AdminAcademique = () => {
   const [newTrimestre, setNewTrimestre] = useState({ idAcademi: 0, libelle: '', dateDebut: '', dateFin: '' });
   const [newSession, setNewSession] = useState({ idTrimestre: 0, libelle: '', dateDebut: '', dateFin: '' });
   const [confirmState, setConfirmState] = useState<{ open: boolean; onConfirm: () => void; message: string }>({ open: false, onConfirm: () => {}, message: '' });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { fetchAnnees(); }, []);
 
@@ -112,6 +114,7 @@ const AdminAcademique = () => {
   };
 
   const handleSaveAnnee = async () => {
+    setSubmitting(true);
     try {
       if (duplicateSourceId) {
         await api.post(`/academique/annees/${duplicateSourceId}/duplicate`, anneeForm);
@@ -127,6 +130,8 @@ const AdminAcademique = () => {
       fetchAnnees();
     } catch (err: any) {
       notifyError(err?.response?.data?.error || "Erreur inconnue");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -544,9 +549,7 @@ const AdminAcademique = () => {
                   className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded font-semibold hover:bg-gray-200 transition">
                   Annuler
                 </button>
-                <button onClick={handleSaveAnnee} className="flex-1 btn-admin justify-center">
-                  {duplicateSourceId ? "Dupliquer" : editAnnee ? "Enregistrer" : "Créer"}
-                </button>
+                <SubmitBtn loading={submitting} text={duplicateSourceId ? "Dupliquer" : editAnnee ? "Enregistrer" : "Créer"} className="flex-1" onClick={handleSaveAnnee} />
               </div>
             </div>
           </div>

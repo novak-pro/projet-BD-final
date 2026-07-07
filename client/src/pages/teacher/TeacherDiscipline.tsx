@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { notifySuccess, notifyError } from '../../utils/notifications';
+import SubmitBtn from '../../components/SubmitBtn';
 
 interface EleveItem {
   matricule: number;
@@ -20,6 +21,7 @@ const TeacherDiscipline = () => {
   const [form, setForm] = useState({
     eleveId: '', type: '', gravite: 'Faible', pointsDeduits: '1', commentaire: ''
   });
+  const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -34,6 +36,7 @@ const TeacherDiscipline = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.eleveId) return notifyError("Sélectionnez un élève");
+    setSubmitting(true);
     try {
       await api.post('/discipline/incident', {
         eleveId: parseInt(form.eleveId),
@@ -47,6 +50,8 @@ const TeacherDiscipline = () => {
       setForm({ eleveId: '', type: '', gravite: 'Faible', pointsDeduits: '1', commentaire: '' });
     } catch {
       notifyError("Erreur lors du signalement");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -106,7 +111,7 @@ const TeacherDiscipline = () => {
             <textarea value={form.commentaire} onChange={e => setForm({...form, commentaire: e.target.value})}
               required className="border border-gray-200 p-3 rounded w-full text-sm" rows={3} />
           </div>
-          <button className="btn-admin justify-center">Signaler l'incident</button>
+          <SubmitBtn loading={submitting} text="Signaler l'incident" loadingText="Envoi..." />
         </form>
       </div>
     </div>

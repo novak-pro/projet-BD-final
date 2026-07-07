@@ -4,6 +4,7 @@ import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
+import SubmitBtn from '../../components/SubmitBtn';
 
 interface Incident {
   id: number;
@@ -57,6 +58,7 @@ const DisciplinePage = () => {
   const [editingPending, setEditingPending] = useState<number | null>(null);
   const [editPendingForm, setEditPendingForm] = useState({ commentaire: '', pointsDeduits: 0, gravite: '' });
   const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     loadEleves();
@@ -111,6 +113,7 @@ const DisciplinePage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await api.post('/discipline/incident', {
         eleveId: parseInt(form.eleveId),
@@ -125,6 +128,8 @@ const DisciplinePage = () => {
       loadEleves();
     } catch (err) {
       notifyError("Erreur lors de l'enregistrement");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -165,6 +170,7 @@ const DisciplinePage = () => {
   // ---- CRUD Types d'infractions ----
   const handleCreateType = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await api.post('/discipline/types', typeForm);
       notifySuccess("Type d'infraction créé !");
@@ -172,6 +178,7 @@ const DisciplinePage = () => {
       setShowTypeForm(false);
       loadTypes();
     } catch { notifyError("Erreur lors de la création"); }
+    finally { setSubmitting(false); }
   };
 
   const handleUpdateType = async (id: number) => {
@@ -297,9 +304,7 @@ const DisciplinePage = () => {
                     </div>
                   </div>
                   <textarea className="w-full border border-gray-200 p-2 rounded-[var(--radius)] outline-none text-sm focus:border-[var(--accent)]" placeholder="Commentaire détaillé..." rows={4} value={form.commentaire} onChange={e => setForm({...form, commentaire: e.target.value})} required></textarea>
-                  <button type="submit" className="w-full btn-admin justify-center py-2.5">
-                    <Send size={18}/> Enregistrer
-                  </button>
+                  <SubmitBtn loading={submitting} text="Enregistrer" className="w-full" />
                 </form>
               </div>
             </div>
@@ -480,7 +485,7 @@ const DisciplinePage = () => {
                     onChange={e => setTypeForm({ ...typeForm, pointsMalus: parseInt(e.target.value) || 0 })} />
                 </div>
                 <div className="flex items-end">
-                  <button type="submit" className="btn-admin w-full justify-center py-2">Ajouter</button>
+                  <SubmitBtn loading={submitting} text="Ajouter" className="w-full" />
                 </div>
               </form>
             )}

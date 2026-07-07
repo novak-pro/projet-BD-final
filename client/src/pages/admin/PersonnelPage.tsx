@@ -5,6 +5,7 @@ import { Users, BookOpen, GraduationCap, Edit, UserX, X, AlertTriangle, Search, 
 import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
+import SubmitBtn from '../../components/SubmitBtn';
 
 interface Personnel {
   id: number;
@@ -81,6 +82,7 @@ const PersonnelPage = () => {
   // Delete
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -123,6 +125,7 @@ const PersonnelPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingId) return;
+    setSubmitting(true);
     try {
       const payload: any = { nom: formData.nom, prenom: formData.prenom, telephone: formData.telephone, fonction: formData.fonction, ville: formData.ville, quartier: formData.quartier, departement: formData.departement, photo: formData.photo };
       if (formData.email && formData.email !== personnel.find(p => p.id === editingId)?.user.email) {
@@ -133,6 +136,8 @@ const PersonnelPage = () => {
       loadData();
     } catch (err: any) {
       notifyError(err?.response?.data?.error || "Erreur");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -155,6 +160,7 @@ const PersonnelPage = () => {
   const handlePromouvoir = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!promoPersonnel || !promoSalleId) return;
+    setSubmitting(true);
     try {
       await personnelService.promouvoirTitulaire({ personnelId: promoPersonnel.id, salleId: parseInt(promoSalleId) });
       setPromoPersonnel(null);
@@ -162,6 +168,8 @@ const PersonnelPage = () => {
       loadData();
     } catch (err: any) {
       notifyError(err?.response?.data?.error || "Erreur");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -187,6 +195,7 @@ const PersonnelPage = () => {
   // --- Affectation enseignant → salle + matières ---
   const handleAffectation = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await personnelService.affecterSalle({
         personnelId: parseInt(affectData.personnelId),
@@ -198,6 +207,8 @@ const PersonnelPage = () => {
       loadData();
     } catch (err: any) {
       notifyError(err?.response?.data?.error || "Erreur lors de l'affectation");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -396,7 +407,7 @@ const PersonnelPage = () => {
               <div className="admin-field"><label>Quartier</label><input type="text" value={formData.quartier} onChange={e => setFormData({ ...formData, quartier: e.target.value })} /></div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditModal(false)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
-                <button type="submit" className="flex-1 btn-admin justify-center">Enregistrer</button>
+                <SubmitBtn loading={submitting} text="Enregistrer" className="flex-1" />
               </div>
             </form>
           </div>
@@ -424,7 +435,7 @@ const PersonnelPage = () => {
               </select>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setPromoPersonnel(null)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
-                <button type="submit" className="flex-1 btn-admin justify-center">Promouvoir</button>
+                <SubmitBtn loading={submitting} text="Promouvoir" className="flex-1" />
               </div>
             </form>
           </div>
@@ -478,7 +489,7 @@ const PersonnelPage = () => {
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => { setShowAffectModal(false); setAffectData({ personnelId: '', salleId: '', matiereIds: [] }); }}
                   className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
-                <button type="submit" className="flex-1 btn-admin justify-center">Affecter</button>
+                <SubmitBtn loading={submitting} text="Affecter" className="flex-1" />
               </div>
             </form>
           </div>

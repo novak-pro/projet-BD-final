@@ -4,6 +4,7 @@ import { enrollmentService } from '../services/enrollmentService';
 import { useTranslation } from '../i18n/LanguageContext';
 import api from '../services/axiosInstance';
 import { notifySuccess, notifyError } from '../utils/notifications';
+import SubmitBtn from '../components/SubmitBtn';
 
 const ParentScolarite = () => {
   const { t } = useTranslation();
@@ -16,6 +17,7 @@ const ParentScolarite = () => {
   const [requests, setRequests] = useState<any[]>([]);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [recuPreview, setRecuPreview] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [procedure, setProcedure] = useState<string>('');
   const [showProcedure, setShowProcedure] = useState(false);
@@ -82,6 +84,7 @@ const ParentScolarite = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError('');
+    setSubmitting(true);
 
     const selectedCycle = cycles.find(c => c.idCycle === selectedCycleId);
     const selectedClasse = classes.find(c => c.idClasse === Number(formData.classe));
@@ -98,6 +101,7 @@ const ParentScolarite = () => {
       setFormData({ nom: '', prenom: '', dateNaissance: '', lieuNaissance: '', sexe: '0', niveau: '', classe: '', photoURL: '', recuPDF: '', modePaiement: '' });
       loadRequests();
     } catch (err) { notifyError("Erreur lors de l'envoi"); }
+    finally { setSubmitting(false); }
   };
 
   return (
@@ -234,9 +238,7 @@ const ParentScolarite = () => {
           </div>
         )}
 
-        <button className="col-span-2 btn-admin justify-center">
-          Soumettre la demande d'inscription
-        </button>
+        <SubmitBtn loading={submitting} text="Soumettre la demande d'inscription" loadingText="Envoi..." className="col-span-2 btn-admin justify-center" />
       </form>
 
       <div className="mt-10">

@@ -4,6 +4,7 @@ import api from '../services/axiosInstance';
 import { enrollmentService } from '../services/enrollmentService';
 import { useTranslation } from '../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../utils/notifications';
+import SubmitBtn from '../components/SubmitBtn';
 
 interface AnneeAcademique {
   idAcademi: number;
@@ -111,6 +112,7 @@ export default function StudentList() {
   const [cycleForm, setCycleForm] = useState({ libelle: '', description: '' });
   const [editingCycle, setEditingCycle] = useState<{ idCycle: number; libelle: string; description?: string | null; _count?: { classes: number } } | null>(null);
   const [deletingCycle, setDeletingCycle] = useState<{ idCycle: number; libelle: string } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchAnnees = async () => {
     try {
@@ -220,6 +222,7 @@ export default function StudentList() {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStudent) return;
+    setSubmitting(true);
     try {
       await api.put(`/students/${editingStudent.matricule}`, {
         nom: editForm.nom,
@@ -236,15 +239,18 @@ export default function StudentList() {
       setEditingStudent(null);
       fetchStudents(selectedAnneeId || undefined);
     } catch { notifyError('Erreur lors de la mise à jour'); }
+    finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deletingStudent) return;
+    setSubmitting(true);
     try {
       await api.delete(`/students/${deletingStudent.matricule}`);
       setDeletingStudent(null);
       fetchStudents(selectedAnneeId || undefined);
     } catch { notifyError('Erreur lors de la suppression'); }
+    finally { setSubmitting(false); }
   };
 
   const handleReject = async (id: number) => {
@@ -259,6 +265,7 @@ export default function StudentList() {
 
   const confirmApprove = async () => {
     if (!approveModal) return;
+    setSubmitting(true);
     try {
       await enrollmentService.process(approveModal.id, 'APPROVED', '', selectedClassroomId);
       notifySuccess("Demande validée — Élève créé.");
@@ -267,11 +274,13 @@ export default function StudentList() {
       fetchEnrollments();
       fetchStudents(selectedAnneeId || undefined);
     } catch { notifyError("Erreur"); }
+    finally { setSubmitting(false); }
   };
 
   const handleCreateClasse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!classeForm.libelle.trim()) { notifyError('Le libellé est requis'); return; }
+    setSubmitting(true);
     try {
       await api.post('/enrollments/classes', {
         libelle: classeForm.libelle.trim(),
@@ -282,6 +291,7 @@ export default function StudentList() {
       setShowClasseForm(false);
       fetchClasses();
     } catch { notifyError('Erreur lors de la création'); }
+    finally { setSubmitting(false); }
   };
 
   const handleUpdateClasse = async (e: React.FormEvent) => {
@@ -300,17 +310,20 @@ export default function StudentList() {
 
   const handleDeleteClasse = async () => {
     if (!deletingClasse) return;
+    setSubmitting(true);
     try {
       await api.delete(`/enrollments/classes/${deletingClasse.idClasse}`);
       notifySuccess('Classe supprimée');
       setDeletingClasse(null);
       fetchClasses();
     } catch { notifyError('Impossible de supprimer cette classe'); }
+    finally { setSubmitting(false); }
   };
 
   const handleCreateCycle = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cycleForm.libelle.trim()) { notifyError('Le libellé est requis'); return; }
+    setSubmitting(true);
     try {
       const res = await api.post('/enrollments/cycles', {
         libelle: cycleForm.libelle.trim(),
@@ -323,6 +336,8 @@ export default function StudentList() {
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || 'Erreur lors de la création';
       notifyError(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -345,6 +360,7 @@ export default function StudentList() {
 
   const handleDeleteCycle = async () => {
     if (!deletingCycle) return;
+    setSubmitting(true);
     try {
       await api.delete(`/enrollments/cycles/${deletingCycle.idCycle}`);
       notifySuccess('Cycle supprimé');
@@ -353,6 +369,8 @@ export default function StudentList() {
     } catch (err: any) {
       const msg = err?.response?.data?.error || err?.message || 'Impossible de supprimer ce cycle';
       notifyError(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -594,7 +612,7 @@ export default function StudentList() {
                     </div>
                     <div className="flex gap-3 pt-2">
                       <button type="button" onClick={() => setEditingStudent(null)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">{t('common.cancel')}</button>
-                      <button type="submit" className="flex-1 btn-admin justify-center">{t('common.save')}</button>
+                      <SubmitBtn type="submit" text={t('common.save')} loading={submitting} className="flex-1 btn-admin justify-center" />
                     </div>
                   </form>
                 </div>
@@ -614,7 +632,7 @@ export default function StudentList() {
                   </p>
                   <div className="flex gap-3">
                     <button onClick={() => setDeletingStudent(null)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">{t('common.cancel')}</button>
-                    <button onClick={handleDelete} className="flex-1 btn-admin-danger justify-center py-2.5">{t('common.delete')}</button>
+                    <SubmitBtn type="button" onClick={handleDelete} text={t('common.delete')} loading={submitting} className="flex-1 btn-admin-danger justify-center py-2.5" />
                   </div>
                 </div>
               </div>
@@ -737,7 +755,7 @@ export default function StudentList() {
                     </select>
                   </div>
                   <div className="flex gap-2">
-                    <button type="submit" className="btn-admin justify-center">Créer</button>
+                    <SubmitBtn type="submit" text="Créer" loading={submitting} className="btn-admin justify-center" />
                     <button type="button" onClick={() => { setShowClasseForm(false); setClasseForm({ libelle: '', idCycle: '' }); }}
                       className="bg-gray-100 text-gray-700 px-4 py-2 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
                   </div>
@@ -830,7 +848,7 @@ export default function StudentList() {
                   </p>
                   <div className="flex gap-3">
                     <button onClick={() => setDeletingClasse(null)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
-                    <button onClick={handleDeleteClasse} className="flex-1 btn-admin-danger justify-center py-2.5">Supprimer</button>
+                    <SubmitBtn type="button" onClick={handleDeleteClasse} text="Supprimer" loading={submitting} className="flex-1 btn-admin-danger justify-center py-2.5" />
                   </div>
                 </div>
               </div>
@@ -865,7 +883,7 @@ export default function StudentList() {
                       className="w-full px-3 py-2 border border-gray-200 rounded-[8px] outline-none text-sm focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] resize-none" />
                   </div>
                   <div className="flex gap-2">
-                    <button type="submit" className="btn-admin justify-center">Créer</button>
+                    <SubmitBtn type="submit" text="Créer" loading={submitting} className="btn-admin justify-center" />
                     <button type="button" onClick={() => { setShowCycleForm(false); setCycleForm({ libelle: '', description: '' }); }}
                       className="bg-gray-100 text-gray-700 px-4 py-2 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
                   </div>
@@ -953,7 +971,7 @@ export default function StudentList() {
                   </p>
                   <div className="flex gap-3">
                     <button onClick={() => setDeletingCycle(null)} className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
-                    <button onClick={handleDeleteCycle} className="flex-1 btn-admin-danger justify-center py-2.5">Supprimer</button>
+                    <SubmitBtn type="button" onClick={handleDeleteCycle} text="Supprimer" loading={submitting} className="flex-1 btn-admin-danger justify-center py-2.5" />
                   </div>
                 </div>
               </div>
@@ -981,8 +999,7 @@ export default function StudentList() {
             <div className="flex gap-3">
               <button onClick={() => { setApproveModal(null); setSelectedClassroomId(''); }}
                 className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
-              <button onClick={confirmApprove}
-                className="flex-1 bg-green-600 text-white py-2.5 rounded-[var(--radius)] font-semibold hover:bg-green-700 transition">Valider</button>
+              <SubmitBtn type="button" onClick={confirmApprove} text="Valider" loading={submitting} className="flex-1 bg-green-600 text-white py-2.5 rounded-[var(--radius)] font-semibold hover:bg-green-700 transition" />
             </div>
           </div>
         </div>

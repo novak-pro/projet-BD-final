@@ -5,6 +5,7 @@ import { ROLE_GROUPS } from '../types/roles';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
 import { useLogo } from '../contexts/LogoContext';
+import SubmitBtn from '../components/SubmitBtn';
 
 const Login = () => {
   const { t } = useTranslation();
@@ -15,6 +16,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const roles = [
@@ -26,6 +28,7 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSubmitting(true);
 
     try {
       const response = await api.post('/auth/login', { email, password });
@@ -47,6 +50,8 @@ const Login = () => {
       else navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.error || t('auth.errorServer'));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -169,13 +174,7 @@ const Login = () => {
                 Se souvenir de moi
               </label>
 
-              <button
-                type="submit"
-                className="w-full py-3 rounded-xl text-white font-bold text-sm transition-all hover:brightness-110 active:scale-[0.98] flex items-center justify-center gap-2 shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #4A7DC9, #2C4A7C)' }}
-              >
-                Se connecter <ArrowRight size={16} />
-              </button>
+              <SubmitBtn loading={submitting} text="Se connecter" loadingText="Connexion..." className="w-full btn-admin justify-center py-3" />
             </form>
 
             <div className="flex items-center gap-3 my-6">

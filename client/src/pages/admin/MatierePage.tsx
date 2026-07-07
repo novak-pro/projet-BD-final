@@ -5,6 +5,7 @@ import { BookOpen, Plus, Trash2, FileText, Download, Search, Edit2, X, School } 
 import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
+import SubmitBtn from '../../components/SubmitBtn';
 
 interface Matiere {
   id: number;
@@ -45,6 +46,7 @@ const MatierePage = () => {
   const [editCode, setEditCode] = useState('');
   const [editClassIds, setEditClassIds] = useState<number[]>([]);
   const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
+  const [submitting, setSubmitting] = useState(false);
 
   const loadMatieres = async () => {
     try {
@@ -91,6 +93,7 @@ const MatierePage = () => {
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMat) return;
+    setSubmitting(true);
     try {
       await matiereService.update(editingMat.id, {
         nom: editNom,
@@ -100,6 +103,7 @@ const MatierePage = () => {
       setEditingMat(null);
       loadMatieres();
     } catch { notifyError("Erreur lors de la modification"); }
+    finally { setSubmitting(false); }
   };
 
   useEffect(() => { loadMatieres(); loadClasses(); }, []);
@@ -319,7 +323,7 @@ const MatierePage = () => {
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setEditingMat(null)}
                   className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-[var(--radius)] font-semibold hover:bg-gray-200 transition">Annuler</button>
-                <button type="submit" className="flex-1 btn-admin justify-center">Enregistrer</button>
+                <SubmitBtn loading={submitting} text="Enregistrer" className="flex-1" />
               </div>
             </form>
           </div>

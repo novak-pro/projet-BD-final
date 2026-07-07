@@ -4,6 +4,7 @@ import BrandHeader from '../components/BrandHeader';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import SubmitBtn from '../components/SubmitBtn';
 import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
@@ -21,14 +22,18 @@ const Register = () => {
     fonction: 'ENSEIGNANT'
   });
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await api.post('/auth/register', { ...formData, role });
       setMessage("✅ " + t('auth.registerSuccess'));
     } catch (err: any) {
       setMessage("❌ " + (err.response?.data?.error || t('auth.registerError')));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -183,11 +188,7 @@ const Register = () => {
                 </div>
               </div>
 
-              <button type="submit"
-                className="w-full py-2.5 rounded-lg text-white font-semibold text-sm transition-all hover:brightness-110 active:scale-[0.98]"
-                style={{ background: '#0f172a' }}>
-                {t('auth.registerSubmit')}
-              </button>
+              <SubmitBtn loading={submitting} text="Créer un compte" loadingText="Création en cours..." className="w-full btn-admin justify-center py-3" />
             </form>
 
             {message && (
