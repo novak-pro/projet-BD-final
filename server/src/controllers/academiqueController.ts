@@ -306,10 +306,10 @@ export const generateTrimestres = async (req: Request, res: Response) => {
 export const setActiveAnnee = async (req: Request, res: Response) => {
   try {
     const id = parseInt(req.params.id as string);
-    await prisma.anneeAcademique.updateMany({ data: { active: false, statut: 'TERMINEE' } });
+    await prisma.anneeAcademique.updateMany({ data: { active: false } });
     const annee = await prisma.anneeAcademique.update({
       where: { idAcademi: id },
-      data: { active: true, statut: 'EN_COURS' },
+      data: { active: true },
     });
     res.json(annee);
   } catch (error) {

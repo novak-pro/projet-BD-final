@@ -13,6 +13,7 @@ const EpreuvePage = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [message, setMessage] = useState('');
   const [activeAnnee, setActiveAnnee] = useState<any>(null);
+  const [trimestres, setTrimestres] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const sujetRef = useRef<HTMLInputElement>(null);
   const corrigeRef = useRef<HTMLInputElement>(null);
@@ -32,6 +33,9 @@ const EpreuvePage = () => {
       if (annee) {
         setActiveAnnee(annee);
         setForm(prev => ({ ...prev, anneeAcad: annee.libelle }));
+        if (annee.trimestres?.length) setTrimestres(annee.trimestres.map((t: any) => t.libelle));
+      } else {
+        setTrimestres(['Trimestre 1', 'Trimestre 2', 'Trimestre 3']);
       }
     } catch {
       // ignore
@@ -125,8 +129,8 @@ const EpreuvePage = () => {
             <label>Évaluation</label>
             <select value={form.evaluation} onChange={e => setForm({...form, evaluation: e.target.value})} required>
               <option value="">Choisir...</option>
-              {activeAnnee?.trimestres?.map((t: any) => (
-                <option key={t.idTrimestre} value={t.libelle}>{t.libelle}</option>
+              {trimestres.map(t => (
+                <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
