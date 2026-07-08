@@ -175,18 +175,7 @@ export const getDetailBulletin = async (req: Request, res: Response): Promise<vo
   try {
     const eleve = await prisma.eleve.findUnique({
       where: { matricule: Number(matricule) },
-      include: {
-        notes: {
-          where: { evaluation: String(evaluation) },
-          include: {
-            matiere: {
-              include: {
-                cours: true,
-              },
-            },
-          },
-        },
-      },
+      select: { classroomId: true },
     });
 
     if (!eleve) {
@@ -194,13 +183,30 @@ export const getDetailBulletin = async (req: Request, res: Response): Promise<vo
       return;
     }
 
-    const details = eleve.notes.map((note) => {
-      const coeff = note.matiere.cours[0]?.coefficient || 1;
+    const notes = await prisma.note.findMany({
+      where: { eleveId: Number(matricule), evaluation: String(evaluation) },
+      include: {
+        matiere: {
+          include: {
+            cours: {
+              where: eleve.classroomId ? { idClasse: eleve.classroomId } : undefined,
+              include: { enseignant: true },
+            },
+          },
+        },
+      },
+    });
+
+    const details = notes.map((note) => {
+      const cours = note.matiere.cours[0];
+      const coeff = cours?.coefficient || 1;
+      const enseignant = cours?.enseignant;
       return {
         matiere: note.matiere.nom,
         valeur: note.valeur,
         coefficient: coeff,
-        points: note.valeur * coeff,
+        points: parseFloat((note.valeur * coeff).toFixed(2)),
+        enseignant: enseignant ? `${enseignant.prenom} ${enseignant.nom}` : null,
       };
     });
 

@@ -91,8 +91,49 @@ const BulletinPage = () => {
   const handleExportPDF = async (matricule: number) => {
     setExportingPDF(matricule);
     try {
-      const res = await api.get(`/bulletins/complet?matricule=${matricule}&evaluation=${encodeURIComponent(evaluation)}`);
-      generateBulletinPDF(res.data);
+      const [detailsRes, eleveRes] = await Promise.all([
+        api.get(`/bulletins/details?matricule=${matricule}&evaluation=${encodeURIComponent(evaluation)}`),
+        api.get(`/students/${matricule}`),
+      ]);
+      const details = Array.isArray(detailsRes.data) ? detailsRes.data : [];
+      const eleveInfo = eleveRes.data;
+      const bulletin = bulletins.find(b => b.matricule === matricule);
+      if (!bulletin) { notifyError("Bulletin non trouvé"); return; }
+
+      const moyenneClasseGenerale = bulletins.length > 0
+        ? parseFloat((bulletins.reduce((s, b) => s + b.moyenne, 0) / bulletins.length).toFixed(2))
+        : 0;
+
+      generateBulletinPDF({
+        eleve: {
+          matricule,
+          nom: bulletin.nom,
+          prenom: bulletin.prenom,
+          niveau: eleveInfo?.niveau || '',
+        },
+        classe: {
+          libelle: classes.find(c => String(c.idClasse) === classe)?.libelle || '',
+          effectif: bulletins.length,
+          titulaire: null,
+        },
+        evaluation,
+        details: details.map((d: any) => ({
+          matiere: d.matiere,
+          valeur: d.valeur,
+          coefficient: d.coefficient,
+          points: d.points || parseFloat((d.valeur * d.coefficient).toFixed(2)),
+          enseignant: d.enseignant || null,
+          moyenneClasse: null,
+          appreciation: null,
+        })),
+        moyenneGenerale: bulletin.moyenne,
+        rang: bulletin.rang,
+        totalPoints: bulletin.totalPoints,
+        totalCoeffs: bulletin.totalCoeffs,
+        moyenneClasseGenerale,
+        absences: 0,
+        retards: 0,
+      });
     } catch (err: any) {
       console.error("Erreur export PDF bulletin:", err);
       notifyError(err?.response?.data?.error || "Erreur lors de la génération du PDF");

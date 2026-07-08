@@ -83,15 +83,15 @@ export function generateBulletinPDF(data: BulletinData) {
   doc.rect(0, 0, pw, 42, 'F');
 
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('ÉCOLE EXCELLENCE', ml, 18);
-  doc.setFontSize(10);
+  doc.text('ÉCOLE EXCELLENCE', ml, 16);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('« La connaissance est la clé de la réussite »', ml, 25);
-  doc.setFontSize(16);
+  doc.text('« La connaissance est la clé de la réussite »', ml, 23);
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text('BULLETIN SCOLAIRE', pw / 2, 18, { align: 'center' });
+  doc.text('BULLETIN SCOLAIRE', pw / 2, 34, { align: 'center' });
 
   // Infos sous le bandeau
   y = 50;

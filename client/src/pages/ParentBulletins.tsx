@@ -54,9 +54,35 @@ const ParentBulletins = () => {
     if (!selectedChild) return;
     setExporting(true);
     try {
-      const res = await api.get(`/bulletins/complet?matricule=${selectedChild}&evaluation=${encodeURIComponent(evaluation)}`);
-      generateBulletinPDF(res.data);
-    } catch {
+      const child = children.find(c => String(c.matricule) === selectedChild);
+      generateBulletinPDF({
+        eleve: {
+          matricule: Number(selectedChild),
+          nom: child?.nom || '',
+          prenom: child?.prenom || '',
+          niveau: child?.niveau || '',
+        },
+        classe: { libelle: '', effectif: 0, titulaire: null },
+        evaluation,
+        details: notes.map(n => ({
+          matiere: n.matiere?.nom || '',
+          valeur: n.valeur,
+          coefficient: 1,
+          points: n.valeur,
+          enseignant: null,
+          moyenneClasse: null,
+          appreciation: null,
+        })),
+        moyenneGenerale: moyenne,
+        rang: 0,
+        totalPoints: notes.reduce((s, n) => s + n.valeur, 0),
+        totalCoeffs: notes.length,
+        moyenneClasseGenerale: 0,
+        absences: 0,
+        retards: 0,
+      });
+    } catch (err: any) {
+      console.error("Erreur export PDF:", err);
       notifyError("Erreur lors de la génération du PDF");
     } finally {
       setExporting(false);
