@@ -3,6 +3,7 @@ import { ShieldAlert } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import SubmitBtn from '../../components/SubmitBtn';
+import Spinner from '../../components/Spinner';
 
 interface EleveItem {
   matricule: number;
@@ -23,14 +24,13 @@ const TeacherDiscipline = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/cours/mes-eleves')
-      .then((res: any) => setEleves(res.data))
-      .catch(() => {});
-    api.get('/discipline/types')
-      .then((res: any) => setTypes(Array.isArray(res.data) ? res.data : []))
-      .catch(() => {});
+    Promise.all([
+      api.get('/cours/mes-eleves').then((res: any) => setEleves(res.data)).catch(() => {}),
+      api.get('/discipline/types').then((res: any) => setTypes(Array.isArray(res.data) ? res.data : [])).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,6 +54,8 @@ const TeacherDiscipline = () => {
       setSubmitting(false);
     }
   };
+
+  if (loading) return <Spinner text="Chargement des données..." />;
 
   return (
     <div className="space-y-6">

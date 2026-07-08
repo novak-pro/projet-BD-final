@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Book, BookOpen, Search } from 'lucide-react';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
+import Spinner from '../components/Spinner';
 
 interface Livre {
   id: number;
@@ -22,17 +23,21 @@ const ParentBibliotheque = () => {
   const [livres, setLivres] = useState<Livre[]>([]);
   const [search, setSearch] = useState('');
   const [filterCycle, setFilterCycle] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadLivres();
   }, []);
 
   const loadLivres = async () => {
+    setLoading(true);
     try {
       const res = await api.get('/bibliotheque');
       setLivres(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Erreur", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,6 +46,8 @@ const ParentBibliotheque = () => {
     if (filterCycle && l.cycle !== filterCycle) return false;
     return true;
   });
+
+  if (loading) return <Spinner text="Chargement de la bibliothèque..." />;
 
   return (
     <div className="admin-card">

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FileBarChart } from 'lucide-react';
+import { FileBarChart, FileText } from 'lucide-react';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
+import { generateBulletinPDF } from '../utils/generateBulletinPDF';
+import { notifyError } from '../utils/notifications';
 
 interface Child {
   matricule: number;
@@ -44,7 +46,22 @@ const ParentBulletins = () => {
       .finally(() => setLoading(false));
   }, [selectedChild, evaluation]);
 
+  const [exporting, setExporting] = useState(false);
+
   const moyenne = notes.length > 0 ? notes.reduce((sum, n) => sum + n.valeur, 0) / notes.length : 0;
+
+  const handleExportPDF = async () => {
+    if (!selectedChild) return;
+    setExporting(true);
+    try {
+      const res = await api.get(`/bulletins/complet?matricule=${selectedChild}&evaluation=${encodeURIComponent(evaluation)}`);
+      generateBulletinPDF(res.data);
+    } catch {
+      notifyError("Erreur lors de la génération du PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="admin-card">
@@ -53,6 +70,16 @@ const ParentBulletins = () => {
           <FileBarChart size={18} style={{ color: 'var(--navy)' }} />
           Bulletins
         </h2>
+        {selectedChild && (
+          <button onClick={handleExportPDF} disabled={exporting} className="btn-admin text-sm py-1.5 px-3">
+            {exporting ? (
+              <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-1" />
+            ) : (
+              <FileText size={16} className="mr-1" />
+            )}
+            Export PDF
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-4 mb-6">

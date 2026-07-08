@@ -6,6 +6,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
 import SubmitBtn from '../../components/SubmitBtn';
+import Spinner from '../../components/Spinner';
 
 interface Personnel {
   id: number;
@@ -83,10 +84,12 @@ const PersonnelPage = () => {
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
+    setLoading(true);
     try {
       const pRes = await personnelService.getAll().catch(() => null);
       const sRes = await api.get('/salles').catch(() => null);
@@ -96,6 +99,8 @@ const PersonnelPage = () => {
       if (mRes) setMatieres(mRes.data);
     } catch (err) {
       console.error("Erreur chargement", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,6 +108,8 @@ const PersonnelPage = () => {
 
   const enseignants = personnel.filter(p => p.fonction === 'ENSEIGNANT');
   const surveillants = personnel.filter(p => p.fonction === 'SURVEILLANT');
+
+  if (loading) return <Spinner text="Chargement du personnel..." />;
 
   const filtered = personnel.filter(p => {
     const q = search.toLowerCase();

@@ -6,11 +6,13 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Créer le dossier uploads s'il n'existe pas
-const uploadsDir = path.join(__dirname, '..', 'uploads', 'epreuves');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Créer les dossiers uploads s'ils n'existent pas
+['epreuves', 'livres'].forEach(sub => {
+  const dir = path.join(__dirname, '..', 'uploads', sub);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 const app = express();
 app.use(cors());

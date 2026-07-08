@@ -3,6 +3,7 @@ import { Book, Plus, Edit, Trash2, Search, X, BookOpen } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
+import Spinner from '../../components/Spinner';
 
 interface Livre {
   id: number;
@@ -24,40 +25,67 @@ interface Matiere {
   nom: string;
 }
 
-const initialForm = { titre: '', auteur: '', maisonEdition: '', description: '', cycle: 'Premier cycle', classeConcernee: '', langue: 'Francais', couvertureUrl: '', pdfUrl: '', idMatiere: '' };
+interface Cycle {
+  idCycle: number;
+  libelle: string;
+}
 
-const cycles = ['Premier cycle', 'Deuxieme cycle', 'Troisieme cycle'];
+interface Classe {
+  idClasse: number;
+  libelle: string;
+  cycle: { idCycle: number; libelle: string };
+}
+
+const initialForm = { titre: '', auteur: '', maisonEdition: '', description: '', cycle: '', classeConcernee: '', langue: 'Francais', idMatiere: '' };
 
 const BibliothequePage = () => {
   const [livres, setLivres] = useState<Livre[]>([]);
   const [matieres, setMatieres] = useState<Matiere[]>([]);
+  const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [classes, setClasses] = useState<Classe[]>([]);
   const [search, setSearch] = useState('');
   const [filterCycle, setFilterCycle] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Livre | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [couvertureFile, setCouvertureFile] = useState<File | null>(null);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [couvertureName, setCouvertureName] = useState('');
+  const [pdfName, setPdfName] = useState('');
   const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
     try {
-      const [lRes, mRes] = await Promise.all([
+      const [lRes, mRes, cRes, clsRes] = await Promise.all([
         api.get('/bibliotheque'),
-        api.get('/matieres')
+        api.get('/matieres'),
+        api.get('/enrollments/cycles'),
+        api.get('/enrollments/classes'),
       ]);
       setLivres(Array.isArray(lRes.data) ? lRes.data : []);
       setMatieres(Array.isArray(mRes.data) ? mRes.data : []);
+      setCycles(Array.isArray(cRes.data) ? cRes.data : []);
+      setClasses(Array.isArray(clsRes.data) ? clsRes.data : []);
     } catch (err) {
       console.error("Erreur chargement", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   const openCreate = () => {
     setEditing(null);
     setForm(initialForm);
+    setCouvertureFile(null);
+    setPdfFile(null);
+    setCouvertureName('');
+    setPdfName('');
     setShowModal(true);
   };
 
@@ -71,10 +99,12 @@ const BibliothequePage = () => {
       cycle: livre.cycle,
       classeConcernee: livre.classeConcernee,
       langue: livre.langue,
-      couvertureUrl: livre.couvertureUrl || '',
-      pdfUrl: livre.pdfUrl || '',
       idMatiere: String(livre.idMatiere)
     });
+    setCouvertureFile(null);
+    setPdfFile(null);
+    setCouvertureName(livre.couvertureUrl ? livre.couvertureUrl.split('/').pop() || '' : '');
+    setPdfName(livre.pdfUrl ? livre.pdfUrl.split('/').pop() || '' : '');
     setShowModal(true);
   };
 
@@ -91,19 +121,33 @@ const BibliothequePage = () => {
   };
 
   const handleSubmit = async () => {
-    const payload = { ...form, idMatiere: Number(form.idMatiere) };
+    const fd = new FormData();
+    fd.append('titre', form.titre);
+    fd.append('auteur', form.auteur);
+    fd.append('maisonEdition', form.maisonEdition);
+    fd.append('description', form.description);
+    fd.append('cycle', form.cycle);
+    fd.append('classeConcernee', form.classeConcernee);
+    fd.append('langue', form.langue);
+    fd.append('idMatiere', form.idMatiere);
+    if (couvertureFile) fd.append('couverture', couvertureFile);
+    if (pdfFile) fd.append('fichier', pdfFile);
     try {
       if (editing) {
-        await api.put(`/bibliotheque/${editing.id}`, payload);
+        await api.put(`/bibliotheque/${editing.id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       } else {
-        await api.post('/bibliotheque', payload);
+        await api.post('/bibliotheque', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       }
       setShowModal(false);
+      notifySuccess(editing ? "Livre modifié avec succès" : "Livre ajouté avec succès");
       loadData();
     } catch (err) {
       notifyError("Erreur lors de l'enregistrement");
     }
   };
+
+  const cycleOptions = cycles.map(c => c.libelle);
+  const filteredClasses = form.cycle ? classes.filter(c => c.cycle?.libelle === form.cycle) : classes;
 
   const filtered = livres.filter(l => {
     if (search && !`${l.titre} ${l.auteur}`.toLowerCase().includes(search.toLowerCase())) return false;
@@ -123,6 +167,7 @@ const BibliothequePage = () => {
         confirmLabel="Oui"
         cancelLabel="Non"
       />
+    {loading ? <Spinner text="Chargement de la bibliothèque..." /> : (
     <div className="admin-card">
       <div className="admin-card-header">
         <h2>
@@ -143,7 +188,7 @@ const BibliothequePage = () => {
         </div>
         <select className="border border-gray-200 rounded-[8px] py-2 px-3 text-sm outline-none" value={filterCycle} onChange={e => setFilterCycle(e.target.value)}>
           <option value="">Tous les cycles</option>
-          {cycles.map(c => <option key={c} value={c}>{c}</option>)}
+          {cycleOptions.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
 
@@ -152,7 +197,7 @@ const BibliothequePage = () => {
           <div key={livre.id} className="bg-white rounded-[var(--radius-lg)] border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
             <div className="h-40 flex items-center justify-center" style={{ background: 'var(--accent-light)' }}>
               {livre.couvertureUrl ? (
-                <img src={livre.couvertureUrl} alt={livre.titre} className="w-full h-full object-cover" />
+                <img src={`${api.defaults.baseURL?.replace('/api', '')}${livre.couvertureUrl}`} alt={livre.titre} className="w-full h-full object-cover" />
               ) : (
                 <BookOpen size={48} style={{ color: 'var(--navy)', opacity: 0.3 }} />
               )}
@@ -167,7 +212,7 @@ const BibliothequePage = () => {
               </div>
               {livre.description && <p className="text-xs text-gray-400 mt-2 line-clamp-2">{livre.description}</p>}
               <div className="flex justify-between items-center mt-3 pt-2 border-t border-gray-50">
-                {livre.pdfUrl && <a href={livre.pdfUrl} target="_blank" rel="noreferrer" className="text-xs font-medium" style={{ color: 'var(--accent)' }}>Voir PDF</a>}
+                {livre.pdfUrl && <a href={`${api.defaults.baseURL?.replace('/api', '')}${livre.pdfUrl}`} target="_blank" rel="noreferrer" className="text-xs font-medium" style={{ color: 'var(--accent)' }}>Voir PDF</a>}
                 <div className="flex gap-2 ml-auto">
                   <button onClick={() => openEdit(livre)} className="p-1.5 hover:bg-gray-100 rounded"><Edit size={15} className="text-gray-500"/></button>
                   <button onClick={() => handleDelete(livre.id)} className="p-1.5 hover:bg-red-50 rounded"><Trash2 size={15} className="text-red-400"/></button>
@@ -205,13 +250,17 @@ const BibliothequePage = () => {
               <div className="admin-form-row">
                 <div className="admin-field">
                   <label>Cycle</label>
-                  <select value={form.cycle} onChange={e => setForm({...form, cycle: e.target.value})}>
-                    {cycles.map(c => <option key={c} value={c}>{c}</option>)}
+                  <select value={form.cycle} onChange={e => { setForm({...form, cycle: e.target.value, classeConcernee: '' }); }}>
+                    <option value="">Sélectionner...</option>
+                    {cycles.map(c => <option key={c.idCycle} value={c.libelle}>{c.libelle}</option>)}
                   </select>
                 </div>
                 <div className="admin-field">
                   <label>Classe concernée</label>
-                  <input value={form.classeConcernee} onChange={e => setForm({...form, classeConcernee: e.target.value})} required />
+                  <select value={form.classeConcernee} onChange={e => setForm({...form, classeConcernee: e.target.value})} required>
+                    <option value="">Sélectionner...</option>
+                    {filteredClasses.map(cl => <option key={cl.idClasse} value={cl.libelle}>{cl.libelle}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="admin-form-row">
@@ -241,12 +290,24 @@ const BibliothequePage = () => {
               </div>
               <div className="admin-form-row">
                 <div className="admin-field">
-                  <label>URL couverture</label>
-                  <input value={form.couvertureUrl} onChange={e => setForm({...form, couvertureUrl: e.target.value})} />
+                  <label>Couverture</label>
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 border border-dashed border-gray-300 rounded-[var(--radius)]">
+                    <span className="text-xs text-gray-400 flex-1 truncate">{couvertureName || 'Aucun fichier'}</span>
+                    <label className="text-xs bg-[var(--navy)] text-white px-2 py-1 rounded cursor-pointer hover:brightness-110">
+                      Parcourir
+                      <input type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) { setCouvertureFile(f); setCouvertureName(f.name); } }} />
+                    </label>
+                  </div>
                 </div>
                 <div className="admin-field">
-                  <label>URL PDF</label>
-                  <input value={form.pdfUrl} onChange={e => setForm({...form, pdfUrl: e.target.value})} />
+                  <label>Fichier PDF</label>
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 border border-dashed border-gray-300 rounded-[var(--radius)]">
+                    <span className="text-xs text-gray-400 flex-1 truncate">{pdfName || 'Aucun fichier'}</span>
+                    <label className="text-xs bg-[var(--navy)] text-white px-2 py-1 rounded cursor-pointer hover:brightness-110">
+                      Parcourir
+                      <input type="file" accept=".pdf" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) { setPdfFile(f); setPdfName(f.name); } }} />
+                    </label>
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">
@@ -260,6 +321,7 @@ const BibliothequePage = () => {
         </div>
       )}
     </div>
+    )}
     </>
   );
 };

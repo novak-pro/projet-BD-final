@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { CalendarDays, Clock, MapPin, User as UserIcon, Plus, Trash2, X, Edit2, DoorOpen } from 'lucide-react';
+import { CalendarDays, Clock, MapPin, User as UserIcon, Plus, Trash2, X, Edit2, DoorOpen, FileText } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
 import SubmitBtn from '../../components/SubmitBtn';
+import Spinner from '../../components/Spinner';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface PlanningEntry {
   id: number;
@@ -55,6 +58,7 @@ const PlanningPage = () => {
   const [form, setForm] = useState({ idCours: '', idSalle: '', jour: 'LUNDI', heureDebut: '08:00', heureFin: '10:00' });
   const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => { loadInitial(); }, []);
 
@@ -78,6 +82,7 @@ const PlanningPage = () => {
       setSalles(sls);
       if (sls.length > 0) setSelectedSalle(String(sls[0].idSalle));
     } catch (err) { console.error("Erreur chargement", err); }
+    finally { setLoading(false); }
   };
 
   const loadPlannings = async () => {
@@ -91,6 +96,8 @@ const PlanningPage = () => {
       }
     } catch (err) { console.error("Erreur chargement planning", err); }
   };
+
+  if (loading) return <Spinner text="Chargement du planning..." />;
 
   const openAddModal = async () => {
     setEditingId(null);
@@ -168,6 +175,39 @@ const PlanningPage = () => {
   const salleLibelle = selectedSalle ? salles.find(s => s.idSalle === Number(selectedSalle))?.libelle : '';
   const classeLibelle = selectedClasse ? classes.find(c => c.idClasse === Number(selectedClasse))?.libelle : '';
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const title = mode === 'salle' ? `Emploi du Temps - ${salleLibelle}` : `Emploi du Temps - ${classeLibelle}`;
+    doc.setFontSize(16);
+    doc.text(title, 14, 15);
+    doc.setFontSize(10);
+    doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, 14, 22);
+
+    const rows = plannings.map(p => [
+      p.jour,
+      `${p.heureDebut} - ${p.heureFin}`,
+      p.cours?.matiere?.nom || '',
+      p.cours?.enseignant ? `${p.cours.enseignant.prenom} ${p.cours.enseignant.nom}` : '',
+      p.salle?.libelle || '',
+    ]).sort((a, b) => {
+      const order = ['LUNDI','MARDI','MERCREDI','JEUDI','VENDREDI','SAMEDI'];
+      const cmp = order.indexOf(a[0]) - order.indexOf(b[0]);
+      if (cmp !== 0) return cmp;
+      return a[1].localeCompare(b[1]);
+    });
+
+    autoTable(doc, {
+      startY: 28,
+      head: [['Jour', 'Heure', 'Matière', 'Enseignant', 'Salle']],
+      body: rows,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [27, 42, 74] },
+      alternateRowStyles: { fillColor: [240, 244, 255] },
+    });
+
+    doc.save('emploi_du_temps.pdf');
+  };
+
   return (
     <>
       <ConfirmModal
@@ -200,6 +240,11 @@ const PlanningPage = () => {
                 <option key={c.idClasse} value={c.idClasse}>{c.libelle}</option>
               ))}
             </select>
+          )}
+          {((mode === 'salle' && selectedSalle) || (mode === 'classe' && selectedClasse)) && plannings.length > 0 && (
+            <button onClick={exportPDF} className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius)] text-sm font-semibold hover:brightness-110 transition-all border" style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}>
+              <FileText size={16} /> Export PDF
+            </button>
           )}
           <button onClick={openAddModal} className="flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius)] text-white text-sm font-semibold hover:brightness-110 transition-all" style={{ background: 'var(--navy)' }}>
             <Plus size={16} /> Ajouter

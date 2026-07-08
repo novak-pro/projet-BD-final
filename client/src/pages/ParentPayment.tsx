@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, Clock, Upload, Calendar } from 'lucide-react';
+import { CreditCard, Clock, Upload, Calendar, Loader2 } from 'lucide-react';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../utils/notifications';
 import SubmitBtn from '../components/SubmitBtn';
+import Spinner from '../components/Spinner';
 
 interface Child {
   matricule: number;
@@ -52,11 +53,14 @@ const ParentPayment = () => {
   const [submitting, setSubmitting] = useState(false);
   const [myPayments, setMyPayments] = useState<Payment[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingChildren, setLoadingChildren] = useState(true);
+  const [loadingScolarite, setLoadingScolarite] = useState(false);
 
   useEffect(() => {
     api.get('/enrollments/my-children')
       .then((res) => setChildren(res.data))
-      .catch(() => console.error('Impossible de charger les enfants'));
+      .catch(() => console.error('Impossible de charger les enfants'))
+      .finally(() => setLoadingChildren(false));
   }, []);
 
   useEffect(() => {
@@ -64,14 +68,17 @@ const ParentPayment = () => {
     setScolarite(null);
     setScolariteError('');
     setSelectedTranches(1);
+    setLoadingScolarite(true);
     const child = children.find(c => String(c.matricule) === selectedChild);
     if (!child?.classroomId) {
       setScolariteError("Cet enfant n'a pas de classe assignée. Contactez l'administration.");
+      setLoadingScolarite(false);
       return;
     }
     api.get(`/scolarite/classe/${child.classroomId}`)
       .then((res) => setScolarite(res.data))
-      .catch(() => setScolariteError("Aucune scolarité configurée pour la classe de cet enfant."));
+      .catch(() => setScolariteError("Aucune scolarité configurée pour la classe de cet enfant."))
+      .finally(() => setLoadingScolarite(false));
   }, [selectedChild, children]);
 
   useEffect(() => {
@@ -145,6 +152,9 @@ const ParentPayment = () => {
         <form onSubmit={handlePayment} className="space-y-6">
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">Sélectionnez l'enfant</label>
+            {loadingChildren ? (
+              <div className="flex items-center gap-2 p-3 text-gray-400 text-sm"><Loader2 size={16} className="animate-spin" /> Chargement de vos enfants...</div>
+            ) : (
             <select required value={selectedChild} onChange={(e) => setSelectedChild(e.target.value)}
               className="w-full border border-gray-200 p-3 rounded-[var(--radius)] outline-none text-sm focus:border-[var(--accent)]">
               <option value="">Choisir un enfant...</option>
@@ -152,6 +162,7 @@ const ParentPayment = () => {
                 <option key={c.matricule} value={String(c.matricule)}>{c.prenom} {c.nom} ({c.niveau})</option>
               ))}
             </select>
+            )}
           </div>
 
           {scolariteError && (
@@ -160,21 +171,21 @@ const ParentPayment = () => {
             </div>
           )}
 
-          {scolarite && (
-            <>
-              <div className="bg-gray-50 p-4 rounded-[var(--radius)] border border-gray-200 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Frais d'inscription</span>
-                  <span className="font-bold">{scolarite.montantInscription.toLocaleString()} FCFA</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Pension annuelle</span>
-                  <span className="font-bold">{scolarite.montantPension.toLocaleString()} FCFA</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Par tranche ({scolarite.nombreTranches}x)</span>
-                  <span className="font-bold">{pensionParTranche.toLocaleString()} FCFA</span>
-                </div>
+          <div className="bg-gray-50 p-4 rounded-[var(--radius)] border border-gray-200 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Frais d'inscription</span>
+              <span className="font-bold">{scolarite ? scolarite.montantInscription.toLocaleString() : '—'} FCFA</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Pension annuelle</span>
+              <span className="font-bold">{scolarite ? scolarite.montantPension.toLocaleString() : '—'} FCFA</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Par tranche ({scolarite ? scolarite.nombreTranches : '—'}x)</span>
+              <span className="font-bold">{scolarite ? pensionParTranche.toLocaleString() : '—'} FCFA</span>
+            </div>
+            {scolarite && scolarite.tranches.length > 0 && (
+              <>
                 <hr className="border-gray-200" />
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Échéancier</span>
@@ -188,65 +199,65 @@ const ParentPayment = () => {
                     <span className="text-gray-400">— {new Date(t.dateLimite).toLocaleDateString('fr-FR')}</span>
                   </div>
                 ))}
-              </div>
+              </>
+            )}
+          </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Nombre de tranches à payer</label>
-                <div className="flex gap-2">
-                  {Array.from({ length: scolarite.nombreTranches }, (_, i) => i + 1).map((num) => (
-                    <button key={num} type="button" onClick={() => setSelectedTranches(num)}
-                      className={`flex-1 py-3 rounded-[var(--radius)] font-bold transition-all ${
-                        selectedTranches === num ? 'bg-[var(--navy)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}>
-                      {num} {num > 1 ? 'Tranches' : 'Tranche'}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Nombre de tranches à payer</label>
+            <div className="flex gap-2">
+              {(scolarite ? Array.from({ length: scolarite.nombreTranches }, (_, i) => i + 1) : [1]).map((num) => (
+                <button key={num} type="button" onClick={() => setSelectedTranches(num)}
+                  className={`flex-1 py-3 rounded-[var(--radius)] font-bold transition-all ${
+                    selectedTranches === num ? 'bg-[var(--navy)] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}>
+                  {num} {num > 1 ? 'Tranches' : 'Tranche'}
+                </button>
+              ))}
+            </div>
+          </div>
 
-              <div className="bg-gray-50 p-4 rounded-[var(--radius)] flex justify-between items-center border border-dashed border-gray-300">
-                <span className="text-gray-600 font-medium">Montant à verser :</span>
-                <span className="text-2xl font-black" style={{ color: 'var(--navy)' }}>
-                  {totalAmount.toLocaleString()} FCFA
-                </span>
-              </div>
+          <div className="bg-gray-50 p-4 rounded-[var(--radius)] flex justify-between items-center border border-dashed border-gray-300">
+            <span className="text-gray-600 font-medium">Montant à verser :</span>
+            <span className="text-2xl font-black" style={{ color: 'var(--navy)' }}>
+              {totalAmount.toLocaleString()} FCFA
+            </span>
+          </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Mode de paiement</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {['CASH', 'VIREMENT'].map((m) => (
-                    <button key={m} type="button" onClick={() => setModePaiement(m)}
-                      className={`py-3 text-sm rounded-[var(--radius)] border font-bold transition-all ${
-                        modePaiement === m
-                          ? 'border-[var(--accent)] bg-[var(--accent-light)] text-[var(--navy)]'
-                          : 'border-gray-100 text-gray-400 hover:border-gray-300'
-                      }`}>
-                      {m === 'CASH' ? "Cash à l'école" : 'Virement bancaire'}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Mode de paiement</label>
+            <div className="grid grid-cols-2 gap-3">
+              {['CASH', 'VIREMENT'].map((m) => (
+                <button key={m} type="button" onClick={() => setModePaiement(m)}
+                  className={`py-3 text-sm rounded-[var(--radius)] border font-bold transition-all ${
+                    modePaiement === m
+                      ? 'border-[var(--accent)] bg-[var(--accent-light)] text-[var(--navy)]'
+                      : 'border-gray-100 text-gray-400 hover:border-gray-300'
+                  }`}>
+                  {m === 'CASH' ? "Cash à l'école" : 'Virement bancaire'}
+                </button>
+              ))}
+            </div>
+          </div>
 
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Reçu de paiement</label>
-                <div className="flex items-center gap-3 p-4 bg-gray-50 border border-dashed border-gray-300 rounded-[var(--radius)]">
-                  <div className="flex-1">
-                    {recuName ? (
-                      <p className="text-xs text-gray-600 flex items-center gap-1"><Upload size={12} /> {recuName}</p>
-                    ) : (
-                      <p className="text-xs text-gray-400">Joindre le reçu (PDF ou photo)</p>
-                    )}
-                  </div>
-                  <label className="text-xs bg-[var(--navy)] text-white px-3 py-1.5 rounded-lg cursor-pointer hover:brightness-110 transition-all">
-                    {recuName ? 'Changer' : 'Parcourir'}
-                    <input type="file" accept=".pdf,image/*" onChange={handleRecuChange} className="hidden" />
-                  </label>
-                </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Reçu de paiement</label>
+            <div className="flex items-center gap-3 p-4 bg-gray-50 border border-dashed border-gray-300 rounded-[var(--radius)]">
+              <div className="flex-1">
+                {recuName ? (
+                  <p className="text-xs text-gray-600 flex items-center gap-1"><Upload size={12} /> {recuName}</p>
+                ) : (
+                  <p className="text-xs text-gray-400">Joindre le reçu (PDF ou photo)</p>
+                )}
               </div>
+              <label className="text-xs bg-[var(--navy)] text-white px-3 py-1.5 rounded-lg cursor-pointer hover:brightness-110 transition-all">
+                {recuName ? 'Changer' : 'Parcourir'}
+                <input type="file" accept=".pdf,image/*" onChange={handleRecuChange} className="hidden" />
+              </label>
+            </div>
+          </div>
 
-              <SubmitBtn loading={submitting} text="Envoyer la demande de paiement" loadingText="Traitement en cours..." className="w-full btn-admin justify-center text-base py-4" />
-            </>
-          )}
+          <SubmitBtn loading={submitting} text="Envoyer la demande de paiement" loadingText="Traitement en cours..." className="w-full btn-admin justify-center text-base py-4" disabled={!scolarite} />
         </form>
       </div>
 

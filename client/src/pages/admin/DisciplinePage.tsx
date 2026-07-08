@@ -5,6 +5,7 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
 import SubmitBtn from '../../components/SubmitBtn';
+import Spinner from '../../components/Spinner';
 
 interface Incident {
   id: number;
@@ -59,11 +60,10 @@ const DisciplinePage = () => {
   const [editPendingForm, setEditPendingForm] = useState({ commentaire: '', pointsDeduits: 0, gravite: '' });
   const [confirmState, setConfirmState] = useState<{open:boolean;onConfirm:()=>void;message:string}>({open:false,onConfirm:()=>{},message:''});
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadEleves();
-    loadPending();
-    loadTypes();
+    Promise.all([loadEleves(), loadPending(), loadTypes()]).finally(() => setLoading(false));
   }, []);
 
   const loadTypes = async () => {
@@ -225,6 +225,7 @@ const DisciplinePage = () => {
         confirmLabel="Oui"
         cancelLabel="Non"
       />
+    {loading ? <Spinner text="Chargement de la discipline..." /> : (
     <div className="space-y-6">
       <div className="admin-card">
         <div className="admin-card-header">
@@ -586,6 +587,7 @@ const DisciplinePage = () => {
         )}
       </div>
     </div>
+    )}
     </>
   );
 };

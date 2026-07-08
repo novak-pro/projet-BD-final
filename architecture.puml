@@ -1,0 +1,41 @@
+@startuml
+!define ICONURL https://raw.githubusercontent.com/tupadr3/plantuml-icon-font-sprites/master/font-awesome-5
+
+skinparam backgroundColor white
+skinparam packageStyle rectangle
+
+title Architecture générale de la plateforme École Excellence
+
+actor "Administrateur" as admin
+actor "Enseignant" as teacher
+actor "Parent" as parent
+
+rectangle "Frontend React (Vite)" {
+  usecase "AdminLayout" as adml
+  usecase "TeacherLayout" as tchl
+  usecase "ParentLayout" as prtl
+}
+
+rectangle "API REST (Express / TypeScript)" {
+  database "Authentification\nJWT" as auth
+  database "Contrôleurs" as ctrl
+  database "Middlewares" as mw
+}
+
+database "Prisma ORM" as prisma
+database "PostgreSQL" as db
+
+admin --> adml : /admin/*
+teacher --> tchl : /teacher/*
+parent --> prtl : /parent/*
+
+adml --> ctrl : Requêtes API
+tchl --> ctrl
+prtl --> ctrl
+
+ctrl --> mw : Vérification\nrôle + token
+mw --> auth : JWT
+ctrl --> prisma : Requêtes
+prisma --> db : SQL
+
+@enduml

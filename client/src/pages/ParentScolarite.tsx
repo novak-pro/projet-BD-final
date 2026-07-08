@@ -5,6 +5,7 @@ import { useTranslation } from '../i18n/LanguageContext';
 import api from '../services/axiosInstance';
 import { notifySuccess, notifyError } from '../utils/notifications';
 import SubmitBtn from '../components/SubmitBtn';
+import Spinner from '../components/Spinner';
 
 const ParentScolarite = () => {
   const { t } = useTranslation();
@@ -23,10 +24,13 @@ const ParentScolarite = () => {
   const [showProcedure, setShowProcedure] = useState(false);
   const [scolarites, setScolarites] = useState<any[]>([]);
   const [showScolariteInfo, setShowScolariteInfo] = useState(false);
+  const [loading, setLoading] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
   const recuRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { loadRequests(); loadProcedure(); loadCycles(); loadClasses(); loadScolarites(); }, []);
+  useEffect(() => {
+    Promise.all([loadRequests(), loadProcedure(), loadCycles(), loadClasses(), loadScolarites()]).finally(() => setLoading(false));
+  }, []);
 
   const loadProcedure = async () => {
     try {
@@ -86,6 +90,7 @@ const ParentScolarite = () => {
   };
 
   const selectedCycleId = formData.niveau ? Number(formData.niveau) : null;
+  if (loading) return <Spinner text="Chargement du formulaire..." />;
   const availableClasses = selectedCycleId
     ? classes.filter(c => c.cycle?.idCycle === selectedCycleId)
     : [];

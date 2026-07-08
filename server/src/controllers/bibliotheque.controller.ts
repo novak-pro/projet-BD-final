@@ -2,6 +2,9 @@ import { Response } from 'express';
 import prisma from '../lib/prisma';
 import { AuthRequest } from '../middlewares/authMiddleware';
 
+const getFileUrl = (filename: string | undefined): string | null =>
+  filename ? `/uploads/livres/${filename}` : null;
+
 export const getAllLivres = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const livres = await prisma.livre.findMany({
@@ -32,7 +35,10 @@ export const getLivreById = async (req: AuthRequest, res: Response): Promise<voi
 
 export const createLivre = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { titre, auteur, maisonEdition, description, cycle, classeConcernee, langue, couvertureUrl, pdfUrl, idMatiere } = req.body as any;
+    const { titre, auteur, maisonEdition, description, cycle, classeConcernee, langue, idMatiere } = req.body as any;
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const couvertureUrl = getFileUrl(files?.couverture?.[0]?.filename);
+    const pdfUrl = getFileUrl(files?.fichier?.[0]?.filename);
     const livre = await prisma.livre.create({
       data: { titre, auteur, maisonEdition, description, cycle, classeConcernee, langue, couvertureUrl, pdfUrl, idMatiere: Number(idMatiere) }
     });
@@ -45,11 +51,14 @@ export const createLivre = async (req: AuthRequest, res: Response): Promise<void
 export const updateLivre = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const id = Number((req as any).params.id);
-    const { titre, auteur, maisonEdition, description, cycle, classeConcernee, langue, couvertureUrl, pdfUrl, idMatiere } = req.body as any;
-    const livre = await prisma.livre.update({
-      where: { id },
-      data: { titre, auteur, maisonEdition, description, cycle, classeConcernee, langue, couvertureUrl, pdfUrl, idMatiere: idMatiere ? Number(idMatiere) : undefined }
-    });
+    const { titre, auteur, maisonEdition, description, cycle, classeConcernee, langue, idMatiere } = req.body as any;
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const couvertureUrl = getFileUrl(files?.couverture?.[0]?.filename);
+    const pdfUrl = getFileUrl(files?.fichier?.[0]?.filename);
+    const data: any = { titre, auteur, maisonEdition, description, cycle, classeConcernee, langue, idMatiere: idMatiere ? Number(idMatiere) : undefined };
+    if (couvertureUrl) data.couvertureUrl = couvertureUrl;
+    if (pdfUrl) data.pdfUrl = pdfUrl;
+    const livre = await prisma.livre.update({ where: { id }, data });
     res.json(livre);
   } catch (error) {
     res.status(500).json({ error: "Erreur lors de la mise a jour" });

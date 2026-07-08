@@ -4,6 +4,7 @@ import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import SubmitBtn from '../../components/SubmitBtn';
+import Spinner from '../../components/Spinner';
 
 const statusConfig: Record<string, { color: string; label: string }> = {
   DISPONIBLE: { color: "bg-green-100 text-green-700 border-green-200", label: "Disponible" },
@@ -68,8 +69,11 @@ const AdminInfrastructure = () => {
   // Delete
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchSalles(); fetchClasses(); fetchEnseignants(); }, []);
+  useEffect(() => {
+    Promise.all([fetchSalles(), fetchClasses(), fetchEnseignants()]).finally(() => setLoading(false));
+  }, []);
 
   const fetchSalles = async () => {
     try {
@@ -91,6 +95,8 @@ const AdminInfrastructure = () => {
       setEnseignants(res.data.filter((p: Personnel) => p.fonction === 'ENSEIGNANT'));
     } catch { console.error("Erreur chargement enseignants"); }
   };
+
+  if (loading) return <Spinner text="Chargement des infrastructures..." />;
 
   const filtered = salles.filter(s =>
     !search || s.libelle.toLowerCase().includes(search.toLowerCase())

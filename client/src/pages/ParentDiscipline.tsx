@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, AlertTriangle } from 'lucide-react';
 import api from '../services/axiosInstance';
 import { useTranslation } from '../i18n/LanguageContext';
+import Spinner from '../components/Spinner';
 
 interface Child {
   matricule: number;
@@ -25,9 +26,10 @@ const ParentDiscipline = () => {
   const [selectedChild, setSelectedChild] = useState('');
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [soldePoints, setSoldePoints] = useState(20);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/enrollments/my-children').then(res => setChildren(res.data)).catch(() => {});
+    api.get('/enrollments/my-children').then(res => { setChildren(res.data); setLoading(false); }).catch(() => setLoading(false));
   }, []);
 
   useEffect(() => {
@@ -39,6 +41,8 @@ const ParentDiscipline = () => {
       })
       .catch(() => {});
   }, [selectedChild]);
+
+  if (loading) return <Spinner text="Chargement de vos enfants..." />;
 
   return (
     <div className="admin-card">

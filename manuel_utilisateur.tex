@@ -1,0 +1,405 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{tocloft}
+\usepackage{xcolor}
+
+\geometry{margin=2.5cm}
+\onehalfspacing
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\begin{document}
+
+% ---------- TABLE DES MATIÈRES ----------
+\tableofcontents
+\newpage
+
+% ===================================================================
+\chapter{PRÉSENTATION DE LA PLATEFORME}
+% ===================================================================
+
+\section{Objectif et périmètre}
+
+Ce manuel présente la plateforme \textbf{École Excellence}, un système de gestion scolaire complet permettant aux administrateurs, enseignants et parents d'interagir autour de la vie scolaire. La plateforme couvre l'inscription des élèves, la gestion des notes, des paiements, de la discipline, de la bibliothèque, de la messagerie et du planning.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 1 :} Architecture générale de la plateforme ---}
+\end{center}
+\medskip
+
+\section{Accès et navigateurs supportés}
+
+La plateforme est accessible depuis tout navigateur web moderne (Chrome, Firefox, Edge, Safari). Une connexion Internet est requise. L'interface s'adapte aux écrans d'ordinateur et de tablette.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 2 :} Page de connexion ---}
+\end{center}
+\medskip
+
+\section{Connexion et compte}
+
+Chaque utilisateur dispose d'un compte avec un rôle spécifique :
+\begin{itemize}
+    \item \textbf{Administrateur principal} — gestion complète de l'établissement
+    \item \textbf{Enseignant (Personnel)} — saisie des notes, dépôt d'épreuves, discipline
+    \item \textbf{Parent} — suivi de la scolarité des enfants, paiements
+\end{itemize}
+
+Pour se connecter, l'utilisateur saisit son email et son mot de passe sur la page de connexion. Un compte doit être activé par l'administrateur avant la première connexion.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 3 :} Tableau de bord après connexion ---}
+\end{center}
+\medskip
+
+% ===================================================================
+\chapter{ROLE ADMINISTRATEUR PRINCIPAL}
+% ===================================================================
+
+\section{Tableau de bord}
+
+Le tableau de bord affiche les statistiques clés de l'établissement : nombre d'élèves, d'enseignants, de salles et de demandes en attente.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 4 :} Tableau de bord administrateur ---}
+\end{center}
+\medskip
+
+\section{Gestion des inscriptions}
+
+L'administrateur visualise les demandes d'inscription soumises par les parents. Il peut les approuver (ce qui crée automatiquement le dossier élève) ou les rejeter avec un motif.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 5 :} Liste des demandes d'inscription ---}
+\end{center}
+\medskip
+
+\section{Gestion des élèves}
+
+Cette page permet de consulter la liste complète des élèves, d'ajouter un élève, de modifier ses informations (nom, prénom, classe, cycle, langue, etc.) ou de le supprimer. La colonne \og{Solde de points}\fg{} affiche le solde de conduite avec un code couleur.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 6 :} Liste des élèves ---}
+\end{center}
+\medskip
+
+\section{Gestion des cycles et classes}
+
+L'administrateur crée et organise les cycles (Premier cycle, Deuxième cycle, Troisième cycle) et les classes associées. Chaque classe peut être rattachée à un cycle et avoir un responsable.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 7 :} Gestion des cycles et classes ---}
+\end{center}
+\medskip
+
+\section{Gestion des matières}
+
+Les matières sont créées et associées à une ou plusieurs classes. On peut également y rattacher des épreuves et consulter le nombre de cours et de livres liés.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 8 :} Liste des matières ---}
+\end{center}
+\medskip
+
+\section{Gestion du personnel}
+
+Cette section permet de gérer l'ensemble du personnel (enseignants, surveillants, secrétaires, etc.) : création, modification, désactivation. On peut également :
+\begin{itemize}
+    \item Promouvoir un enseignant titulaire d'une salle
+    \item Affecter un enseignant à une classe avec ses matières
+\end{itemize}
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 9 :} Gestion du personnel ---}
+\end{center}
+\medskip
+
+\section{Gestion des salles / infrastructures}
+
+L'administrateur gère les salles de l'établissement : création, position, capacité, état (disponible, en service, en rénovation, etc.). Chaque salle peut être rattachée à une classe et avoir un enseignant titulaire.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 10 :} Gestion des salles ---}
+\end{center}
+\medskip
+
+\section{Gestion du planning}
+
+Le planning permet de créer des créneaux horaires par classe ou par salle. Le système détecte les conflits (même salle ou même enseignant sur un même créneau).
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 11 :} Planning hebdomadaire ---}
+\end{center}
+\medskip
+
+\section{Gestion académique (années, trimestres, sessions)}
+
+L'administrateur crée les années académiques, active une année en cours, et génère automatiquement les trimestres et sessions d'examens associés.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 12 :} Gestion académique ---}
+\end{center}
+\medskip
+
+\section{Gestion de la scolarité et des tranches}
+
+Cette page permet de configurer les frais de scolarité par classe : montant d'inscription, montant de la pension, nombre de tranches, et échéancier détaillé (libellé, montant, date limite pour chaque tranche). Les parents visualisent ces informations depuis leur espace.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 13 :} Configuration de la scolarité ---}
+\end{center}
+\medskip
+
+\section{Validation des paiements}
+
+L'administrateur consulte les demandes de paiement soumises par les parents, visualise le reçu joint, et peut valider ou rejeter la demande.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 14 :} Validation des paiements ---}
+\end{center}
+\medskip
+
+\section{Bulletins et classements}
+
+Cette page génère les bulletins de notes par classe avec le classement des élèves, les moyennes par matière et la moyenne générale.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 15 :} Bulletin et classement ---}
+\end{center}
+\medskip
+
+\section{Gestion disciplinaire}
+
+L'administrateur accède à plusieurs onglets :
+\begin{itemize}
+    \item \textbf{Rapport :} signaler un incident directement
+    \item \textbf{Signalements :} approuver ou rejeter les signalements des enseignants ; déduire les points de conduite
+    \item \textbf{Alettes :} liste des élèves sous le seuil critique (solde $\le$ 10/20)
+    \item \textbf{Types d'infractions :} gérer le catalogue des infractions (libellé, gravité, points)
+\end{itemize}
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 16 :} Gestion disciplinaire ---}
+\end{center}
+\medskip
+
+\section{Bibliothèque}
+
+L'administrateur gère les livres de la bibliothèque scolaire : ajout, modification, suppression avec couverture et fichier PDF.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 17 :} Bibliothèque ---}
+\end{center}
+\medskip
+
+\section{Messagerie}
+
+L'administrateur peut :
+\begin{itemize}
+    \item Envoyer une annonce à tous les parents
+    \item Envoyer un message personnel à un parent spécifique
+    \item Modérer les messages envoyés par les enseignants (approuver ou rejeter)
+\end{itemize}
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 18 :} Messagerie ---}
+\end{center}
+\medskip
+
+\section{Procédure d'inscription}
+
+L'administrateur rédige le texte de la procédure d'inscription qui sera affiché aux parents dans leur espace.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 19 :} Édition de la procédure d'inscription ---}
+\end{center}
+\medskip
+
+% ===================================================================
+\chapter{ROLE ENSEIGNANT}
+% ===================================================================
+
+\section{Tableau de bord}
+
+L'enseignant voit la liste de ses cours assignés avec la classe, la matière, la salle et les informations associées.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 20 :} Tableau de bord enseignant ---}
+\end{center}
+\medskip
+
+\section{Saisie des notes}
+
+L'enseignant peut saisir les notes de ses élèves de deux manières :
+\begin{itemize}
+    \item Depuis le détail d'un cours (évaluation individuelle)
+    \item Via la saisie groupée par classe et matière
+\end{itemize}
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 21 :} Saisie des notes ---}
+\end{center}
+\medskip
+
+\section{Dépôt d'épreuves}
+
+L'enseignant dépose les sujets d'examen et les corrigés au format PDF. Les matières disponibles sont filtrées par classe sélectionnée.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 22 :} Dépôt d'épreuves ---}
+\end{center}
+\medskip
+
+\section{Signalement disciplinaire}
+
+L'enseignant signale un incident disciplinaire pour un élève. Le signalement est soumis en statut \og{PENDING}\fg{} et doit être approuvé par l'administrateur pour que les points soient déduits.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 23 :} Signalement disciplinaire ---}
+\end{center}
+\medskip
+
+\section{Planning personnel}
+
+L'enseignant consulte son emploi du temps personnel avec les créneaux, les classes et les salles.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 24 :} Planning enseignant ---}
+\end{center}
+\medskip
+
+\section{Messagerie}
+
+L'enseignant peut envoyer un message à l'administration. Le message est mis en attente de modération avant d'être transmis au destinataire.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 25 :} Messagerie enseignant ---}
+\end{center}
+\medskip
+
+% ===================================================================
+\chapter{ROLE PARENT}
+% ===================================================================
+
+\section{Inscription d'un enfant}
+
+Le parent soumet une demande d'inscription pour son enfant via un formulaire (nom, prénom, date et lieu de naissance, sexe, cycle, classe, photo et reçu de paiement). La demande est examinée par l'administrateur. Le parent peut suivre l'état de ses demandes depuis son espace.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 26 :} Formulaire d'inscription ---}
+\end{center}
+\medskip
+
+\section{Paiement de la pension}
+
+Le parent sélectionne un enfant, consulte les montants de la scolarité (inscription, pension) et l'échéancier des tranches configurés pour sa classe. Il choisit le nombre de tranches à payer, le mode de paiement (cash à l'école ou virement), joint son reçu au format PDF et soumet sa demande. L'historique des paiements est consultable.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 27 :} Paiement de la pension ---}
+\end{center}
+\medskip
+
+\section{Consultation scolarité}
+
+Le parent accède à un récapitulatif des frais de scolarité et des échéanciers pour toutes les classes via un bouton \og{Info Scolarité}\fg{}.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 28 :} Information scolarité ---}
+\end{center}
+\medskip
+
+\section{Bibliothèque}
+
+Le parent consulte la bibliothèque scolaire : recherche par titre ou auteur, filtre par cycle, et télécharge les PDF des livres disponibles.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 29 :} Bibliothèque parent ---}
+\end{center}
+\medskip
+
+\section{Discipline}
+
+Le parent visualise le solde de points de conduite de son enfant et l'historique des incidents avec les détails (date, type, gravité, points déduits). Une alerte s'affiche si le solde est critique.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 30 :} Discipline parent ---}
+\end{center}
+\medskip
+
+\section{Bulletins}
+
+Le parent consulte les bulletins de notes de ses enfants avec les résultats par matière.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 31 :} Bulletins parent ---}
+\end{center}
+\medskip
+
+\section{Planning de l'enfant}
+
+Le parent visualise l'emploi du temps de son enfant pour la semaine en cours.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 32 :} Planning enfant ---}
+\end{center}
+\medskip
+
+\section{Profil détaillé de l'enfant}
+
+Le parent accède à une vue complète de son enfant : informations personnelles, notes, évaluations, incidents disciplinaires.
+
+\medskip
+\begin{center}
+\framebox{--- \textbf{Schéma 33 :} Profil enfant ---}
+\end{center}
+\medskip
+
+\end{document}

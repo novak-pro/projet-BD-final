@@ -4,6 +4,7 @@ import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../../utils/notifications';
 import ConfirmModal from '../../components/ConfirmModal';
+import Spinner from '../../components/Spinner';
 
 interface Parent {
   id: number;
@@ -31,15 +32,20 @@ const AdminMessages = () => {
   const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
   const [pendingMessages, setPendingMessages] = useState<Message[]>([]);
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/messages/parents').then(res => setParents(res.data)).catch(() => {});
-    loadPending();
+    Promise.all([
+      api.get('/messages/parents').then(res => setParents(res.data)).catch(() => {}),
+      api.get('/messages').then(res => setPendingMessages(res.data)).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, []);
 
   const loadPending = () => {
     api.get('/messages').then(res => setPendingMessages(res.data)).catch(() => {});
   };
+
+  if (loading) return <Spinner text="Chargement de la messagerie..." />;
 
   const filteredParents = parents.filter(p =>
     `${p.nom} ${p.prenom}`.toLowerCase().includes(search.toLowerCase())

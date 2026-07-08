@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { FileBarChart, Download, Printer, User as UserIcon, RefreshCw, ScrollText, X } from 'lucide-react';
+import { FileText, User as UserIcon, RefreshCw, ScrollText, X } from 'lucide-react';
 import api from '../../services/axiosInstance';
 import { useTranslation } from '../../i18n/LanguageContext';
+import { generateBulletinPDF } from '../../utils/generateBulletinPDF';
+import { notifyError } from '../../utils/notifications';
 
 interface Bulletin {
   matricule: number;
@@ -84,6 +86,21 @@ const BulletinPage = () => {
     } catch { setDetailStudent(b); }
   };
 
+  const [exportingPDF, setExportingPDF] = useState<number | null>(null);
+
+  const handleExportPDF = async (matricule: number) => {
+    setExportingPDF(matricule);
+    try {
+      const res = await api.get(`/bulletins/complet?matricule=${matricule}&evaluation=${encodeURIComponent(evaluation)}`);
+      generateBulletinPDF(res.data);
+    } catch (err: any) {
+      console.error("Erreur export PDF bulletin:", err);
+      notifyError(err?.response?.data?.error || "Erreur lors de la génération du PDF");
+    } finally {
+      setExportingPDF(null);
+    }
+  };
+
   const moyenneColor = (m: number) => {
     if (m >= 16) return 'text-green-600';
     if (m >= 12) return 'text-blue-600';
@@ -112,7 +129,6 @@ const BulletinPage = () => {
             ))}
           </select>
           <button onClick={loadBulletins} className="btn-admin text-sm py-1.5 px-3"><RefreshCw size={16}/> Actualiser</button>
-          <button className="btn-admin text-sm py-1.5 px-3"><Download size={16}/> Export PDF</button>
         </div>
       </div>
 
@@ -154,7 +170,12 @@ const BulletinPage = () => {
                     <span className="font-medium text-gray-700">#{b.rang}</span>
                   </td>
                   <td className="px-3 py-3">
-                    <button onClick={() => loadDetails(b)} className="text-indigo-600 font-bold hover:underline text-sm">Voir détails</button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => loadDetails(b)} className="text-indigo-600 font-bold hover:underline text-sm">Voir détails</button>
+                      <button onClick={() => handleExportPDF(b.matricule)} className="p-1.5 rounded transition" title="Télécharger le bulletin PDF" style={{ color: 'var(--accent)' }}>
+                        {exportingPDF === b.matricule ? <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" /> : <FileText size={16} />}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

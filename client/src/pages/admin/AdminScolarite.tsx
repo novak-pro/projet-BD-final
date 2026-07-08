@@ -36,7 +36,7 @@ const AdminScolarite = () => {
   const [trancheForm, setTrancheForm] = useState({ libelle: '', montant: '', dateLimite: '', scolariteId: '' });
   const [editingTranche, setEditingTranche] = useState<Tranche | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [selectedScoId, setSelectedScoId] = useState<number | null>(null);
+  const [addingTrancheScoId, setAddingTrancheScoId] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -105,6 +105,7 @@ const AdminScolarite = () => {
         notifySuccess('Tranche créée');
       }
       setEditingTranche(null);
+      setAddingTrancheScoId(null);
       setTrancheForm({ libelle: '', montant: '', dateLimite: '', scolariteId: '' });
       const res = await api.get('/scolarite');
       setScolarites(res.data);
@@ -118,9 +119,11 @@ const AdminScolarite = () => {
   const openTrancheForm = (scolariteId: number, t?: Tranche) => {
     if (t) {
       setEditingTranche(t);
+      setAddingTrancheScoId(null);
       setTrancheForm({ libelle: t.libelle, montant: String(t.montant), dateLimite: t.dateLimite.split('T')[0], scolariteId: String(scolariteId) });
     } else {
       setEditingTranche(null);
+      setAddingTrancheScoId(scolariteId);
       setTrancheForm({ libelle: '', montant: '', dateLimite: '', scolariteId: String(scolariteId) });
     }
   };
@@ -199,41 +202,44 @@ const AdminScolarite = () => {
                     <td className="px-3 py-3 text-sm">{s.montantPension.toLocaleString()} FCFA</td>
                     <td className="px-3 py-3 text-sm">{s.nombreTranches}</td>
                     <td className="px-3 py-3">
-                      {selectedScoId === s.id ? (
-                        <div className="space-y-2">
-                          {s.tranches.map(t => (
-                            <div key={t.id} className="flex items-center gap-2 text-xs bg-gray-50 p-1.5 rounded">
-                              {editingTranche?.id === t.id ? (
-                                <form onSubmit={handleTrancheSave} className="flex items-center gap-1 flex-wrap">
-                                  <input type="text" value={trancheForm.libelle} onChange={e => setTrancheForm({...trancheForm, libelle: e.target.value})} className="w-20 px-1 py-0.5 border rounded text-xs" placeholder="Libellé" required />
-                                  <input type="number" value={trancheForm.montant} onChange={e => setTrancheForm({...trancheForm, montant: e.target.value})} className="w-20 px-1 py-0.5 border rounded text-xs" placeholder="Montant" required />
-                                  <input type="date" value={trancheForm.dateLimite} onChange={e => setTrancheForm({...trancheForm, dateLimite: e.target.value})} className="w-28 px-1 py-0.5 border rounded text-xs" required />
-                                  <SubmitBtn type="submit" text="OK" loading={submitting} className="text-xs px-2 py-0.5 btn-admin" />
-                                  <button type="button" onClick={() => { setEditingTranche(null); setTrancheForm({ libelle: '', montant: '', dateLimite: '', scolariteId: '' }); }} className="text-gray-400 hover:text-gray-600"><X size={12} /></button>
-                                </form>
-                              ) : (
-                                <>
-                                  <Calendar size={10} className="text-gray-400" />
-                                  <span className="font-medium">{t.libelle}</span>
-                                  <span className="text-gray-500">{t.montant.toLocaleString()} FCFA</span>
-                                  <span className="text-gray-400">— {new Date(t.dateLimite).toLocaleDateString('fr-FR')}</span>
-                                  <button onClick={() => openTrancheForm(s.id, t)} className="text-[var(--navy)] hover:underline ml-1"><Edit3 size={10} /></button>
-                                  <button onClick={() => handleDeleteTranche(t.id)} className="text-red-500 hover:text-red-700"><Trash2 size={10} /></button>
-                                </>
-                              )}
-                            </div>
-                          ))}
-                          {!editingTranche && (
-                            <button onClick={() => openTrancheForm(s.id)} className="flex items-center gap-1 text-xs text-[var(--accent)] hover:underline">
-                              <Plus size={10} /> Ajouter une tranche
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <button onClick={() => setSelectedScoId(s.id)} className="text-xs text-[var(--accent)] hover:underline">
-                          {s.tranches.length} tranche(s) — Voir
-                        </button>
-                      )}
+                      <div className="space-y-2">
+                        {s.tranches.map(t => (
+                          <div key={t.id} className="flex items-center gap-2 text-xs bg-gray-50 p-1.5 rounded">
+                            {editingTranche?.id === t.id ? (
+                              <form onSubmit={handleTrancheSave} className="flex items-center gap-1 flex-wrap">
+                                <input type="text" value={trancheForm.libelle} onChange={e => setTrancheForm({...trancheForm, libelle: e.target.value})} className="w-20 px-1 py-0.5 border rounded text-xs" placeholder="Libellé" required />
+                                <input type="number" value={trancheForm.montant} onChange={e => setTrancheForm({...trancheForm, montant: e.target.value})} className="w-20 px-1 py-0.5 border rounded text-xs" placeholder="Montant" required />
+                                <input type="date" value={trancheForm.dateLimite} onChange={e => setTrancheForm({...trancheForm, dateLimite: e.target.value})} className="w-28 px-1 py-0.5 border rounded text-xs" required />
+                                <SubmitBtn type="submit" text="OK" loading={submitting} className="text-xs px-2 py-0.5 btn-admin" />
+                                  <button type="button" onClick={() => { setEditingTranche(null); setAddingTrancheScoId(null); setTrancheForm({ libelle: '', montant: '', dateLimite: '', scolariteId: '' }); }} className="text-gray-400 hover:text-gray-600"><X size={12} /></button>
+                              </form>
+                            ) : (
+                              <>
+                                <Calendar size={10} className="text-gray-400" />
+                                <span className="font-medium">{t.libelle}</span>
+                                <span className="text-gray-500">{t.montant.toLocaleString()} FCFA</span>
+                                <span className="text-gray-400">— {new Date(t.dateLimite).toLocaleDateString('fr-FR')}</span>
+                                <button onClick={() => openTrancheForm(s.id, t)} className="text-[var(--navy)] hover:underline ml-1"><Edit3 size={10} /></button>
+                                <button onClick={() => handleDeleteTranche(t.id)} className="text-red-500 hover:text-red-700"><Trash2 size={10} /></button>
+                              </>
+                            )}
+                          </div>
+                        ))}
+                        {addingTrancheScoId === s.id && (
+                          <form onSubmit={handleTrancheSave} className="flex items-center gap-1 flex-wrap mt-2">
+                            <input type="text" value={trancheForm.libelle} onChange={e => setTrancheForm({...trancheForm, libelle: e.target.value})} className="w-20 px-1 py-0.5 border rounded text-xs" placeholder="Libellé" required />
+                            <input type="number" value={trancheForm.montant} onChange={e => setTrancheForm({...trancheForm, montant: e.target.value})} className="w-20 px-1 py-0.5 border rounded text-xs" placeholder="Montant" required />
+                            <input type="date" value={trancheForm.dateLimite} onChange={e => setTrancheForm({...trancheForm, dateLimite: e.target.value})} className="w-28 px-1 py-0.5 border rounded text-xs" required />
+                            <SubmitBtn type="submit" text="OK" loading={submitting} className="text-xs px-2 py-0.5 btn-admin" />
+                            <button type="button" onClick={() => setAddingTrancheScoId(null)} className="text-gray-400 hover:text-gray-600"><X size={12} /></button>
+                          </form>
+                        )}
+                        {!editingTranche && addingTrancheScoId !== s.id && (
+                          <button onClick={() => openTrancheForm(s.id)} className="flex items-center gap-1 text-xs text-[var(--accent)] hover:underline">
+                            <Plus size={10} /> Ajouter une tranche
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-3 text-right">
                       <div className="flex justify-end gap-1">
