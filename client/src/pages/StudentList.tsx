@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Search, Edit, Trash2, X, AlertTriangle, Filter, Users, FileText, School } from 'lucide-react';
+import { Search, Edit, Trash2, X, AlertTriangle, Filter, Users, FileText, School, Camera } from 'lucide-react';
 import api from '../services/axiosInstance';
 import { enrollmentService } from '../services/enrollmentService';
 import { useTranslation } from '../i18n/LanguageContext';
 import { notifySuccess, notifyError } from '../utils/notifications';
 import SubmitBtn from '../components/SubmitBtn';
+
+const BASE_URL = api.defaults.baseURL?.replace('/api', '') || '';
 
 interface AnneeAcademique {
   idAcademi: number;
@@ -515,6 +517,7 @@ export default function StudentList() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="text-gray-400 uppercase text-[10px] font-bold tracking-widest border-b border-gray-100">
+                      <th className="px-3 py-3">Photo</th>
                       <th className="px-3 py-3">{t('student.matricule')}</th>
                       <th className="px-3 py-3">{t('student.lastname')}</th>
                       <th className="px-3 py-3">{t('student.firstname')}</th>
@@ -530,6 +533,15 @@ export default function StudentList() {
                   <tbody className="divide-y divide-gray-50">
                     {filteredStudents.map((s) => (
                       <tr key={s.matricule} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-3 py-3">
+                          {s.photoAdmin ? (
+                            <img src={`${BASE_URL}${s.photoAdmin}`} alt="" className="w-10 h-10 rounded-full object-cover border border-gray-200" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                              <Camera size={14} />
+                            </div>
+                          )}
+                        </td>
                         <td className="px-3 py-3 text-sm font-medium text-gray-800">{s.matricule}</td>
                         <td className="px-3 py-3 text-sm text-gray-600">{s.nom}</td>
                         <td className="px-3 py-3 text-sm text-gray-600">{s.prenom}</td>
@@ -634,7 +646,7 @@ export default function StudentList() {
                       <label>Photo (admin)</label>
                       <div className="flex items-center gap-3">
                         {editingStudent?.photoAdmin && (
-                          <img src={editingStudent.photoAdmin} alt="Photo admin" className="w-14 h-14 rounded-full object-cover border" />
+                          <img src={`${BASE_URL}${editingStudent.photoAdmin}`} alt="Photo admin" className="w-16 h-16 rounded-full object-cover border-2 border-gray-200" />
                         )}
                         <input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files?.[0] || null)} className="text-sm" />
                         {photoFile && (

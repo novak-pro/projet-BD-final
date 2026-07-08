@@ -5,6 +5,8 @@ import { useTranslation } from '../i18n/LanguageContext';
 import { generateBulletinPDF } from '../utils/generateBulletinPDF';
 import { notifyError } from '../utils/notifications';
 
+const BASE_URL = api.defaults.baseURL?.replace('/api', '') || '';
+
 interface Child {
   matricule: number;
   nom: string;
@@ -58,7 +60,7 @@ const ParentBulletins = () => {
       let photoAdmin = null;
       try {
         const eleveRes = await api.get(`/students/${selectedChild}`);
-        photoAdmin = eleveRes.data?.photoAdmin || null;
+        photoAdmin = eleveRes.data?.photoAdmin ? `${BASE_URL}${eleveRes.data.photoAdmin}` : null;
       } catch (_e) { /* ignore */ }
       generateBulletinPDF({
         eleve: {

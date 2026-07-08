@@ -5,6 +5,8 @@ import { useTranslation } from '../../i18n/LanguageContext';
 import { generateBulletinPDF } from '../../utils/generateBulletinPDF';
 import { notifyError } from '../../utils/notifications';
 
+const BASE_URL = api.defaults.baseURL?.replace('/api', '') || '';
+
 interface Bulletin {
   matricule: number;
   nom: string;
@@ -110,7 +112,7 @@ const BulletinPage = () => {
           nom: bulletin.nom,
           prenom: bulletin.prenom,
           niveau: eleveInfo?.niveau || '',
-          photoAdmin: eleveInfo?.photoAdmin || null,
+          photoAdmin: eleveInfo?.photoAdmin ? `${BASE_URL}${eleveInfo.photoAdmin}` : null,
         },
         classe: {
           libelle: classes.find(c => String(c.idClasse) === classe)?.libelle || '',
