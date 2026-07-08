@@ -103,6 +103,7 @@ export const getBulletinComplet = async (req: Request, res: Response): Promise<v
         nom: eleve.nom,
         prenom: eleve.prenom,
         niveau: eleve.niveau,
+        photoAdmin: eleve.photoAdmin,
       },
       classe: {
         libelle: eleve.classroom?.libelle ?? '',

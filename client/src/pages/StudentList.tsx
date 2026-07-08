@@ -21,6 +21,7 @@ interface Student {
   sexe: number;
   langue: string;
   photoURL: string | null;
+  photoAdmin: string | null;
   statut: string;
   niveau: string;
   soldePoints: number;
@@ -83,6 +84,8 @@ export default function StudentList() {
   const [salles, setSalles] = useState<Salle[]>([]);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editForm, setEditForm] = useState({ nom: '', prenom: '', dateNaissance: '', lieuNaissance: '', sexe: '0', langue: 'Français', niveau: '', statut: 'Inscrit', salleId: '', classeId: '' });
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [deletingStudent, setDeletingStudent] = useState<Student | null>(null);
 
   // Inscriptions
@@ -194,6 +197,7 @@ export default function StudentList() {
   const openEditModal = (s: Student) => {
     const latestFreq = s.frequences?.[0];
     setEditingStudent(s);
+    setPhotoFile(null);
     setEditForm({
       nom: s.nom,
       prenom: s.prenom,
@@ -206,6 +210,25 @@ export default function StudentList() {
       salleId: s.salle?.idSalle?.toString() || '',
       classeId: latestFreq?.idSalle?.toString() || s.classroom?.idClasse?.toString() || '',
     });
+  };
+
+  const handleUploadPhoto = async () => {
+    if (!editingStudent || !photoFile) return;
+    setUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('photo', photoFile);
+      await api.put(`/students/${editingStudent.matricule}/photo`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      notifySuccess('Photo mise à jour');
+      setPhotoFile(null);
+      fetchStudents(selectedAnneeId || undefined);
+    } catch {
+      notifyError('Erreur lors de l\'upload de la photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -605,6 +628,21 @@ export default function StudentList() {
                             <option key={sl.idSalle} value={sl.idSalle}>{sl.libelle} {sl.capacite ? `(Cap. ${sl.capacite})` : ''}</option>
                           ))}
                         </select>
+                      </div>
+                    </div>
+                    <div className="admin-field">
+                      <label>Photo (admin)</label>
+                      <div className="flex items-center gap-3">
+                        {editingStudent?.photoAdmin && (
+                          <img src={editingStudent.photoAdmin} alt="Photo admin" className="w-14 h-14 rounded-full object-cover border" />
+                        )}
+                        <input type="file" accept="image/*" onChange={(e) => setPhotoFile(e.target.files?.[0] || null)} className="text-sm" />
+                        {photoFile && (
+                          <button type="button" onClick={handleUploadPhoto} disabled={uploadingPhoto}
+                            className="btn-admin text-xs py-1.5 px-3">
+                            {uploadingPhoto ? 'Envoi...' : 'Upload'}
+                          </button>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-3 pt-2">

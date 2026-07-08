@@ -193,6 +193,7 @@ model Eleve {
   sexe          Int       @default(0)
   langue        String    @default("Français")
   photoURL      String?
+  photoAdmin    String?
   statut        String    @default("Inscrit")
 
   parentId      Int

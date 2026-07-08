@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as studentController from '../controllers/studentController';
 import { protect, restrictTo } from '../middlewares/authMiddleware';
+import { uploadStudentPhoto } from '../middlewares/uploadStudentPhotoMiddleware';
 
 const router = Router();
 
@@ -11,5 +12,6 @@ router.post('/', protect, restrictTo('ADMIN_PRINCIPAL'), studentController.creat
 router.put('/:matricule', protect, restrictTo('ADMIN_PRINCIPAL'), studentController.updateStudent);
 router.delete('/:matricule', protect, restrictTo('ADMIN_PRINCIPAL'), studentController.deleteStudent);
 router.get('/class/:classroomId', protect, studentController.getStudentsByClass);
+router.put('/:matricule/photo', protect, restrictTo('ADMIN_PRINCIPAL'), uploadStudentPhoto, studentController.uploadAdminPhoto);
 
 export default router;

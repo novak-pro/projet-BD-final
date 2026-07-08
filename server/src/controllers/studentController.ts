@@ -171,6 +171,24 @@ export const deleteStudent = async (req: Request, res: Response) => {
   }
 };
 
+export const uploadAdminPhoto = async (req: Request, res: Response) => {
+  try {
+    const { matricule } = req.params;
+    if (!req.file) {
+      res.status(400).json({ error: 'Aucun fichier fourni' });
+      return;
+    }
+    const photoUrl = `/uploads/eleves/${req.file.filename}`;
+    const student = await prisma.eleve.update({
+      where: { matricule: parseInt(matricule as string) },
+      data: { photoAdmin: photoUrl },
+    });
+    res.json({ photoAdmin: student.photoAdmin });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to upload photo' });
+  }
+};
+
 export const getStudentsByClass = async (req: Request, res: Response) => {
   try {
     const { classroomId } = req.params;

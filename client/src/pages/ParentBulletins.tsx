@@ -55,12 +55,18 @@ const ParentBulletins = () => {
     setExporting(true);
     try {
       const child = children.find(c => String(c.matricule) === selectedChild);
+      let photoAdmin = null;
+      try {
+        const eleveRes = await api.get(`/students/${selectedChild}`);
+        photoAdmin = eleveRes.data?.photoAdmin || null;
+      } catch (_e) { /* ignore */ }
       generateBulletinPDF({
         eleve: {
           matricule: Number(selectedChild),
           nom: child?.nom || '',
           prenom: child?.prenom || '',
           niveau: child?.niveau || '',
+          photoAdmin,
         },
         classe: { libelle: '', effectif: 0, titulaire: null },
         evaluation,

@@ -19,7 +19,7 @@ interface NoteDetail {
 }
 
 interface BulletinData {
-  eleve: { matricule: number; nom: string; prenom: string; niveau: string };
+  eleve: { matricule: number; nom: string; prenom: string; niveau: string; photoAdmin?: string | null };
   classe: { libelle: string; effectif: number; titulaire: { nom: string; prenom: string } | null };
   evaluation: string;
   details: NoteDetail[];
@@ -99,6 +99,18 @@ export function generateBulletinPDF(data: BulletinData) {
   doc.setTextColor(100, 100, 110);
   doc.setFont('helvetica', 'normal');
 
+  // Photo admin (au-dessus du nom)
+  let leftX = ml;
+  if (data.eleve.photoAdmin) {
+    const photoW = 22;
+    const photoH = 28;
+    const photoY = 44;
+    try {
+      doc.addImage(data.eleve.photoAdmin, 'JPEG', ml, photoY, photoW, photoH);
+      leftX = ml + photoW + 6;
+    } catch (_e) { /* ignorer si l'image est invalide */ }
+  }
+
   const leftCol = [
     `Élève : ${data.eleve.nom} ${data.eleve.prenom}`,
     `Niveau : ${data.eleve.niveau}`,
@@ -112,7 +124,7 @@ export function generateBulletinPDF(data: BulletinData) {
 
   leftCol.forEach((l, i) => {
     doc.setFont('helvetica', 'normal');
-    doc.text(l, ml, y + i * 6);
+    doc.text(l, leftX, y + i * 6);
   });
   rightCol.forEach((r, i) => {
     doc.setFont('helvetica', 'normal');

@@ -110,6 +110,7 @@ const BulletinPage = () => {
           nom: bulletin.nom,
           prenom: bulletin.prenom,
           niveau: eleveInfo?.niveau || '',
+          photoAdmin: eleveInfo?.photoAdmin || null,
         },
         classe: {
           libelle: classes.find(c => String(c.idClasse) === classe)?.libelle || '',

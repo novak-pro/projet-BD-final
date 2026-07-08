@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Créer les dossiers uploads s'ils n'existent pas
-['epreuves', 'livres'].forEach(sub => {
+['epreuves', 'livres', 'eleves'].forEach(sub => {
   const dir = path.join(__dirname, '..', 'uploads', sub);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
