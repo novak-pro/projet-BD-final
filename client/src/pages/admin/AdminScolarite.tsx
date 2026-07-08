@@ -37,11 +37,14 @@ const AdminScolarite = () => {
   const [editingTranche, setEditingTranche] = useState<Tranche | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [addingTrancheScoId, setAddingTrancheScoId] = useState<number | null>(null);
+  const [procedure, setProcedure] = useState('');
+  const [procedureLoading, setProcedureLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([
       api.get('/scolarite').then(r => setScolarites(r.data)).catch(() => {}),
       api.get('/enrollments/classes').then(r => setClasses(r.data)).catch(() => {}),
+      api.get('/procedure').then(r => { if (r.data?.contenu) setProcedure(r.data.contenu); }).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -125,6 +128,18 @@ const AdminScolarite = () => {
       setEditingTranche(null);
       setAddingTrancheScoId(scolariteId);
       setTrancheForm({ libelle: '', montant: '', dateLimite: '', scolariteId: String(scolariteId) });
+    }
+  };
+
+  const saveProcedure = async () => {
+    setProcedureLoading(true);
+    try {
+      await api.put('/procedure', { contenu: procedure });
+      notifySuccess('Procédure enregistrée !');
+    } catch {
+      notifyError("Erreur lors de l'enregistrement de la procédure");
+    } finally {
+      setProcedureLoading(false);
     }
   };
 
@@ -253,6 +268,30 @@ const AdminScolarite = () => {
             </table>
           </div>
         )}
+      </div>
+
+      {/* Procédure d'inscription */}
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <h2>
+            <FileText size={18} style={{ color: 'var(--navy)' }} />
+            Procédure d'inscription
+          </h2>
+          <p className="text-xs text-gray-400">Ce texte sera affiché aux parents lors de l'inscription</p>
+        </div>
+        <div className="admin-form">
+          <textarea
+            value={procedure}
+            onChange={(e) => setProcedure(e.target.value)}
+            className="w-full border border-gray-200 p-3 rounded-[var(--radius)] outline-none text-sm min-h-[200px] resize-y"
+            placeholder="Décrivez la procédure d'inscription (étapes, documents requis, frais...)"
+          />
+          <div className="mt-3">
+            <button onClick={saveProcedure} disabled={procedureLoading} className="btn-admin">
+              {procedureLoading ? 'Enregistrement...' : 'Enregistrer la procédure'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

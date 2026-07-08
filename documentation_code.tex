@@ -1,0 +1,2811 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+
+\geometry{margin=2cm}
+
+% Couleurs
+\definecolor{codebg}{RGB}{245,245,250}
+\definecolor{codeframe}{RGB}{220,220,230}
+\definecolor{codekey}{RGB}{0,80,160}
+\definecolor{codestring}{RGB}{180,60,60}
+\definecolor{codecomment}{RGB}{60,140,60}
+
+\lstdefinestyle{code}{
+  language=Java,
+  backgroundcolor=\color{codebg},
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\color{codekey}\bfseries,
+  stringstyle=\color{codestring},
+  commentstyle=\color{codecomment}\itshape,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{codeframe},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  tabsize=2,
+  showstringspaces=false,
+  extendedchars=true,
+  inputencoding=utf8,
+  literate={é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {à}{{\`a}}1 {ç}{{\c{c}}}1 {ô}{{\^o}}1 {ù}{{\`u}}1 {É}{{\'E}}1 {È}{{\`E}}1 {Ê}{{\^E}}1 {À}{{\`A}}1 {Ç}{{\c{C}}}1 {Ô}{{\^O}}1 {@@}{@}1,
+  morekeywords={async,await,export,import,const,let,var,function,return,if,else,for,try,catch,new,typeof,this,class,extends,interface,type,enum,as,from,where,select,include,orderBy,data,create,update,delete,findUnique,findMany,findFirst,PrismaClient,Router,Request,Response,NextFunction,Promise,void,any,boolean,number,string,Array,Map,Set,Record,Component,useState,useEffect,useRef,ReactNode,FC,Element,model,datasource,generator,provider,Int,Float,Boolean,DateTime,Json,id,default,unique,relation,map,db,updatedAt,now,autoincrement,onDelete,Cascade,Restrict,SetNull,fields,references},
+}
+
+\hypersetup{colorlinks=true,linkcolor=blue}
+
+\begin{document}
+
+\title{Documentation Technique --- Plateforme École Excellence}
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+\tableofcontents
+\newpage
+
+% =================================================================
+\section{Introduction}
+% =================================================================
+
+Cette documentation présente la plateforme \textbf{École Excellence}, une application web de gestion scolaire. L'architecture repose sur :
+\begin{itemize}
+  \item \textbf{Backend} : serveur Node.js / Express, Prisma ORM, PostgreSQL
+  \item \textbf{Frontend} : React 19, TypeScript, Vite, jsPDF
+\end{itemize}
+
+Les sections suivantes décrivent chaque module avec des extraits de code commentés.
+
+% =================================================================
+\section{Base de données --- Schéma Prisma}
+% =================================================================
+
+Fichier : \texttt{server/prisma/schema.prisma}
+
+\subsection{Configuration}
+
+\begin{lstlisting}[style=code]
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+\end{lstlisting}
+
+\subsection{Énumérations}
+
+\begin{lstlisting}[style=code]
+enum Role { ADMIN_PRINCIPAL, PERSONNEL, PARENT }
+enum UserStatus { PENDING, ACTIVE, DISABLED }
+enum FonctionPersonnel { ENSEIGNANT, SURVEILLANT, DIRECTION, SECRETAIRE, COMPTABLE, ADMINISTRATIF }
+enum EnrollmentStatus { PENDING, APPROVED, REJECTED }
+enum PaymentMethod { ORANGE_MONEY, MTN_MOMO, CARTE_BANCAIRE }
+enum PaymentStatus { PENDING, VALIDATED, REJECTED }
+enum AnneeStatut { PREVUE, EN_COURS, TERMINEE }
+enum SalleEtat { DISPONIBLE, EN_SERVICE, EN_RENOVATION, EN_CONSTRUCTION, FERMEE_TEMPORAIREMENT }
+enum IncidentType { RETARD, ABSENCE_INJUSTIFIEE, COMPORTEMENT, AUTRE }
+enum JourSemaine { LUNDI, MARDI, MERCREDI, JEUDI, VENDREDI, SAMEDI }
+\end{lstlisting}
+
+\subsection{Authentification et profils}
+
+\begin{lstlisting}[style=code]
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  role      Role     @default(PARENT)
+  status    UserStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  adminProfile     Admin?
+  personnelProfile Personnel?
+  parentProfile    Parents?
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  @@map("users")
+}
+
+model Admin {
+  id     Int    @id @default(autoincrement())
+  nom    String @db.VarChar(100)
+  mobile String? @db.VarChar(15)
+  userId Int    @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("Admin")
+}
+
+model Personnel {
+  id          Int    @id @default(autoincrement())
+  nom         String
+  prenom      String
+  fonction    FonctionPersonnel
+  telephone   String
+  ville, quartier, departement, photo  String?
+  statut      String @default("Actif")
+  userId      Int    @unique
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classes     Classe[]
+  cours       Cours[]
+  salleTitulaire Salle[] @relation("SalleTitulaire")
+}
+
+model Parents {
+  id        Int    @id @default(autoincrement())
+  nom, prenom     String @db.VarChar(60)
+  telephone, ville, quartier  String?
+  userId    Int    @unique
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enfants   Eleve[]
+  demandes  EnrollmentRequest[]
+  paiements Payment[]
+  @@map("Parents")
+}
+\end{lstlisting}
+
+\subsection{Inscriptions}
+
+\begin{lstlisting}[style=code]
+model EnrollmentRequest {
+  id            Int              @id @default(autoincrement())
+  nom, prenom   String           @db.VarChar(60)
+  dateNaissance DateTime         @db.Date
+  lieuNaissance String
+  sexe          Int              @default(0)
+  niveau        String
+  classe        String?
+  photoURL, recuPDF, modePaiement String?
+  status        EnrollmentStatus @default(PENDING)
+  adminNotes    String?
+  parentId      Int
+  parent        Parents          @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now())
+  @@map("EnrollmentRequest")
+}
+\end{lstlisting}
+
+\subsection{Pédagogie --- Élèves, classes, cycles}
+
+\begin{lstlisting}[style=code]
+model Eleve {
+  matricule     Int    @id @default(autoincrement())
+  nom, prenom   String @db.VarChar(60)
+  dateNaissance DateTime @db.Date
+  lieuNaissance String
+  sexe          Int    @default(0)
+  langue        String @default("Francais")
+  photoURL, photoAdmin  String?
+  statut        String @default("Inscrit")
+  parentId      Int
+  parent        Parents @relation(fields: [parentId], references: [id], onDelete: Restrict)
+  classroomId   Int?
+  classroom     Classe? @relation(fields: [classroomId], references: [idClasse], onDelete: SetNull)
+  niveau        String
+  salleId       Int?
+  salle         Salle?  @relation(fields: [salleId], references: [idSalle], onDelete: SetNull)
+  notes         Note[]
+  incidents     Incident[]
+  paiements     Payment[]
+  evaluations   Evaluation[]
+  soldePoints   Int     @default(20)
+  frequences    Frequente[]
+  @@map("Eleve")
+}
+
+model Classe {
+  idClasse   Int    @id @default(autoincrement())
+  libelle    String
+  idCycle    Int
+  cycle      Cycle  @relation(fields: [idCycle], references: [idCycle], onDelete: Restrict)
+  responsableId Int?
+  responsable    Personnel? @relation(fields: [responsableId], references: [id], onDelete: SetNull)
+  students   Eleve[]
+  salles     Salle[]
+  cours      Cours[]
+  matieres   MatiereClasse[]
+  scolarite  Scolarite?
+  @@map("Classe")
+}
+
+model Cycle {
+  idCycle     Int    @id @default(autoincrement())
+  libelle     String
+  description String? @db.Text
+  classes     Classe[]
+  @@map("Cycle")
+}
+\end{lstlisting}
+
+\subsection{Notes et cours}
+
+\begin{lstlisting}[style=code]
+model Cours {
+  idCours      Int    @id @default(autoincrement())
+  idMatiere    Int
+  matiere      Matiere @relation(fields: [idMatiere], references: [id], onDelete: Restrict)
+  coefficient  Float  @default(1.0)
+  idClasse     Int?
+  classe       Classe? @relation(fields: [idClasse], references: [idClasse], onDelete: Cascade)
+  idSalle      Int?
+  salle        Salle? @relation(fields: [idSalle], references: [idSalle], onDelete: SetNull)
+  enseignantId Int?
+  enseignant   Personnel? @relation(fields: [enseignantId], references: [id], onDelete: SetNull)
+  evaluations  Evaluation[]
+  plannings    EmploiDuTemps[]
+  @@map("Cours")
+}
+
+model Note {
+  id          Int    @id @default(autoincrement())
+  valeur      Float
+  evaluation  String
+  idMatiere   Int
+  matiere     Matiere @relation(fields: [idMatiere], references: [id], onDelete: Restrict)
+  eleveId     Int
+  eleve       Eleve  @relation(fields: [eleveId], references: [matricule], onDelete: Cascade)
+  dateSaisie  DateTime @default(now())
+}
+
+model Matiere {
+  id    Int    @id @default(autoincrement())
+  nom   String @unique
+  code  String?
+  classes  MatiereClasse[]
+  cours    Cours[]
+  livres   Livre[]
+  notes    Note[]
+}
+\end{lstlisting}
+
+\subsection{Scolarité et paiements}
+
+\begin{lstlisting}[style=code]
+model Scolarite {
+  id                 Int   @id @default(autoincrement())
+  montantInscription Float
+  montantPension     Float
+  nombreTranches     Int
+  classeId           Int   @unique
+  classe             Classe @relation(fields: [classeId], references: [idClasse], onDelete: Cascade)
+  tranches           Tranche[]
+  @@map("Scolarite")
+}
+
+model Tranche {
+  id          Int      @id @default(autoincrement())
+  libelle     String
+  montant     Float
+  dateLimite  DateTime @db.Date
+  scolariteId Int
+  scolarite   Scolarite @relation(fields: [scolariteId], references: [id], onDelete: Cascade)
+  @@map("Tranche")
+}
+
+model Payment {
+  id             Int           @id @default(autoincrement())
+  montant        Float
+  nombreTranches Int
+  methode        PaymentMethod
+  recuPDF, modePaiement, transactionRef, adminNotes String?
+  status         PaymentStatus @default(PENDING)
+  eleveId        Int
+  eleve          Eleve         @relation(fields: [eleveId], references: [matricule], onDelete: Cascade)
+  parentId       Int
+  parent         Parents       @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+  @@map("Payment")
+}
+\end{lstlisting}
+
+\subsection{Discipline et infractions}
+
+\begin{lstlisting}[style=code]
+model Incident {
+  id            Int          @id @default(autoincrement())
+  type          IncidentType
+  date          DateTime     @default(now())
+  gravite       String
+  pointsDeduits Int          @default(0)
+  commentaire   String
+  auteur        String
+  eleveId       Int
+  eleve         Eleve        @relation(fields: [eleveId], references: [matricule], onDelete: Cascade)
+  status        String       @default("APPROVED")
+}
+
+model TypeInfraction {
+  id          Int    @id @default(autoincrement())
+  libelle     String @unique
+  gravite     String
+  pointsMalus Int    @default(0)
+  @@map("TypeInfraction")
+}
+\end{lstlisting}
+
+\subsection{Bibliothèque, planning, messagerie}
+
+\begin{lstlisting}[style=code]
+model Livre {
+  id              Int    @id @default(autoincrement())
+  titre, auteur   String
+  maisonEdition, description String?
+  cycle, classeConcernee, langue String
+  couvertureUrl, pdfUrl String?
+  idMatiere       Int
+  matiere         Matiere @relation(fields: [idMatiere], references: [id], onDelete: Restrict)
+}
+
+model EmploiDuTemps {
+  id         Int       @id @default(autoincrement())
+  jour       JourSemaine
+  heureDebut, heureFin String
+  idCours    Int
+  cours      Cours     @relation(fields: [idCours], references: [idCours], onDelete: Cascade)
+  idSalle    Int
+  salle      Salle     @relation(fields: [idSalle], references: [idSalle], onDelete: Cascade)
+}
+
+model Message {
+  id          Int      @id @default(autoincrement())
+  content     String
+  type        String
+  status      String   @default("SENT")
+  senderId    Int
+  recipientId Int?
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient   User?    @relation("ReceivedMessages", fields: [recipientId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  @@map("Message")
+}
+\end{lstlisting}
+
+\subsection{Années académiques et fréquentation}
+
+\begin{lstlisting}[style=code]
+model AnneeAcademique {
+  idAcademi Int         @id @default(autoincrement())
+  libelle   String      @unique
+  dateDebut DateTime    @db.Date
+  dateFin   DateTime    @db.Date
+  active    Boolean     @default(false)
+  statut    AnneeStatut @default(PREVUE)
+  trimestres Trimestre[]
+  frequences Frequente[]
+  @@map("AnneeAcademique")
+}
+
+model Frequente {
+  idFrequente Int @id @default(autoincrement())
+  idEleve     Int
+  idSalle     Int
+  idAcademi   Int
+  eleve  Eleve  @relation(fields: [idEleve], references: [matricule], onDelete: Cascade)
+  classe Classe @relation(fields: [idSalle], references: [idClasse], onDelete: Restrict)
+  annee  AnneeAcademique @relation(fields: [idAcademi], references: [idAcademi], onDelete: Restrict)
+  @@unique([idEleve, idSalle, idAcademi])
+  @@map("Frequente")
+}
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Configuration serveur}
+% =================================================================
+
+\subsection{Point d'entrée (\texttt{server/index.ts})}
+
+\begin{lstlisting}[style=code]
+import app from './app';
+const PORT = parseInt(process.env.PORT || '3000', 10);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log('Serveur lance sur le port', PORT);
+});
+\end{lstlisting}
+
+\subsection{Application Express (\texttt{server/app.ts})}
+
+Configure CORS, parsing JSON, fichiers statiques, et importe toutes les routes.
+
+\begin{lstlisting}[style=code]
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
+
+// Creation dossiers uploads
+['epreuves', 'livres', 'eleves'].forEach(sub => {
+  const dir = path.join(__dirname, '..', 'uploads', sub);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
+
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
+// Import des routes
+import authRoutes from './src/routes/authRoutes';
+import studentRoutes from './src/routes/studentRoutes';
+import bulletinRoutes from './src/routes/bulletinRoutes';
+import paymentRoutes from './src/routes/paymentRoutes';
+import scolariteRoutes from './src/routes/scolariteRoutes';
+// ... (18 autres modules de routes)
+
+// Declaration des routes
+app.use('/api/auth', authRoutes);
+app.use('/api/students', studentRoutes);
+app.use('/api/bulletins', bulletinRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/scolarite', scolariteRoutes);
+// ...
+
+export default app;
+\end{lstlisting}
+
+\subsection{Client Prisma (\texttt{server/src/lib/prisma.ts})}
+
+\begin{lstlisting}[style=code]
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+export default prisma;
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Middleware d'authentification}
+% =================================================================
+
+Fichier : \texttt{server/src/middlewares/authMiddleware.ts}
+
+Ce middleware centralise la sécurité. \texttt{protect} vérifie le token JWT et le statut du compte. \texttt{restrictTo} limite l'accès par rôle.
+
+\begin{lstlisting}[style=code]
+import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
+import prisma from '../lib/prisma';
+
+export interface AuthRequest extends Request {
+  user?: any;
+}
+
+export const protect = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  let token;
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      token = req.headers.authorization.split(' ')[1];
+      const decoded: any = jwt.verify(token, process.env.JWT_SECRET as string);
+      const currentUser = await prisma.user.findUnique({ where: { id: decoded.id } });
+      if (!currentUser) return res.status(401).json({ message: "Utilisateur inexistant" });
+      if (currentUser.status !== 'ACTIVE') return res.status(403).json({ message: "Compte non actif" });
+      req.user = currentUser;
+      next();
+    } catch (error) {
+      return res.status(401).json({ message: "Session expiree" });
+    }
+  }
+  if (!token) return res.status(401).json({ message: "Non connecte" });
+};
+
+export const restrictTo = (...roles: string[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction) => {
+    if (!roles.includes(req.user.role)) return res.status(403).json({ message: "Permission refusee" });
+    next();
+  };
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Contrôleur d'authentification}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/authController.ts}
+
+Gère l'inscription et la connexion.
+
+\begin{lstlisting}[style=code]
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+
+export const register = async (req, res) => {
+  const { email, password, role, nom, prenom, telephone, fonction } = req.body;
+  const hashed = await bcrypt.hash(password, 10);
+  const newUser = await prisma.user.create({
+    data: {
+      email, password: hashed, role, status: 'PENDING',
+      ...(role === 'PERSONNEL'
+        ? { personnelProfile: { create: { nom, prenom, telephone, fonction } } }
+        : { parentProfile: { create: { nom, prenom, telephone } } })
+    }
+  });
+  res.status(201).json({ message: "Inscription soumise, en attente de validation" });
+};
+
+export const login = async (req, res) => {
+  const { email, password } = req.body;
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) return res.status(401).json({ error: "Identifiants incorrects" });
+  if (user.status === 'PENDING') return res.status(403).json({ error: "Compte en attente" });
+  if (user.status === 'DISABLED') return res.status(403).json({ error: "Compte desactive" });
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) return res.status(401).json({ error: "Identifiants incorrects" });
+  const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '24h' });
+  res.json({ token, user: { id: user.id, email: user.email, role: user.role } });
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Gestion des élèves}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/studentController.ts}
+
+Opérations CRUD avec relations, upload de photo admin, et notification parent.
+
+\begin{lstlisting}[style=code]
+export const getAllStudents = async (req, res) => {
+  const students = await prisma.eleve.findMany({
+    include: { parent: true, classroom: true, salle: true, evaluations: true },
+    orderBy: { nom: 'asc' }
+  });
+  res.json(students);
+};
+
+export const getStudentById = async (req, res) => {
+  const student = await prisma.eleve.findUnique({
+    where: { matricule: parseInt(req.params.matricule) },
+    include: { parent: true, classroom: { include: { cycle: true, responsable: true } },
+              evaluations: { include: { cours: true } } }
+  });
+  if (!student) return res.status(404).json({ error: 'Student not found' });
+  res.json(student);
+};
+
+export const updateStudent = async (req, res) => {
+  const student = await prisma.eleve.update({
+    where: { matricule: parseInt(req.params.matricule) },
+    data: { nom, prenom, ... } // champs mis a jour
+  });
+  // Notification automatique au parent
+  if (student.parent?.user) {
+    await prisma.message.create({
+      data: { content: `Informations de ${student.prenom} modifiees`, type: 'PERSONAL',
+              status: 'SENT', senderId: req.user.id, recipientId: student.parent.user.id }
+    });
+  }
+  res.json(student);
+};
+
+export const uploadAdminPhoto = async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Aucun fichier' });
+  const photoUrl = '/uploads/eleves/' + req.file.filename;
+  const student = await prisma.eleve.update({
+    where: { matricule: parseInt(req.params.matricule) },
+    data: { photoAdmin: photoUrl }
+  });
+  res.json({ photoAdmin: student.photoAdmin });
+};
+\end{lstlisting}
+
+\subsection{Routes des élèves (\texttt{studentRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+const router = Router();
+router.get('/', protect, studentController.getAllStudents);
+router.get('/with-frequente', protect, studentController.getStudentsWithFrequente);
+router.get('/:matricule', protect, studentController.getStudentById);
+router.post('/', protect, restrictTo('ADMIN_PRINCIPAL'), studentController.createStudent);
+router.put('/:matricule', protect, restrictTo('ADMIN_PRINCIPAL'), studentController.updateStudent);
+router.delete('/:matricule', protect, restrictTo('ADMIN_PRINCIPAL'), studentController.deleteStudent);
+router.put('/:matricule/photo', protect, restrictTo('ADMIN_PRINCIPAL'), uploadStudentPhoto, studentController.uploadAdminPhoto);
+router.get('/class/:classroomId', protect, studentController.getStudentsByClass);
+export default router;
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Gestion des inscriptions}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/enrollmentController.ts}
+
+Workflow complet : soumission parent, validation admin, CRUD cycles/classes.
+
+\begin{lstlisting}[style=code]
+// Soumission par le parent
+export const submitEnrollment = async (req, res) => {
+  const parent = await prisma.parents.findUnique({ where: { userId: req.user.id } });
+  const demande = await prisma.enrollmentRequest.create({
+    data: { nom, prenom, dateNaissance: new Date(dateNaissance), lieuNaissance, sexe,
+            niveau, classe, photoURL, recuPDF, modePaiement, parentId: parent.id }
+  });
+  res.status(201).json(demande);
+};
+
+// Validation par l'admin (transaction : creation eleve + frequente)
+export const processEnrollment = async (req, res) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const updated = await tx.enrollmentRequest.update({ where: { id }, data: { status, adminNotes } });
+    if (status === 'APPROVED') {
+      const eleve = await tx.eleve.create({ data: { ...request, classroomId } });
+      if (classroomId && activeAnnee) {
+        await tx.frequente.create({ data: { idEleve: eleve.matricule, idSalle: classroomId, idAcademi: activeAnnee.idAcademi } });
+      }
+    }
+    return updated;
+  });
+  res.json({ message: 'Demande traitee' });
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Bulletins et classements}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/bulletin.controller.ts}
+
+Calcul complet des bulletins : notes, moyennes par matiere, moyenne generale, rang, assiduite, photo admin.
+
+\begin{lstlisting}[style=code]
+export const getBulletinComplet = async (req, res) => {
+  const { matricule, evaluation } = req.query;
+  const eleve = await prisma.eleve.findUnique({
+    where: { matricule: Number(matricule) },
+    include: { classroom: { include: { responsable: true, _count: { select: { students: true } } } },
+               incidents: { where: { date: { gte: new Date(new Date().getFullYear(), 0, 1) } } } }
+  });
+  // Calcul note par matiere
+  const notes = await prisma.note.findMany({
+    where: { eleveId: Number(matricule), evaluation: String(evaluation) },
+    include: { matiere: { include: { cours: { where: { idClasse: classId }, include: { enseignant: true } } } } }
+  });
+  // Retourne details avec moyenneClasse, rang, assiduite, photoAdmin
+  res.json({ eleve: { ...eleve, photoAdmin: eleve.photoAdmin }, classe, evaluation, details,
+             moyenneGenerale, rang, totalPoints, totalCoeffs, moyenneClasseGenerale, absences, retards });
+};
+
+// Fonction interne de calcul des rangs (avec gestion ex-aequo)
+async function calculerBulletinsClasseRaw(idClasse, evaluation) {
+  const eleves = await prisma.eleve.findMany({
+    where: { classroomId: idClasse },
+    include: { notes: { where: { evaluation }, include: { matiere: { include: { cours: { where: { idClasse } } } } } } }
+  });
+  const palmares = eleves.map(eleve => {
+    let totalPoints = 0, totalCoeffs = 0;
+    eleve.notes.forEach(n => { totalPoints += n.valeur * (n.matiere.cours[0]?.coefficient || 1); totalCoeffs += n.matiere.cours[0]?.coefficient || 1; });
+    return { matricule: eleve.matricule, nom: eleve.nom, prenom: eleve.prenom, moyenne: totalCoeffs > 0 ? +(totalPoints/totalCoeffs).toFixed(2) : 0 };
+  });
+  palmares.sort((a,b) => b.moyenne - a.moyenne);
+  let rang = 1;
+  return palmares.map((e,i) => { if (i>0 && e.moyenne < palmares[i-1].moyenne) rang = i+1; return {...e, rang}; });
+}
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Paiements et scolarite}
+% =================================================================
+
+\subsection{Paiements (\texttt{paymentController.ts})}
+
+\begin{lstlisting}[style=code]
+export const initiatePayment = async (req, res) => {
+  const parent = await prisma.parents.findUnique({ where: { userId: req.user.id } });
+  const payment = await prisma.payment.create({
+    data: { montant, nombreTranches, methode: methode, recuPDF, modePaiement, transactionRef,
+            eleveId: Number(eleveId), parentId: parent.id, status: 'PENDING' }
+  });
+  res.status(201).json(payment);
+};
+
+export const validatePayment = async (req, res) => {
+  const updated = await prisma.payment.update({
+    where: { id: Number(req.params.id) },
+    data: { status: status, adminNotes, updatedAt: new Date() }
+  });
+  res.json({ message: 'Paiement ' + status });
+};
+\end{lstlisting}
+
+\subsection{Scolarite (\texttt{scolarite.controller.ts})}
+
+Configuration des frais par classe avec gestion des tranches.
+
+\begin{lstlisting}[style=code]
+export const createScolarite = async (req, res) => {
+  const data = await prisma.scolarite.create({
+    data: { montantInscription: parseFloat(montantInscription), montantPension: parseFloat(montantPension),
+            nombreTranches: parseInt(nombreTranches), classeId: parseInt(classeId) },
+    include: { classe: true, tranches: true }
+  });
+  res.status(201).json(data);
+};
+
+export const createTranche = async (req, res) => {
+  const data = await prisma.tranche.create({
+    data: { libelle, montant: parseFloat(montant), dateLimite: new Date(dateLimite), scolariteId: parseInt(scolariteId) }
+  });
+  res.status(201).json(data);
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Discipline}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/discipline.controller.ts}
+
+Gestion des incidents avec workflow d'approbation et systeme de points.
+
+\begin{lstlisting}[style=code]
+export const rapporterIncident = async (req, res) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const isAdmin = req.user.role === 'ADMIN_PRINCIPAL';
+    const incident = await tx.incident.create({
+      data: { eleveId, type, gravite, pointsDeduits, commentaire, auteur, status: isAdmin ? 'APPROVED' : 'PENDING' }
+    });
+    if (isAdmin) {
+      let eleve = await tx.eleve.update({ where: { matricule: eleveId }, data: { soldePoints: { decrement: pointsDeduits } } });
+      if (eleve.soldePoints < 0) eleve = await tx.eleve.update({ where: { matricule: eleveId }, data: { soldePoints: 0 } });
+      return { incident, soldeActuel: eleve.soldePoints, alerte: eleve.soldePoints <= 10 };
+    }
+    return { incident, message: "Signalement envoye pour validation" };
+  });
+  res.status(201).json(result);
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Personnel}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/personnel.controller.ts}
+
+Gestion du personnel, affectation aux classes, promotion titulaire.
+
+\begin{lstlisting}[style=code]
+export const affecterEnseignantSalle = async (req, res) => {
+  const coursList = await Promise.all(
+    matiereIds.map(matiereId =>
+      prisma.cours.create({
+        data: { enseignantId: Number(personnelId), idSalle, idClasse, idMatiere: Number(matiereId), coefficient: 1.0 },
+        include: { matiere: true, salle: true, classe: true }
+      })
+    )
+  );
+  // Notification automatique
+  await prisma.message.create({
+    data: { content: `Affecte a la classe ${classeLibelle} pour: ${matieresList}`,
+            type: 'PERSONAL', status: 'SENT', senderId: req.user.id, recipientId: enseignant.userId }
+  });
+  res.status(201).json({ message: "Affectation reussie", cours: coursList });
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Planning}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/planning.controller.ts}
+
+Gestion de l'emploi du temps avec detection de conflits.
+
+\begin{lstlisting}[style=code]
+export const createPlanning = async (req, res) => {
+  // Verification conflit salle
+  const conflit = await prisma.emploiDuTemps.findFirst({
+    where: { idSalle: Number(idSalle), jour, AND: [
+      { heureDebut: { lte: heureFin } }, { heureFin: { gte: heureDebut } }
+    ]}
+  });
+  if (conflit) return res.status(400).json({ error: "Salle deja occupee" });
+  const planning = await prisma.emploiDuTemps.create({ data: { idCours, idSalle, jour, heureDebut, heureFin } });
+  res.status(201).json(planning);
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Bibliotheque}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/bibliotheque.controller.ts}
+
+CRUD des livres avec upload fichiers.
+
+\begin{lstlisting}[style=code]
+export const createLivre = async (req, res) => {
+  const files = req.files;
+  const couvertureUrl = files?.couverture?.[0]?.filename ? '/uploads/livres/' + files.couverture[0].filename : null;
+  const pdfUrl = files?.fichier?.[0]?.filename ? '/uploads/livres/' + files.fichier[0].filename : null;
+  const livre = await prisma.livre.create({
+    data: { titre, auteur, maisonEdition, description, cycle, classeConcernee, langue, couvertureUrl, pdfUrl, idMatiere: Number(idMatiere) }
+  });
+  res.status(201).json(livre);
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Cours (enseignant)}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/cours.controller.ts}
+
+\begin{lstlisting}[style=code]
+export const getMesCours = async (req, res) => {
+  const personnel = await prisma.personnel.findUnique({ where: { userId: req.user.id } });
+  const cours = await prisma.cours.findMany({
+    where: { enseignantId: personnel.id },
+    include: { matiere: true, classe: { include: { _count: { select: { students: true } }, cycle: true } },
+              salle: true, plannings: { include: { salle: true }, orderBy: [{ jour: 'asc' }, { heureDebut: 'asc' }] } }
+  });
+  res.json({ cours, salleTitulaire: personnel.salleTitulaire });
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Messagerie}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/messageController.ts}
+
+\begin{lstlisting}[style=code]
+export const sendAnnouncement = async (req, res) => {
+  const parents = await prisma.parents.findMany({ select: { userId: true } });
+  await prisma.message.createMany({
+    data: parents.map(p => ({ content: req.body.content, type: 'ANNOUNCEMENT', status: 'SENT', senderId: req.user.id, recipientId: p.userId }))
+  });
+  res.status(201).json({ message: 'Annonce envoyee a tous les parents' });
+};
+
+export const moderateMessage = async (req, res) => {
+  const updated = await prisma.message.update({ where: { id: Number(req.params.id) }, data: { status: req.body.status } });
+  res.json(updated);
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Administration}
+% =================================================================
+
+Fichier : \texttt{server/src/controllers/adminController.ts}
+
+\begin{lstlisting}[style=code]
+export const getStats = async (req, res) => {
+  const [totalEleves, totalEnseignants, totalSalles, pendingUsers] = await Promise.all([
+    prisma.eleve.count(), prisma.personnel.count(), prisma.salle.count(), prisma.user.count({ where: { status: 'PENDING' } })
+  ]);
+  res.json({ totalEleves, totalEnseignants, totalSalles, pendingUsers });
+};
+
+export const handleUserValidation = async (req, res) => {
+  await prisma.user.update({ where: { id: Number(req.body.userId) }, data: { status: req.body.action } });
+  res.json({ message: req.body.action === 'ACTIVE' ? 'Compte active' : 'Compte desactive' });
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Toutes les routes serveur}
+% =================================================================
+
+\subsection{Routes d'authentification (\texttt{authRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+import { Router } from 'express';
+import * as authController from '../controllers/authController';
+import {protect, authenticateToken } from '../middlewares/authMiddleware';
+
+const router = Router();
+
+router.post('/register', authController.register);
+router.post('/login', authController.login);
+router.get('/profile', protect, authenticateToken, authController.getMe );
+
+export default router;
+\end{lstlisting}
+
+\subsection{Routes administrateur (\texttt{adminRoutes.ts})}
+
+Protégées par \texttt{protect} et \texttt{restrictTo('ADMIN\_PRINCIPAL')}.
+
+\begin{lstlisting}[style=code]
+router.use(protect, restrictTo('ADMIN_PRINCIPAL'));
+router.get('/stats', getStats);
+router.get('/pending', getPendingUsers);
+router.post('/validate', handleUserValidation);
+router.post('/salles', createSalle);
+router.get('/salles', getAllSalles);
+router.patch('/salles/:id/etat', updateEtatSalle);
+router.post('/matieres', createMatiere);
+router.get('/matieres', getMatieres);
+router.get('/personnel', getAllPersonnel);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes inscriptions (\texttt{enrollmentRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.post('/', authenticateToken, submitEnrollment);
+router.get('/', authenticateToken, getEnrollments);
+router.patch('/:id/process', authenticateToken, isAdmin, processEnrollment);
+router.get('/my-children', authenticateToken, getMyChildren);
+router.get('/child/:matricule', authenticateToken, getChildProfile);
+router.patch('/child/:matricule/photo', authenticateToken, updateChildPhoto);
+router.patch('/child/:matricule/school', authenticateToken, updateChildSchoolInfo);
+router.patch('/child/:matricule/school-admin', authenticateToken, isAdmin, updateChildSchoolInfoAdmin);
+router.get('/cycles', authenticateToken, getCycles);
+router.post('/cycles', authenticateToken, isAdmin, createCycle);
+router.put('/cycles/:id', authenticateToken, isAdmin, updateCycle);
+router.delete('/cycles/:id', authenticateToken, isAdmin, deleteCycle);
+router.get('/classes', authenticateToken, getAllClasses);
+router.post('/classes', authenticateToken, isAdmin, createClasse);
+router.put('/classes/:id', authenticateToken, isAdmin, updateClasse);
+router.delete('/classes/:id', authenticateToken, isAdmin, deleteClasse);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes paiements (\texttt{paymentRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.post('/', protect, restrictTo('PARENT'), initiatePayment);
+router.post('/initiate', protect, restrictTo('PARENT'), initiatePayment);
+router.get('/my-payments', protect, getPayments);
+router.get('/all', protect, restrictTo('ADMIN_PRINCIPAL'), getPayments);
+router.get('/history/:parentId', protect, restrictTo('PARENT'), getPayments);
+router.get('/config/:matricule', protect, getStudentFeeConfig);
+router.patch('/:id/validate', protect, restrictTo('ADMIN_PRINCIPAL'), validatePayment);
+router.get('/config', protect, restrictTo('ADMIN_PRINCIPAL'), getAllFeeConfigs);
+router.post('/config', protect, restrictTo('ADMIN_PRINCIPAL'), createFeeConfig);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes bulletins (\texttt{bulletinRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.get('/classe', protect, restrictTo('ADMIN_PRINCIPAL'), calculerBulletinsClasse);
+router.get('/details', protect, getDetailBulletin);
+router.get('/complet', protect, getBulletinComplet);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes scolarite (\texttt{scolariteRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.get('/', protect, getAllScolarites);
+router.get('/classe/:classeId', protect, getScolariteByClasse);
+router.post('/', protect, restrictTo('ADMIN_PRINCIPAL'), createScolarite);
+router.put('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateScolarite);
+router.delete('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteScolarite);
+router.post('/tranches', protect, restrictTo('ADMIN_PRINCIPAL'), createTranche);
+router.put('/tranches/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateTranche);
+router.delete('/tranches/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteTranche);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes discipline (\texttt{disciplineRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.post('/incident', protect, restrictTo('ADMIN_PRINCIPAL', 'PERSONNEL'), rapporterIncident);
+router.get('/incident/pending', protect, restrictTo('ADMIN_PRINCIPAL'), getPendingIncidents);
+router.put('/incident/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateIncident);
+router.get('/eleve/:eleveId', protect, getIncidentsByEleve);
+router.delete('/incident/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteIncident);
+router.get('/types', protect, restrictTo('ADMIN_PRINCIPAL'), getTypeInfractions);
+router.post('/types', protect, restrictTo('ADMIN_PRINCIPAL'), createTypeInfraction);
+router.put('/types/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateTypeInfraction);
+router.delete('/types/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteTypeInfraction);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes personnel (\texttt{personnelRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.get('/', protect, restrictTo('ADMIN_PRINCIPAL'), getAllPersonnel);
+router.put('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updatePersonnel);
+router.post('/:id/deactivate', protect, restrictTo('ADMIN_PRINCIPAL'), deactivatePersonnel);
+router.post('/promouvoir-titulaire', protect, restrictTo('ADMIN_PRINCIPAL'), promouvoirTitulaire);
+router.delete('/retirer-promotion/:personnelId', protect, restrictTo('ADMIN_PRINCIPAL'), retirerPromotion);
+router.post('/affecter-salle', protect, restrictTo('ADMIN_PRINCIPAL'), affecterEnseignantSalle);
+router.get('/:personnelId/cours', protect, getCoursEnseignant);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes planning (\texttt{planningRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.post('/', protect, restrictTo('ADMIN_PRINCIPAL'), createPlanning);
+router.put('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updatePlanning);
+router.get('/classe/:idClasse', protect, restrictTo('ADMIN_PRINCIPAL', 'PERSONNEL'), getPlanningByClasse);
+router.get('/cours/:idClasse', protect, restrictTo('ADMIN_PRINCIPAL'), getCoursByClasse);
+router.get('/salle/:idSalle', protect, restrictTo('ADMIN_PRINCIPAL', 'PERSONNEL'), getPlanningBySalle);
+router.get('/cours-salle/:idSalle', protect, restrictTo('ADMIN_PRINCIPAL'), getCoursBySalle);
+router.get('/eleve/:eleveId', protect, getPlanningByEleve);
+router.delete('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deletePlanning);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes notes (\texttt{noteRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.get('/eleve/:eleveId', protect, getNotesByEleve);
+router.post('/bulk', protect, restrictTo('PERSONNEL'), enregistrerNotesGroupees);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes epreuves (\texttt{epreuveRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.post('/', protect, restrictTo('PERSONNEL'), uploadEpreuveFiles, deposerEpreuve);
+router.get('/', protect, getEpreuves);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes bibliotheque (\texttt{bibliothequeRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.get('/', protect, getAllLivres);
+router.get('/:id', protect, getLivreById);
+router.post('/', protect, restrictTo('ADMIN_PRINCIPAL'), uploadLivreFiles, createLivre);
+router.put('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), uploadLivreFiles, updateLivre);
+router.delete('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteLivre);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes messagerie (\texttt{messageRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.use(protect);
+router.get('/', getMessages);
+router.get('/parents', restrictTo('ADMIN_PRINCIPAL'), getParentsList);
+router.post('/announcement', restrictTo('ADMIN_PRINCIPAL'), sendAnnouncement);
+router.post('/personal', restrictTo('ADMIN_PRINCIPAL'), sendPersonalMessage);
+router.post('/teacher', restrictTo('PERSONNEL'), sendTeacherMessage);
+router.patch('/:id/moderate', restrictTo('ADMIN_PRINCIPAL'), moderateMessage);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes cours (\texttt{coursRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.get('/mes-cours', protect, restrictTo('PERSONNEL'), getMesCours);
+router.get('/mes-eleves', protect, restrictTo('PERSONNEL'), getMesEleves);
+router.get('/:id', protect, restrictTo('PERSONNEL'), getCoursDetail);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes academiques (\texttt{academiqueRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.get('/annees/active', protect, getActiveAnnee);
+router.get('/annees', protect, restrictTo('ADMIN_PRINCIPAL'), getAllAnnees);
+router.post('/annees', protect, restrictTo('ADMIN_PRINCIPAL'), createAnnee);
+router.put('/annees/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateAnnee);
+router.delete('/annees/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteAnnee);
+router.patch('/annees/:id/active', protect, restrictTo('ADMIN_PRINCIPAL'), setActiveAnnee);
+router.post('/annees/:id/duplicate', protect, restrictTo('ADMIN_PRINCIPAL'), duplicateAnnee);
+router.post('/annees/:id/trimestres/generate', protect, restrictTo('ADMIN_PRINCIPAL'), generateTrimestres);
+router.post('/trimestres', protect, restrictTo('ADMIN_PRINCIPAL'), createTrimestre);
+router.put('/trimestres/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateTrimestre);
+router.delete('/trimestres/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteTrimestre);
+router.post('/sessions', protect, restrictTo('ADMIN_PRINCIPAL'), createSession);
+router.put('/sessions/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateSession);
+router.delete('/sessions/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteSession);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes matieres (\texttt{matiereRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.post('/', protect, restrictTo('ADMIN_PRINCIPAL'), createMatiere);
+router.get('/', protect, restrictTo('ADMIN_PRINCIPAL', 'PERSONNEL'), getMatieres);
+router.put('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateMatiere);
+router.delete('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteMatiere);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes salles (\texttt{salleRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.post('/', protect, restrictTo('ADMIN_PRINCIPAL'), createSalle);
+router.get('/', protect, restrictTo('ADMIN_PRINCIPAL'), getAllSalles);
+router.put('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateSalle);
+router.delete('/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteSalle);
+router.patch('/:id/etat', protect, restrictTo('ADMIN_PRINCIPAL'), updateEtatSalle);
+router.patch('/:id/position', protect, restrictTo('ADMIN_PRINCIPAL'), updatePositionSalle);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes procedure (\texttt{procedureRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.get('/', getProcedure);
+router.put('/', authenticateToken, isAdmin, updateProcedure);
+export default router;
+\end{lstlisting}
+
+\subsection{Routes utilisateurs (\texttt{userRoutes.ts})}
+
+\begin{lstlisting}[style=code]
+router.use(protect, restrictTo('ADMIN_PRINCIPAL'));
+router.get('/deactivated', getDeactivatedAccounts);
+router.post('/reactivate', reactivateAccount);
+router.post('/deactivate', deactivateAccount);
+export default router;
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Controleurs manquants}
+% =================================================================
+
+\subsection{Notes (\texttt{note.controller.ts})}
+
+\begin{lstlisting}[style=code]
+export const getNotesByEleve = async (req, res) => {
+  const notes = await prisma.note.findMany({
+    where: { eleveId: Number(req.params.eleveId) },
+    include: { matiere: true },
+    orderBy: { dateSaisie: 'desc' }
+  });
+  res.json(notes);
+};
+
+export const enregistrerNotesGroupees = async (req, res) => {
+  const { idMatiere, idClasse, evaluation, notes } = req.body;
+  await prisma.$transaction(async (tx) => {
+    for (const n of notes) {
+      await tx.note.create({
+        data: { valeur: n.valeur, evaluation, idMatiere, eleveId: n.eleveId }
+      });
+    }
+  });
+  res.status(201).json({ message: 'Notes enregistrees' });
+};
+\end{lstlisting}
+
+\subsection{Épreuves (\texttt{epreuve.controller.ts})}
+
+\begin{lstlisting}[style=code]
+export const deposerEpreuve = async (req, res) => {
+  const files = req.files;
+  const sujetUrl = '/uploads/epreuves/' + files.sujet[0].filename;
+  const corrigeUrl = '/uploads/epreuves/' + files.corrige[0].filename;
+  const epreuve = await prisma.epreuve.create({
+    data: { idMatiere: Number(req.body.idMatiere), idClasse: Number(req.body.idClasse),
+            evaluation: req.body.evaluation, anneeAcad: req.body.anneeAcad,
+            auteur: req.body.auteur, sujetUrl, corrigeUrl }
+  });
+  res.status(201).json(epreuve);
+};
+
+export const getEpreuves = async (req, res) => {
+  const epreuves = await prisma.epreuve.findMany({
+    include: { matiere: true, classe: true }, orderBy: { createdAt: 'desc' }
+  });
+  res.json(epreuves);
+};
+\end{lstlisting}
+
+\subsection{Matières (\texttt{matiere.controller.ts})}
+
+\begin{lstlisting}[style=code]
+export const createMatiere = async (req, res) => {
+  const matiere = await prisma.matiere.create({
+    data: { nom: req.body.nom, code: req.body.code }
+  });
+  if (req.body.classIds?.length) {
+    await prisma.matiereClasse.createMany({
+      data: req.body.classIds.map(id => ({ idMatiere: matiere.id, idClasse: Number(id) }))
+    });
+  }
+  res.status(201).json(matiere);
+};
+
+export const getMatieres = async (req, res) => {
+  const matieres = await prisma.matiere.findMany({
+    include: { classes: { include: { classe: { include: { cycle: true } } } } }
+  });
+  res.json(matieres);
+};
+\end{lstlisting}
+
+\subsection{Salles (\texttt{salle.controller.ts})}
+
+\begin{lstlisting}[style=code]
+export const createSalle = async (req, res) => {
+  const salle = await prisma.salle.create({
+    data: { libelle: req.body.libelle, position: req.body.position,
+            capacite: req.body.capacite, etat: req.body.etat || 'DISPONIBLE',
+            idClasse: req.body.idClasse || null }
+  });
+  if (req.body.enseignantTitulaireId) {
+    await prisma.salle.update({ where: { idSalle: salle.idSalle },
+      data: { titulaireId: req.body.enseignantTitulaireId } });
+  }
+  res.status(201).json(salle);
+};
+
+export const getAllSalles = async (req, res) => {
+  const salles = await prisma.salle.findMany({
+    include: { classe: true, titulaire: true, _count: { select: { eleves: true } } },
+    orderBy: { libelle: 'asc' }
+  });
+  res.json(salles);
+};
+\end{lstlisting}
+
+\subsection{Procédure (\texttt{procedureController.ts})}
+
+\begin{lstlisting}[style=code]
+export const getProcedure = async (req, res) => {
+  let proc = await prisma.procedureInscription.findFirst();
+  if (!proc) proc = await prisma.procedureInscription.create({ data: { contenu: '' } });
+  res.json(proc);
+};
+
+export const updateProcedure = async (req, res) => {
+  const proc = await prisma.procedureInscription.upsert({
+    where: { id: 1 }, create: { contenu: req.body.contenu }, update: { contenu: req.body.contenu }
+  });
+  res.json(proc);
+};
+\end{lstlisting}
+
+\subsection{Utilisateurs (\texttt{userController.ts})}
+
+\begin{lstlisting}[style=code]
+export const getDeactivatedAccounts = async (req, res) => {
+  const users = await prisma.user.findMany({
+    where: { status: 'DISABLED' },
+    include: { personnelProfile: { select: { nom: true, prenom: true } },
+              parentProfile: { select: { nom: true, prenom: true } } }
+  });
+  res.json(users);
+};
+
+export const reactivateAccount = async (req, res) => {
+  await prisma.user.update({ where: { id: req.body.userId }, data: { status: 'ACTIVE' } });
+  res.json({ message: 'Compte reactive' });
+};
+\end{lstlisting}
+
+\subsection{Académique (\texttt{academiqueController.ts})}
+
+\begin{lstlisting}[style=code]
+export const createAnnee = async (req, res) => {
+  const annee = await prisma.anneeAcademique.create({
+    data: { libelle: req.body.libelle, dateDebut: new Date(req.body.dateDebut),
+            dateFin: new Date(req.body.dateFin), statut: 'PREVUE' }
+  });
+  res.status(201).json(annee);
+};
+
+export const generateTrimestres = async (req, res) => {
+  const annee = await prisma.anneeAcademique.findUnique({ where: { idAcademi: Number(req.params.id) } });
+  const debut = new Date(annee.dateDebut);
+  const fin = new Date(annee.dateFin);
+  const tiers = (fin.getTime() - debut.getTime()) / 3;
+  for (let i = 0; i < 3; i++) {
+    const tDebut = new Date(debut.getTime() + i * tiers);
+    const tFin = new Date(debut.getTime() + (i + 1) * tiers);
+    await prisma.trimestre.create({
+      data: { libelle: 'Trimestre ' + (i+1), dateDebut: tDebut, dateFin: tFin,
+              idAcademi: annee.idAcademi }
+    });
+  }
+  res.json({ message: 'Trimestres generes' });
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Frontend --- Configuration}
+% =================================================================
+
+\subsection{Axios instance (\texttt{client/src/services/axiosInstance.ts})}
+
+\begin{lstlisting}[style=code]
+import axios from 'axios';
+const api = axios.create({ baseURL: 'https://projet-bd-final-production.up.railway.app/api' });
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = 'Bearer ' + token;
+  return config;
+});
+api.interceptors.response.use(
+  (response) => response,
+  (error) => { if (error.response?.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; } return Promise.reject(error); }
+);
+export default api;
+\end{lstlisting}
+
+\subsection{App.tsx --- Routage principal}
+
+\begin{lstlisting}[style=code]
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Admin */}
+        <Route element={<ProtectedRoute allowedRoles={['ADMIN_PRINCIPAL']} />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/finance" element={<AdminScolarite />} />
+            <Route path="/admin/paiements" element={<AdminPayments />} />
+            <Route path="/admin/planning" element={<PlanningPage />} />
+            <Route path="/admin/bulletins" element={<BulletinPage />} />
+            <Route path="/admin/discipline" element={<DisciplinePage />} />
+            <Route path="/admin/students" element={<StudentList />} />
+            <Route path="/admin/personnel" element={<PersonnelPage />} />
+            <Route path="/admin/bibliotheque" element={<BibliothequePage />} />
+            <Route path="/admin/messages" element={<AdminMessages />} />
+            <Route path="/admin/academique" element={<AdminAcademique />} />
+          </Route>
+        </Route>
+
+        {/* Enseignant */}
+        <Route element={<ProtectedRoute allowedRoles={['PERSONNEL']} />}>
+          <Route element={<TeacherLayout />}>
+            <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+            <Route path="/teacher/cours/:idCours" element={<CourseDetail />} />
+            <Route path="/teacher/grades" element={<TeacherGrades />} />
+          </Route>
+        </Route>
+
+        {/* Parent */}
+        <Route element={<ProtectedRoute allowedRoles={['PARENT']} />}>
+          <Route element={<ParentLayout />}>
+            <Route path="/parent/scolarite" element={<ParentScolarite />} />
+            <Route path="/parent/paiements" element={<ParentPayment />} />
+            <Route path="/parent/bulletins" element={<ParentBulletins />} />
+            <Route path="/parent/enfant/:matricule" element={<ParentChildProfile />} />
+          </Route>
+        </Route>
+      </Routes>
+    </Router>
+  );
+}
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Frontend --- Pages principales}
+% =================================================================
+
+\subsection{Bulletins admin (\texttt{BulletinPage.tsx})}
+
+Affichage du classement avec export PDF individuel.
+
+\begin{lstlisting}[style=code]
+const handleExportPDF = async (matricule: number) => {
+  setExportingPDF(matricule);
+  try {
+    const [detailsRes, eleveRes] = await Promise.all([
+      api.get('/bulletins/details?matricule=' + matricule + '&evaluation=' + encodeURIComponent(evaluation)),
+      api.get('/students/' + matricule),
+    ]);
+    const details = Array.isArray(detailsRes.data) ? detailsRes.data : [];
+    const eleveInfo = eleveRes.data;
+    generateBulletinPDF({
+      eleve: {
+        matricule, nom: bulletin.nom, prenom: bulletin.prenom, niveau: eleveInfo?.niveau || '',
+        photoAdmin: eleveInfo?.photoAdmin ? BASE_URL + eleveInfo.photoAdmin : null,
+      },
+      classe: { libelle: classes.find(c => String(c.idClasse) === classe)?.libelle || '', effectif: bulletins.length, titulaire: null },
+      evaluation,
+      details: details.map((d: any) => ({ matiere: d.matiere, valeur: d.valeur, coefficient: d.coefficient, points: d.points, enseignant: d.enseignant, moyenneClasse: null, appreciation: null })),
+      moyenneGenerale: bulletin.moyenne, rang: bulletin.rang, totalPoints: bulletin.totalPoints, totalCoeffs: bulletin.totalCoeffs,
+      moyenneClasseGenerale, absences: 0, retards: 0,
+    });
+  } catch (err: any) { notifyError("Erreur PDF"); }
+  finally { setExportingPDF(null); }
+};
+\end{lstlisting}
+
+\subsection{Bulletins parent (\texttt{ParentBulletins.tsx})}
+
+\begin{lstlisting}[style=code]
+const handleExportPDF = async () => {
+  setExporting(true);
+  try {
+    const child = children.find(c => String(c.matricule) === selectedChild);
+    let photoAdmin = null;
+    try {
+      const eleveRes = await api.get('/students/' + selectedChild);
+      photoAdmin = eleveRes.data?.photoAdmin ? BASE_URL + eleveRes.data.photoAdmin : null;
+    } catch (_e) { /* ignore */ }
+    generateBulletinPDF({
+      eleve: { matricule: Number(selectedChild), nom: child?.nom || '', prenom: child?.prenom || '', niveau: child?.niveau || '', photoAdmin },
+      classe: { libelle: '', effectif: 0, titulaire: null }, evaluation,
+      details: notes.map(n => ({ matiere: n.matiere?.nom || '', valeur: n.valeur, coefficient: 1, points: n.valeur, enseignant: null, moyenneClasse: null, appreciation: null })),
+      moyenneGenerale: moyenne, rang: 0, totalPoints: notes.reduce((s,n) => s + n.valeur, 0), totalCoeffs: notes.length, moyenneClasseGenerale: 0, absences: 0, retards: 0,
+    });
+  } catch (err) { notifyError("Erreur PDF"); }
+  finally { setExporting(false); }
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Frontend --- Pages d'authentification}
+% =================================================================
+
+\subsection{Login (\texttt{Login.tsx})}
+
+Page de connexion avec sélecteur de rôle (Admin/Personnel/Parents), fond dégradé bleu marine, animation sur les champs et basculement vers l'inscription.
+
+\begin{lstlisting}[style=code]
+const Login = () => {
+  const { t } = useTranslation();
+  const { logoUrl } = useLogo();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [activeRole, setActiveRole] = useState('ADMIN');
+  const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  const roles = [
+    { id: 'ADMIN', label: 'Admin', icon: Shield },
+    { id: 'PERSONNEL', label: 'Personnel', icon: Briefcase },
+    { id: 'PARENTS', label: 'Parents', icon: Users },
+  ];
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setError(''); setSubmitting(true);
+    try {
+      const response = await api.post('/auth/login', { email, password });
+      const data = response.data;
+      const userRole = data.user.role;
+      const allowedRoles = ROLE_GROUPS[activeRole];
+      if (!allowedRoles.includes(userRole)) {
+        setError(t('auth.errorAccess')); return;
+      }
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('role', userRole);
+      if (userRole === 'ADMIN_PRINCIPAL') navigate('/admin');
+      else if (userRole === 'PERSONNEL') navigate('/teacher/dashboard');
+      else if (userRole === 'PARENT') navigate('/parent/scolarite');
+    } catch (err) {
+      setError(err.response?.data?.error || t('auth.errorServer'));
+    } finally { setSubmitting(false); }
+  };
+  // Rendu : fond degrade, colonne branding + formulaire avec icones
+};
+\end{lstlisting}
+
+\subsection{Register (\texttt{Register.tsx})}
+
+Inscription avec choix Parent/Personnel, champs dynamiques selon le rôle, validation.
+
+\begin{lstlisting}[style=code]
+const Register = () => {
+  const { t } = useTranslation();
+  const [role, setRole] = useState<'PARENT' | 'PERSONNEL'>('PARENT');
+  const [formData, setFormData] = useState({
+    email: '', password: '', nom: '', prenom: '', telephone: '', ville: '',
+    quartier: '', fonction: 'ENSEIGNANT'
+  });
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault(); setSubmitting(true);
+    try {
+      await api.post('/auth/register', { ...formData, role });
+      setMessage("Inscription soumise, en attente de validation");
+    } catch (err) {
+      setMessage(err.response?.data?.error || t('auth.registerError'));
+    } finally { setSubmitting(false); }
+  };
+  // Rendu : bascule PARENT/PERSONNEL, champs avec icones, select fonction si PERSONNEL
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Frontend --- Pages Administrateur}
+% =================================================================
+
+\subsection{AdminDashboard (\texttt{AdminDashboard.tsx})}
+
+Tableau de bord avec statistiques (élèves, enseignants, salles, inscriptions en attente), accès rapides et gestion des demandes.
+
+\begin{lstlisting}[style=code]
+const AdminDashboard = () => {
+  const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalEleves: 0, totalEnseignants: 0, totalSalles: 0, pendingUsers: 0 });
+
+  useEffect(() => {
+    Promise.all([api.get('/admin/stats'), api.get('/admin/pending')])
+      .then(([statsRes, pendingRes]) => {
+        setStats(statsRes.data);
+        setPendingUsers(Array.isArray(pendingRes.data) ? pendingRes.data : []);
+      });
+  }, []);
+
+  const processUser = async (userId, action) => {
+    await api.post('/admin/validate', { userId, action });
+    fetchData();
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 4 StatCards: Eleves, Personnel, Salles, Inscriptions */}
+      {/* 3 Quick Links: Gestion eleves, Personnel, Infrastructures */}
+      {/* Tableau des demandes d'acces avec boutons Accepter/Refuser */}
+    </div>
+  );
+};
+\end{lstlisting}
+
+\subsection{AdminEnrollments (\texttt{AdminEnrollments.tsx})}
+
+Gestion des inscriptions avec modal d'approbation incluant sélection de classe.
+
+\begin{lstlisting}[style=code]
+const AdminEnrollments = () => {
+  const [requests, setRequests] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [approveModal, setApproveModal] = useState(null);
+  const [selectedClasse, setSelectedClasse] = useState('');
+
+  const handleAction = async (id, status, classroomId?) => {
+    if (status === 'REJECTED') {
+      const notes = prompt("Motif du refus :");
+      if (!notes) return;
+      await enrollmentService.process(id, status, notes);
+    } else {
+      setApproveModal({ id }); // ouvre modal pour choisir classe
+    }
+  };
+
+  const confirmApprove = async () => {
+    await enrollmentService.process(approveModal.id, 'APPROVED', '', selectedClasse);
+    setApproveModal(null);
+    fetchRequests();
+  };
+  // Tableau avec colonnes: Enfant, Parent, Date, Cycle/Classe, Paiement, Statut, Actions
+};
+\end{lstlisting}
+
+\subsection{AdminFeeConfig (\texttt{AdminFeeConfig.tsx})}
+
+Configuration des tarifs par niveau et rédaction de la procédure d'inscription.
+
+\begin{lstlisting}[style=code]
+const AdminFeeConfig = () => {
+  const [configs, setConfigs] = useState<FeeConfig[]>([]);
+  const [formData, setFormData] = useState({ niveau: '', montantTotal: '', montantTranche: '' });
+  const [procedure, setProcedure] = useState('');
+  const [procedureLoading, setProcedureLoading] = useState(false);
+
+  useEffect(() => { fetchConfigs(); loadProcedure(); }, []);
+
+  const loadProcedure = async () => {
+    try {
+      const res = await api.get('/procedure');
+      if (res.data?.contenu) setProcedure(res.data.contenu);
+    } catch { /* ignore */ }
+  };
+
+  const saveProcedure = async () => {
+    setProcedureLoading(true);
+    try {
+      await api.put('/procedure', { contenu: procedure });
+      notifySuccess('Procedure enregistree !');
+    } catch {
+      notifyError("Erreur lors de l'enregistrement de la procedure");
+    } finally { setProcedureLoading(false); }
+  };
+
+  const handleSave = async () => {
+    await api.post('/payments/config', {
+      ...formData, montantTotal: parseFloat(formData.montantTotal),
+      montantTranche: parseFloat(formData.montantTranche)
+    });
+    notifySuccess("Tarif enregistre !");
+    setFormData({ niveau: '', montantTotal: '', montantTranche: '' });
+    fetchConfigs();
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Procedure d'inscription */}
+      <div className="admin-card">
+        <div className="admin-card-header">
+          <h2><FileText size={18} style={{ color: 'var(--navy)' }} /> Procedure d'inscription</h2>
+        </div>
+        <div className="admin-form">
+          <textarea value={procedure}
+            onChange={(e) => setProcedure(e.target.value)}
+            className="w-full border p-3 rounded min-h-[200px] resize-y"
+            placeholder="Decrivez la procedure d'inscription (etapes, documents requis, frais...)"
+          />
+          <div className="mt-3">
+            <button onClick={saveProcedure} disabled={procedureLoading} className="btn-admin">
+              {procedureLoading ? 'Enregistrement...' : 'Enregistrer la procedure'}
+            </button>
+          </div>
+        </div>
+      </div>
+      {/* Configuration tarifs */}
+      <div className="admin-card">
+        <div className="admin-card-header"><h2>Configuration des Pensions par Niveau</h2></div>
+        <div className="admin-form">
+          <div className="admin-form-row">
+            <input type="text" placeholder="Niveau (ex: CP1)" value={formData.niveau} onChange={...} />
+            <input type="number" placeholder="Montant Total (FCFA)" value={formData.montantTotal} onChange={...} />
+            <input type="number" placeholder="Montant d'une Tranche" value={formData.montantTranche} onChange={...} />
+          </div>
+          <button onClick={handleSave} className="btn-admin">Enregistrer</button>
+        </div>
+      </div>
+      {/* Tableau tarifs enregistres */}
+      <div className="admin-card">
+        <table className="w-full">
+          <thead><tr><th>Niveau</th><th>Total (FCFA)</th><th>Par Tranche (FCFA)</th></tr></thead>
+          <tbody>{configs.map(c => <tr key={c.id}><td>{c.niveau}</td><td>{c.montantTotal.toLocaleString()}</td><td>{c.montantTranche.toLocaleString()}</td></tr>)}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+\end{lstlisting}
+
+\subsection{Infrastructure (\texttt{Infrastructure.tsx})}
+
+Gestion complète des salles : création, modification, suppression, changement d'état, édition inline de la position.
+
+\begin{lstlisting}[style=code]
+const AdminInfrastructure = () => {
+  const [salles, setSalles] = useState([]);
+  const [search, setSearch] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingSalle, setEditingSalle] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+
+  // Cards par salle avec: etiquette d'etat (DISPONIBLE, EN_SERVICE...),
+  // Position editable inline, capacite, occupation, classe rattachee, titulaire
+  // Modales: Creation, Edition, Suppression
+  const filtered = salles.filter(s => s.libelle.toLowerCase().includes(search.toLowerCase()));
+  return <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{
+    filtered.map(salle => (
+      <div key={salle.idSalle} className="...">
+        <span>{statusConfig[salle.etat]}</span>
+        <h3>{salle.libelle}</h3>
+        <span>{salle.position}</span>
+        <span>{nbStudents} / {capacite} eleves</span>
+        <span>Classe: {salle.classe?.libelle}</span>
+        <span>Titulaire: {salle.titulaire?.nom}</span>
+      </div>
+    ))
+  }</div>;
+};
+\end{lstlisting}
+
+\subsection{MatierePage (\texttt{MatierePage.tsx})}
+
+Gestion des matières avec CRUD, association aux classes, consultation des épreuves.
+
+\begin{lstlisting}[style=code]
+const MatierePage = () => {
+  const [tab, setTab] = useState<'matieres' | 'epreuves'>('matieres');
+  const [matieres, setMatieres] = useState([]);
+  const [epreuves, setEpreuves] = useState([]);
+  const [name, setName] = useState('');
+  const [classes, setClasses] = useState([]);
+  const [editingMat, setEditingMat] = useState(null);
+
+  // Onglet Matieres: recherche, ajout avec selection de classes, grille de matieres
+  // Onglet Epreuves: tableau avec matiere, classe, evaluation, annee, auteur, date, sujet, corrige
+  const filteredMatieres = matieres.filter(m => m.nom.toLowerCase().includes(searchMat.toLowerCase()));
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {filteredMatieres.map(m => <div key={m.id}>{m.nom}{m.code && `(${m.code})`}</div>)}
+    </div>
+  );
+};
+\end{lstlisting}
+
+\subsection{AdminMessages (\texttt{AdminMessages.tsx})}
+
+Messagerie admin avec 3 onglets : annonces (à tous les parents), messages personnels (recherche destinataire), modération (messages enseignants en attente).
+
+\begin{lstlisting}[style=code]
+const AdminMessages = () => {
+  const [activeTab, setActiveTab] = useState<'announce' | 'personal' | 'pending'>('announce');
+  const [content, setContent] = useState('');
+  const [parents, setParents] = useState([]);
+  const [selectedParent, setSelectedParent] = useState(null);
+
+  const handleSendAnnouncement = async () => {
+    await api.post('/messages/announcement', { content });
+    notifySuccess('Annonce envoyee a tous les parents');
+    setContent('');
+  };
+
+  const handleModerate = async (id, status) => {
+    await api.patch('/messages/' + id + '/moderate', { status });
+    loadPending();
+  };
+};
+\end{lstlisting}
+
+\subsection{AdminDeactivatedAccounts (\texttt{AdminDeactivatedAccounts.tsx})}
+
+Liste des comptes désactivés avec recherche et réactivation.
+
+\begin{lstlisting}[style=code]
+export default function AdminDeactivatedAccounts() {
+  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => { api.get('/users/deactivated').then(res => setUsers(res.data)); }, []);
+
+  const handleReactivate = async (userId) => {
+    await api.post('/users/reactivate', { userId });
+    setUsers(prev => prev.filter(u => u.id !== userId));
+  };
+  // Tableau: Nom, Email, Role, Bouton Reactiver
+}
+\end{lstlisting}
+
+\subsection{AdminAcademique (\texttt{AdminAcademique.tsx})}
+
+Gestion des années académiques avec frise chronologique, édition inline des trimestres/sessions, duplication d'année.
+
+\begin{lstlisting}[style=code]
+const AdminAcademique = () => {
+  const [annees, setAnnees] = useState([]);
+  const [expanded, setExpanded] = useState(null);
+
+  // Panel expandable par annee avec:
+  // - Frise chronologique visuelle des trimestres
+  // - Generation automatique des 3 trimestres
+  // - Ajout/edition/suppression de trimestres et sessions
+  // - Duplication d'annee academique
+
+  const handleGenerateTrimestres = async (idAcademi) => {
+    await api.post('/academique/annees/' + idAcademi + '/trimestres/generate');
+    notifySuccess('3 trimestres crees avec leurs sessions');
+    fetchAnnees();
+  };
+};
+\end{lstlisting}
+
+\subsection{AdminPayments (\texttt{AdminPayments.tsx})}
+
+Gestion des paiements avec statistiques (total encaissé, validé, en attente), recherche, validation/refus et visualisation des reçus.
+
+\begin{lstlisting}[style=code]
+const AdminPayments = () => {
+  const [payments, setPayments] = useState([]);
+  const [filter, setFilter] = useState('');
+
+  // Stats: Total encaisse, Valide, En attente
+  // Tableau: Eleve, Montant, Mode, Recu (bouton Voir avec modal), Date, Statut, Actions
+
+  const handleValidation = async (id, status) => {
+    await api.patch('/payments/' + id + '/validate', { status });
+    loadPayments();
+  };
+};
+\end{lstlisting}
+
+\subsection{DisciplinePage (\texttt{DisciplinePage.tsx})}
+
+Gestion disciplinaire complète : rapport d'incidents, signalements enseignants, alertes seuil critique, catalogue d'infractions.
+
+\begin{lstlisting}[style=code]
+const DisciplinePage = () => {
+  const [activeTab, setActiveTab] = useState<'rapport' | 'pending' | 'alertes' | 'types'>('rapport');
+  const [eleves, setEleves] = useState([]);
+  const [types, setTypes] = useState([]);
+  const [viewingHistory, setViewingHistory] = useState(false);
+
+  // Tab Rapport: formulaire (eleve, type, gravite, points, commentaire) + historique eleve
+  // Tab Signalements: incidents enseignants en attente avec edition/approbation/rejet
+  // Tab Alertes: eleves avec soldePoints <= 10
+  // Tab Types: CRUD types d'infractions (libelle, gravite, points malus)
+};
+\end{lstlisting}
+
+\subsection{StudentList (\texttt{StudentList.tsx})}
+
+Liste des élèves avec photo admin, upload direct dans la modale, recherche, filtre par classe.
+
+\begin{lstlisting}[style=code]
+const StudentList = () => {
+  const [students, setStudents] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [search, setSearch] = useState('');
+  const [editingStudent, setEditingStudent] = useState(null);
+  const BASE_URL = api.defaults.baseURL?.replace('/api', '') || '';
+
+  // Colonnes: Photo (avec upload), Matricule, Nom, Prenom, Classe, Parent, Telephone, Actions
+  // Modal edit: champs eleve + upload photo admin
+  // L'URL relative /uploads/eleves/... est convertie en absolue via BASE_URL
+
+  const handlePhotoUpload = async (matricule, file) => {
+    const formData = new FormData();
+    formData.append('photo', file);
+    await api.put('/students/' + matricule + '/photo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    fetchStudents();
+  };
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Frontend --- Pages Enseignant}
+% =================================================================
+
+\subsection{TeacherDashboard (\texttt{TeacherDashboard.tsx})}
+
+Tableau de bord enseignant : liste des cours avec horaires, badge titulaire, navigation vers le détail.
+
+\begin{lstlisting}[style=code]
+const TeacherDashboard = () => {
+  const [cours, setCours] = useState([]);
+  const [salleTitulaire, setSalleTitulaire] = useState([]);
+
+  useEffect(() => {
+    api.get('/cours/mes-cours').then(res => {
+      const data = res.data;
+      setCours(Array.isArray(data) ? data : (data.cours || []));
+      setSalleTitulaire(data.salleTitulaire || []);
+    });
+  }, []);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      {cours.map(c => (
+        <div key={c.idCours} onClick={() => navigate('/teacher/cours/' + c.idCours)} className="...">
+          <h3>{c.matiere.nom}</h3>
+          <span>Coef. {c.coefficient}</span>
+          <span>{afficheClasse}</span>
+          <span>{nbStudents} eleves</span>
+          <div>{/* plannings badges */}</div>
+        </div>
+      ))}
+    </div>
+  );
+};
+\end{lstlisting}
+
+\subsection{CourseDetail (\texttt{CourseDetail.tsx})}
+
+Détail d'un cours : infos matière/classe, planning, liste des élèves avec dernières notes.
+
+\begin{lstlisting}[style=code]
+const CourseDetail = () => {
+  const { idCours } = useParams();
+  const [cours, setCours] = useState(null);
+
+  useEffect(() => {
+    api.get('/cours/' + idCours).then(res => setCours(res.data));
+  }, [idCours]);
+
+  // Header: matiere, classe, cycle, coefficient, nb eleves
+  // Planning: creneaux horaires
+  // Tableau eleves: photo, nom, derniere note, derniere evaluation
+};
+\end{lstlisting}
+
+\subsection{EpreuvePage (\texttt{EpreuvePage.tsx})}
+
+Dépôt d'épreuves par les enseignants avec upload sujet + corrigé (PDF obligatoires).
+
+\begin{lstlisting}[style=code]
+const EpreuvePage = () => {
+  const [form, setForm] = useState({ idMatiere: '', idClasse: '', evaluation: '', anneeAcad: '', auteur: '' });
+  const [sujetFile, setSujetFile] = useState(null);
+  const [corrigeFile, setCorrigeFile] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const data = new FormData();
+    data.append('sujet', sujetFile);
+    data.append('corrige', corrigeFile);
+    Object.entries(form).forEach(([k,v]) => data.append(k, v));
+    await api.post('/epreuves', data, { headers: { 'Content-Type': 'multipart/form-data' } });
+    setMessage("Epreuve deposee avec succes !");
+  };
+
+  return (
+    // Selects: Matiere (filtree par classe), Classe, Evaluation (trimestre), Annee
+    // 2 zones drop: Sujet (PDF) et Corrige (PDF) avec apercu du nom
+    // Regle metier: Une epreuve ne peut etre enregistree qu'avec son corrige officiel
+  );
+};
+\end{lstlisting}
+
+\subsection{TeacherDiscipline (\texttt{TeacherDiscipline.tsx})}
+
+Signalement d'incidents par les enseignants (statut PENDING jusqu'à validation admin).
+
+\begin{lstlisting}[style=code]
+const TeacherDiscipline = () => {
+  const [form, setForm] = useState({ eleveId: '', type: '', gravite: 'Faible', pointsDeduits: '1', commentaire: '' });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await api.post('/discipline/incident', {
+      eleveId: parseInt(form.eleveId), type: form.type, gravite: form.gravite,
+      pointsDeduits: parseInt(form.pointsDeduits), commentaire: form.commentaire,
+      auteur: 'Enseignant'
+    });
+    setMessage("Incident signale !");
+  };
+
+  return (
+    // Select eleve (liste de mes-eleves), select type infraction,
+    // gravite, points, commentaire, bouton submit
+  );
+};
+\end{lstlisting}
+
+\subsection{TeacherPlanning (\texttt{TeacherPlanning.tsx})}
+
+Emploi du temps enseignant avec grille par jour et code couleur par matière.
+
+\begin{lstlisting}[style=code]
+const TeacherPlanning = () => {
+  const [plannings, setPlannings] = useState([]);
+  const jours = ['LUNDI', 'MARDI', 'MERCREDI', 'JEUDI', 'VENDREDI', 'SAMEDI'];
+
+  useEffect(() => {
+    api.get('/cours/mes-cours').then(res => {
+      const all = [];
+      for (const c of res.data) {
+        if (c.plannings) {
+          for (const p of c.plannings) {
+            all.push({ ...p, cours: { matiere: c.matiere, classe: c.classe } });
+          }
+        }
+      }
+      all.sort((a,b) => jours.indexOf(a.jour) - jours.indexOf(b.jour) || a.heureDebut.localeCompare(b.heureDebut));
+      setPlannings(all);
+    });
+  }, []);
+
+  return (
+    // Grille 6 colonnes (Lundi a Samedi) avec creneaux horaires colores par matiere
+  );
+};
+\end{lstlisting}
+
+\subsection{TeacherGrades (\texttt{TeacherGrades.tsx})}
+
+Saisie des notes par cours/trimestre avec composant GradesEntry.
+
+\begin{lstlisting}[style=code]
+const TeacherGrades = () => {
+  const [cours, setCours] = useState([]);
+  const [selectedCours, setSelectedCours] = useState(null);
+  const [trimestreId, setTrimestreId] = useState('');
+
+  // Selection cours -> affichage du composant GradesEntry
+  // GradesEntry: tableau eleves avec input note, bouton "Valider les notes"
+  // Appel API: POST /notes/bulk { idMatiere, idClasse, evaluation, notes }
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Frontend --- Pages Parent}
+% =================================================================
+
+\subsection{ParentScolarite (\texttt{ParentScolarite.tsx})}
+
+Consultation des frais de scolarité par enfant : affichage des montants, tranches, échéancier, modal "Info Scolarité".
+
+\begin{lstlisting}[style=code]
+const ParentScolarite = () => {
+  const [children, setChildren] = useState([]);
+  const [selectedChild, setSelectedChild] = useState('');
+  const [scolarite, setScolarite] = useState(null);
+
+  useEffect(() => {
+    api.get('/enrollments/my-children').then(res => setChildren(res.data));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedChild) return;
+    api.get('/scolarite/classe/' + selectedChild).then(res => setScolarite(res.data)).catch(() => setScolarite(null));
+  }, [selectedChild]);
+
+  // Affichage montant inscription, pension, nombre tranches, echeancier
+  // Bouton "Info Scolarite" -> modal listant toutes les classes avec echeanciers
+};
+\end{lstlisting}
+
+\subsection{ParentPayment (\texttt{ParentPayment.tsx})}
+
+Paiement en ligne par enfant avec historique.
+
+\begin{lstlisting}[style=code]
+const ParentPayment = () => {
+  const [children, setChildren] = useState([]);
+  const [selectedChild, setSelectedChild] = useState('');
+  const [payments, setPayments] = useState([]);
+  const [form, setForm] = useState({ montant: '', methode: 'ORANGE_MONEY', recuPDF: null });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await api.post('/payments/initiate', {
+      eleveId: selectedChild, montant: parseFloat(form.montant),
+      methode: form.methode, transactionRef: 'TXN-' + Date.now()
+    });
+    notifySuccess("Paiement initie, en attente de validation");
+    loadPayments();
+  };
+
+  // Select enfant, formulaire paiement, historique des paiements
+};
+\end{lstlisting}
+
+\subsection{ParentBibliotheque (\texttt{ParentBibliotheque.tsx})}
+
+Bibliothèque scolaire côté parent : recherche, filtre par cycle, consultation des livres avec PDF.
+
+\begin{lstlisting}[style=code]
+const ParentBibliotheque = () => {
+  const [livres, setLivres] = useState([]);
+  const [search, setSearch] = useState('');
+  const [filterCycle, setFilterCycle] = useState('');
+
+  useEffect(() => { api.get('/bibliotheque').then(res => setLivres(res.data)); }, []);
+
+  const filtered = livres.filter(l => {
+    if (search && !l.titre.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterCycle && l.cycle !== filterCycle) return false;
+    return true;
+  });
+
+  return (
+    // Recherche + select cycle
+    // Grille de livres avec couverture, titre, auteur, matiere, cycle, PDF
+  );
+};
+\end{lstlisting}
+
+\subsection{ParentPlanning (\texttt{ParentPlanning.tsx})}
+
+Emploi du temps d'un enfant avec grille horaire.
+
+\begin{lstlisting}[style=code]
+const ParentPlanning = () => {
+  const [children, setChildren] = useState([]);
+  const [selectedChild, setSelectedChild] = useState('');
+  const [planning, setPlanning] = useState([]);
+
+  useEffect(() => {
+    api.get('/enrollments/my-children').then(res => setChildren(res.data));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedChild) return;
+    api.get('/planning/eleve/' + selectedChild).then(res => setPlanning(res.data));
+  }, [selectedChild]);
+
+  return (
+    // Select enfant + grille 6 colonnes avec creneaux horaires
+  );
+};
+\end{lstlisting}
+
+\subsection{ParentDiscipline (\texttt{ParentDiscipline.tsx})}
+
+Suivi disciplinaire : solde de conduite par enfant, historique des incidents, alerte si critique.
+
+\begin{lstlisting}[style=code]
+const ParentDiscipline = () => {
+  const [children, setChildren] = useState([]);
+  const [selectedChild, setSelectedChild] = useState('');
+  const [incidents, setIncidents] = useState([]);
+  const [soldePoints, setSoldePoints] = useState(20);
+
+  useEffect(() => {
+    if (!selectedChild) return;
+    api.get('/discipline/eleve/' + selectedChild).then(res => {
+      setIncidents(res.data.incidents || []);
+      setSoldePoints(res.data.soldePoints ?? 20);
+    });
+  }, [selectedChild]);
+
+  // Select enfant + solde de conduite + historique incidents + alerte si <= 10
+};
+\end{lstlisting}
+
+\subsection{ParentChildProfile (\texttt{ParentChildProfile.tsx})}
+
+Profil détaillé d'un enfant avec onglets : Informations, Notes, Discipline, Professeurs. Édition des infos scolaires.
+
+\begin{lstlisting}[style=code]
+const ParentChildProfile = () => {
+  const { matricule } = useParams();
+  const [profile, setProfile] = useState(null);
+  const [activeTab, setActiveTab] = useState('infos');
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    api.get('/enrollments/child/' + matricule).then(res => setProfile(res.data));
+  }, [matricule]);
+
+  // 4 onglets: Infos (nom, classe, salle, niveau editable), Notes (tableau),
+  // Discipline (solde + historique), Professeurs (liste des enseignants)
+  // Upload photo enfant
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Frontend --- Composants reutilisables}
+% =================================================================
+
+\subsection{AdminLayout (\texttt{AdminLayout.tsx})}
+
+Layout administrateur avec sidebar (dashboard, élèves, personnel, infrastructure, matières, bulletins, planning, discipline, scolarité, paiements, bibliothèque, académique, messagerie), topbar avec menu hamburger, LanguageSwitcher, SettingsDropdown.
+
+\begin{lstlisting}[style=code]
+const AdminLayout = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { logoUrl } = useLogo();
+  const menuItems = [
+    { icon: <LayoutDashboard />, label: t('nav.dashboard'), path: '/admin' },
+    { icon: <Users />, label: t('nav.students'), path: '/admin/students' },
+    { icon: <GraduationCap />, label: t('nav.personnel'), path: '/admin/personnel' },
+    { icon: <Building2 />, label: t('nav.infrastructure'), path: '/admin/infrastructure' },
+    { icon: <BookOpen />, label: t('nav.subjects'), path: '/admin/matieres' },
+    { icon: <ClipboardList />, label: t('nav.bulletins'), path: '/admin/bulletins' },
+    { icon: <Calendar />, label: t('nav.schedule'), path: '/admin/planning' },
+    { icon: <ShieldCheck />, label: t('nav.discipline'), path: '/admin/discipline' },
+    { icon: <GraduationCap />, label: 'Scolarite', path: '/admin/finance' },
+    { icon: <CreditCard />, label: t('nav.payments'), path: '/admin/paiements' },
+    { icon: <BookOpen />, label: t('nav.library'), path: '/admin/bibliotheque' },
+    { icon: <Calendar />, label: 'Annees academiques', path: '/admin/academique' },
+    { icon: <MessageSquare />, label: 'Messagerie', path: '/admin/messages' },
+  ];
+
+  return (
+    <div className="admin-layout">
+      <aside className="admin-sidebar"> {/* logo + navigation */} </aside>
+      <div className="admin-main">
+        <header className="admin-topbar"> {/* hamburger, titre page, LanguageSwitcher, profil */} </header>
+        <main className="admin-content"><Outlet /></main>
+      </div>
+    </div>
+  );
+};
+\end{lstlisting}
+
+\subsection{TeacherLayout (\texttt{TeacherLayout.tsx})}
+
+Layout enseignant avec 5 entrées : Mes Cours, Saisie des notes, Depot d'epreuves, Discipline, Emploi du temps.
+
+\begin{lstlisting}[style=code]
+const TeacherLayout = () => {
+  const menuItems = [
+    { icon: <BookOpen />, label: 'Mes Cours', path: '/teacher/dashboard' },
+    { icon: <ClipboardList />, label: 'Saisie des notes', path: '/teacher/grades' },
+    { icon: <FileText />, label: "Depot d'epreuves", path: '/teacher/epreuves' },
+    { icon: <ShieldAlert />, label: 'Discipline', path: '/teacher/discipline' },
+    { icon: <Calendar />, label: 'Emploi du temps', path: '/teacher/planning' },
+  ];
+  // Même structure que AdminLayout mais adaptée au role PERSONNEL
+};
+\end{lstlisting}
+
+\subsection{ParentLayout (\texttt{ParentLayout.tsx})}
+
+Layout parent avec menu principal (Scolarité, Paiements, Bibliothèque, Discipline, Bulletins, Planning) et liste dynamique des enfants dans la sidebar.
+
+\begin{lstlisting}[style=code]
+const ParentLayout = () => {
+  const [children, setChildren] = useState([]);
+  useEffect(() => {
+    api.get('/enrollments/my-children').then(res => setChildren(res.data));
+  }, []);
+
+  const menuItems = [
+    { icon: <GraduationCap />, label: t('parent.scolarite'), path: '/parent/scolarite' },
+    { icon: <CreditCard />, label: t('parent.payments'), path: '/parent/paiements' },
+    { icon: <Book />, label: t('parent.library'), path: '/parent/bibliotheque' },
+    { icon: <ShieldCheck />, label: t('parent.discipline'), path: '/parent/discipline' },
+    { icon: <BookOpen />, label: t('parent.bulletins'), path: '/parent/bulletins' },
+    { icon: <Calendar />, label: t('parent.planning'), path: '/parent/planning' },
+  ];
+  // Section "Mes enfants" avec liens vers /parent/enfant/:matricule
+};
+\end{lstlisting}
+
+\subsection{ProtectedRoute (\texttt{ProtectedRoute.tsx})}
+
+Route guard vérifiant token et rôle.
+
+\begin{lstlisting}[style=code]
+const ProtectedRoute = ({ allowedRoles }) => {
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+  if (!token) return <Navigate to="/login" replace />;
+  if (allowedRoles && role && !allowedRoles.includes(role)) return <Navigate to="/login" replace />;
+  return <Outlet />;
+};
+\end{lstlisting}
+
+\subsection{ConfirmModal (\texttt{ConfirmModal.tsx})}
+
+Modal de confirmation générique avec variantes danger/warning.
+
+\begin{lstlisting}[style=code]
+const ConfirmModal = ({ open, title, message, confirmLabel, cancelLabel, variant, onConfirm, onCancel }) => {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+        <div className="flex items-center gap-3 mb-4">
+          <AlertTriangle size={20} className={variant === 'danger' ? 'text-red-600' : 'text-amber-600'} />
+          <h3 className="font-bold">{title}</h3>
+        </div>
+        <p className="text-xs text-gray-500">{message}</p>
+        <div className="flex gap-3 mt-4">
+          <button onClick={onCancel}>{cancelLabel}</button>
+          <button onClick={onConfirm} className={variant === 'danger' ? 'bg-red-600' : 'bg-amber-600'}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+\end{lstlisting}
+
+\subsection{Spinner (\texttt{Spinner.tsx})}
+
+Indicateur de chargement avec animation.
+
+\begin{lstlisting}[style=code]
+const Spinner = ({ text = 'Chargement...' }) => (
+  <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-3">
+    <Loader2 size={32} className="animate-spin" style={{ color: 'var(--accent)' }} />
+    <span className="text-sm font-medium">{text}</span>
+  </div>
+);
+\end{lstlisting}
+
+\subsection{SubmitBtn (\texttt{SubmitBtn.tsx})}
+
+Bouton de formulaire avec état de chargement.
+
+\begin{lstlisting}[style=code]
+const SubmitBtn = ({ loading, text, loadingText, className, onClick, type = 'submit' }) => (
+  <button type={type} onClick={onClick} disabled={loading} className={className}>
+    {loading && <Loader2 size={16} className="animate-spin" />}
+    {loading ? loadingText : text}
+  </button>
+);
+\end{lstlisting}
+
+\subsection{BrandHeader (\texttt{BrandHeader.tsx})}
+
+En-tête de marque pour les pages publiques (logo + titre + sous-titre).
+
+\begin{lstlisting}[style=code]
+const BrandHeader = ({ subtitle }) => {
+  const { logoUrl } = useLogo();
+  return (
+    <div className="text-center mb-10">
+      <div className="w-24 h-24 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto mb-5">
+        {logoUrl ? <img src={logoUrl} alt="Logo" className="object-contain p-2" /> : <GraduationCap size={44} />}
+      </div>
+      <h1 className="text-3xl font-bold text-white">Ecole Excellence</h1>
+      <p className="text-sm text-white/60 mt-2">{subtitle}</p>
+    </div>
+  );
+};
+\end{lstlisting}
+
+\subsection{SettingsDropdown (\texttt{SettingsDropdown.tsx})}
+
+Menu déroulant de paramètres : thème (clair/sombre), langue (FR/EN), logo (admin), comptes désactivés (admin), déconnexion.
+
+\begin{lstlisting}[style=code]
+const SettingsDropdown = ({ sidebar }) => {
+  const { theme, toggleTheme } = useTheme();
+  const { lang, setLang } = useTranslation();
+  const { logoUrl, setLogoUrl } = useLogo();
+  const navigate = useNavigate();
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = () => setLogoUrl(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    navigate('/login');
+  };
+
+  return (
+    // Theme toggle, Langue, Logo upload (admin), Comptes desactives (admin), Deconnexion
+  );
+};
+\end{lstlisting}
+
+\subsection{LanguageSwitcher (\texttt{LanguageSwitcher.tsx})}
+
+Bascule FR/EN.
+
+\begin{lstlisting}[style=code]
+const LanguageSwitcher = ({ className }) => {
+  const { lang, setLang } = useTranslation();
+  return (
+    <button onClick={() => setLang(lang === 'fr' ? 'en' : 'fr')} className={className}>
+      <span className={lang === 'fr' ? 'text-white' : 'text-white/50'}>FR</span>
+      <span className="text-white/30">|</span>
+      <span className={lang === 'en' ? 'text-white' : 'text-white/50'}>EN</span>
+    </button>
+  );
+};
+\end{lstlisting}
+
+\subsection{InboxDropdown (\texttt{InboxDropdown.tsx})}
+
+Boîte de réception avec polling 10s, badge de notifications, dropdown des messages.
+
+\begin{lstlisting}[style=code]
+const InboxDropdown = () => {
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    const interval = setInterval(fetchMessages, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(!open)} className="relative p-2 rounded-lg hover:bg-gray-100">
+        <MessageSquare size={18} />
+        {messages.length > 0 && <span className="badge">{messages.length}</span>}
+      </button>
+      {open && <div className="dropdown">{/* Liste des messages */}</div>}
+    </div>
+  );
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Frontend --- Sous-composants spécialisés}
+% =================================================================
+
+\subsection{GradesEntry (\texttt{GradesEntry.tsx})}
+
+Tableau de saisie des notes avec validation groupée.
+
+\begin{lstlisting}[style=code]
+const GradesEntry = ({ eleves, matiereId, classeId, evaluation }) => {
+  const [grillesNotes, setGrillesNotes] = useState(eleves.map(e => ({
+    eleveId: e.matricule, nom: e.nom, valeur: ''
+  })));
+
+  const submitNotes = async () => {
+    const notes = grillesNotes.map(n => ({ eleveId: n.eleveId, valeur: parseFloat(n.valeur) }))
+      .filter(n => !isNaN(n.valeur));
+    await api.post('/notes/bulk', { idMatiere: matiereId, idClasse: classeId, evaluation, notes });
+    notifySuccess("Notes enregistrees !");
+  };
+
+  return (
+    <table>
+      <thead><tr><th>Eleve</th><th>Note / 20</th></tr></thead>
+      <tbody>{grillesNotes.map(n => <tr key={n.eleveId}>
+        <td>{n.nom}</td><td><input type="number" max={20} min={0} step={0.5} value={n.valeur}
+          onChange={e => handleNoteChange(n.eleveId, e.target.value)} /></td>
+      </tr>)}</tbody>
+    </table>
+  );
+};
+\end{lstlisting}
+
+\subsection{SallesManager (\texttt{SallesManager.tsx})}
+
+Affichage des cartes de salles avec statut.
+
+\begin{lstlisting}[style=code]
+const SallesManager = () => {
+  const [salles, setSalles] = useState([]);
+  useEffect(() => { axios.get('/api/admin/salles').then(res => setSalles(res.data)); }, []);
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {salles.map(salle => (
+        <div key={salle.id} className="card">
+          <span className="status-badge">{salle.etat}</span>
+          <h3>{salle.libelle}</h3>
+          <p>{salle.position}</p>
+          <span>Capacite: {salle.capacite}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+\end{lstlisting}
+
+\subsection{ClassementClasse (\texttt{ClassementClasse.tsx})}
+
+Tableau de classement des élèves avec rang, moyenne, points.
+
+\begin{lstlisting}[style=code]
+const ClassementClasse = ({ bulletins }) => (
+  <div className="admin-card">
+    <div className="admin-card-header"><h2>Classement de la Classe</h2></div>
+    <table>
+      <thead><tr><th>Rang</th><th>Eleve</th><th>Moyenne</th><th>Points Totaux</th><th>Action</th></tr></thead>
+      <tbody>{bulletins.map(b => (
+        <tr key={b.matricule}>
+          <td>{b.rang === 1 ? '1er' : b.rang + 'eme'}</td>
+          <td>{b.nom} {b.prenom}</td>
+          <td>{b.moyenne} / 20</td>
+          <td>{b.totalPoints} / {b.totalCoeffs * 20}</td>
+          <td><button>Voir Bulletin</button></td>
+        </tr>
+      ))}</tbody>
+    </table>
+  </div>
+);
+\end{lstlisting}
+
+\subsection{AffectationForm (\texttt{AffectationForm.tsx})}
+
+Formulaire d'affectation enseignant-matière-classe.
+
+\begin{lstlisting}[style=code]
+const AffectationForm = ({ personels, matieres, classes }) => {
+  const [formData, setFormData] = useState({ personnelId: '', idMatiere: '', idClasse: '', coefficient: 1 });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await axios.post('/api/admin/personnel/affecter', formData);
+    notifySuccess("Enseignant affecte !");
+  };
+  return (
+    <form className="admin-card">
+      <select onChange={e => setFormData({...formData, personnelId: e.target.value})}>...</select>
+      <select onChange={e => setFormData({...formData, idMatiere: e.target.value})}>...</select>
+      <select onChange={e => setFormData({...formData, idClasse: e.target.value})}>...</select>
+      <button type="submit">Valider l'affectation</button>
+    </form>
+  );
+};
+\end{lstlisting}
+
+\subsection{DisciplineView (\texttt{DisciplineView.tsx})}
+
+Visualisation du solde de points et historique des incidents (côté parent).
+
+\begin{lstlisting}[style=code]
+const DisciplineView = ({ incidents, soldePoints }) => (
+  <div className="space-y-4">
+    <div className="bg-white p-6 rounded-xl border flex justify-between items-center">
+      <div><h3>Solde de conduite</h3><p className="text-3xl font-bold">{soldePoints} / 20</p></div>
+      <div className={`h-4 w-4 rounded-full ${soldePoints < 10 ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`} />
+    </div>
+    <div className="bg-white rounded-xl border overflow-hidden">
+      <div className="p-4 border-b font-bold">Historique des incidents</div>
+      {incidents.map(inc => (
+        <div key={inc.id} className="p-4 border-b">
+          <span className="font-semibold text-red-600">-{inc.pointsDeduits} points</span>
+          <p className="text-sm">{inc.type}</p>
+          <p className="text-xs italic">"{inc.commentaire}"</p>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Frontend --- Services}
+% =================================================================
+
+\subsection{enrollmentService (\texttt{enrollmentService.ts})}
+
+\begin{lstlisting}[style=code]
+import api from './axiosInstance';
+const BASE = '/enrollments';
+
+export const enrollmentService = {
+  submit: async (data) => api.post(BASE, data),
+  getAll: async () => api.get(BASE),
+  process: async (id, status, notes, classroomId?) =>
+    api.patch(BASE + '/' + id + '/process', { status, adminNotes: notes, classroomId }),
+};
+\end{lstlisting}
+
+\subsection{apiServices (\texttt{apiServices.ts})}
+
+Services pour paiements, discipline, notes, salles, personnel, matières, épreuves.
+
+\begin{lstlisting}[style=code]
+export const paymentService = {
+  create: (data) => api.post('/payments', data),
+  getHistory: (parentId) => api.get('/payments/history/' + parentId)
+};
+
+export const disciplineService = {
+  reportIncident: (data) => api.post('/discipline/incident', data),
+  getEleveIncidents: (id) => api.get('/discipline/eleve/' + id)
+};
+
+export const noteService = {
+  saveBulk: (data) => api.post('/notes/bulk', data)
+};
+
+export const salleService = {
+  getAll: () => api.get('/salles'),
+  updateStatus: (id, etat) => api.patch('/salles/' + id + '/etat', { etat })
+};
+
+export const personnelService = {
+  getAll: () => api.get('/personnel'),
+  update: (id, data) => api.put('/personnel/' + id, data),
+  deactivate: (id) => api.post('/personnel/' + id + '/deactivate'),
+  promouvoirTitulaire: (data) => api.post('/personnel/promouvoir-titulaire', data),
+  retirerPromotion: (personnelId) => api.delete('/personnel/retirer-promotion/' + personnelId),
+  affecterSalle: (data) => api.post('/personnel/affecter-salle', data),
+  getCours: (personnelId) => api.get('/personnel/' + personnelId + '/cours'),
+};
+
+export const matiereService = {
+  getAll: () => api.get('/matieres'),
+  create: (nom, options) => api.post('/matieres', { nom, ...options }),
+  update: (id, data) => api.put('/matieres/' + id, data),
+  delete: (id) => api.delete('/matieres/' + id)
+};
+
+export const epreuveService = {
+  getAll: () => api.get('/epreuves')
+};
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Generation PDF des bulletins}
+% =================================================================
+
+Fichier : \texttt{client/src/utils/generateBulletinPDF.ts}
+
+Utilitaire de generation de bulletins PDF avec jsPDF.
+
+\begin{lstlisting}[style=code]
+export function generateBulletinPDF(data: BulletinData) {
+  const doc = new jsPDF('p', 'mm', 'a4');
+  const pw = doc.internal.pageSize.getWidth();
+  const ml = 18;
+  let y = 16;
+
+  // Bandeau d'en-tete (bleu marine)
+  doc.setFillColor(27, 42, 74);
+  doc.rect(0, 0, pw, 42, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(20);
+  doc.text('ECOLE EXCELLENCE', ml, 16);
+  doc.setFontSize(18);
+  doc.text('BULLETIN SCOLAIRE', pw / 2, 34, { align: 'center' });
+
+  // Photo admin (si presente)
+  if (data.eleve.photoAdmin) {
+    try {
+      doc.addImage(data.eleve.photoAdmin, 'JPEG', ml, 44, 22, 28);
+    } catch (_e) { /* ignorer */ }
+  }
+
+  // Informations eleve
+  y = 50;
+  doc.setTextColor(100, 100, 110);
+  doc.text('Eleve : ' + data.eleve.nom + ' ' + data.eleve.prenom, ml, y);
+  doc.text('Niveau : ' + data.eleve.niveau, ml, y + 6);
+  doc.text('Matricule : #' + data.eleve.matricule, ml, y + 12);
+  doc.text('Classe : ' + data.classe.libelle, pw/2, y);
+  doc.text('Periode : ' + data.evaluation, pw/2, y + 6);
+
+  // Tableau des notes par matiere
+  data.details.forEach((d, idx) => {
+    const c = noteColor(d.valeur);
+    const blockH = 28;
+    if (ph - y - blockH - 65 < 0) { doc.addPage(); y = 20; }
+    // Fond de carte et lisere colore
+    doc.setFillColor(c[0], c[1], c[2]);
+    doc.rect(ml, y, 3, blockH, 'F');
+    doc.setFontSize(11);
+    doc.text(d.matiere, ml + 10, y + 7);
+    doc.setFontSize(16);
+    doc.text(d.valeur.toFixed(2) + '/20', ml + cw - 10, y + 10, { align: 'right' });
+    doc.setFontSize(8);
+    doc.text('Coeff: ' + d.coefficient, ml + cw - 10, y + 17, { align: 'right' });
+    y += blockH + 3;
+  });
+
+  // Resume general
+  doc.roundedRect(ml, y, cw, 42, 6, 6, 'FD');
+  doc.text('Moyenne Generale: ' + data.moyenneGenerale.toFixed(2) + '/20', ml + 8, y + 32);
+  doc.text('Rang: #' + data.rang + ' (sur ' + data.classe.effectif + ')', pw/2 - 8, y + 28);
+  doc.text('Moy. classe: ' + data.moyenneClasseGenerale.toFixed(2), pw/2 + 35, y + 28);
+  doc.text('Mention: ' + mention(data.moyenneGenerale), ml + cw - 8, y + 28, { align: 'right' });
+
+  // Signatures
+  ['Enseignant(e)', 'Directeur(trice)', 'Parent'].forEach((label, i) => {
+    doc.text(label, sigStart + i * (sigW + sigSpacing), y, { align: 'center' });
+  });
+
+  doc.save('Bulletin_' + data.eleve.nom + '_' + data.eleve.prenom + '.pdf');
+}
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Middlewares d'upload}
+% =================================================================
+
+\subsection{Photos eleves (\texttt{uploadStudentPhotoMiddleware.ts})}
+
+\begin{lstlisting}[style=code]
+import multer from 'multer';
+import path from 'path';
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, path.join(__dirname, '../../../uploads/eleves')),
+  filename: (_req, file, cb) => cb(null, Date.now() + '-' + Math.round(Math.random() * 1e9) + path.extname(file.originalname)),
+});
+const fileFilter = (_req, file, cb) => {
+  ['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.mimetype)
+    ? cb(null, true) : cb(new Error('Images seulement'));
+};
+export const uploadStudentPhoto = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } }).single('photo');
+\end{lstlisting}
+
+\subsection{Livres (\texttt{uploadLivreMiddleware.ts})}
+
+\begin{lstlisting}[style=code]
+const fileFilter = (_req, file, cb) => {
+  ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)
+    ? cb(null, true) : cb(new Error('PDF et images seulement'));
+};
+export const uploadLivreFiles = multer({ storage, fileFilter, limits: { fileSize: 20 * 1024 * 1024 } }).fields([
+  { name: 'couverture', maxCount: 1 }, { name: 'fichier', maxCount: 1 }
+]);
+\end{lstlisting}
+
+\newpage
+
+% =================================================================
+\section{Securite et controle d'acces}
+% =================================================================
+
+\begin{itemize}
+  \item \textbf{Mots de passe} : hache avec bcrypt (10 rounds)
+  \item \textbf{JWT} : token 24h, verifie sur chaque requete protegee
+  \item \textbf{Statut du compte} : PENDING / ACTIVE / DISABLED controle a la connexion et dans le middleware
+  \item \textbf{Roles} : ADMIN\_PRINCIPAL (tout), PERSONNEL (cours/notes), PARENT (enfants/paiements)
+  \item \textbf{Protection par parent} : les enfants sont filtres par parentId
+  \item \textbf{Validation des enseignants} : les incidents et messages des enseignants sont en statut PENDING jusqu'a approbation admin
+\end{itemize}
+
+\newpage
+
+% =================================================================
+\section{Architecture et deploiement}
+% =================================================================
+
+\subsection{Structure des dossiers}
+
+\begin{verbatim}
+projet-BDfinal/
+  server/                    # Backend Node.js/Express
+    prisma/schema.prisma     # Modele de donnees
+    src/
+      controllers/           # Logique metier (20 fichiers)
+      routes/                # Definition des routes (20 fichiers)
+      middlewares/            # Auth, upload (4 fichiers)
+      lib/prisma.ts          # Client Prisma
+    app.ts                   # Configuration Express
+    index.ts                 # Point d'entree
+  client/                    # Frontend React
+    src/
+      pages/                 # Pages (25 fichiers)
+        admin/               # Pages admin (12 fichiers)
+        teacher/             # Pages enseignant (6 fichiers)
+      components/            # Composants reutilisables (8 fichiers)
+        layout/              # Layouts admin/parent/teacher
+      services/              # API services (3 fichiers)
+      utils/                 # Utilitaires (4 fichiers)
+      i18n/                  # Traductions FR/EN
+\end{verbatim}
+
+\subsection{Deploiement}
+\begin{itemize}
+  \item \textbf{Backend} : Railway (Node.js + PostgreSQL Supabase)
+  \item \textbf{Frontend} : Vercel (fichier \texttt{api/index.ts} pour adaptation serverless)
+  \item \textbf{URL API} : \url{https://projet-bd-final-production.up.railway.app/api}
+  \item \textbf{Docker} : \texttt{docker-compose.yml} avec PostgreSQL et l'application
+  \item \textbf{Fichiers statiques} : servis via \texttt{/uploads} (epreuves, livres, photos eleves)
+\end{itemize}
+
+\newpage
+
+% =================================================================
+\section{Conclusion}
+% =================================================================
+
+La plateforme \textbf{École Excellence} couvre l'ensemble des besoins de gestion scolaire :
+
+\begin{itemize}
+  \item \textbf{Inscriptions} en ligne avec workflow de validation
+  \item \textbf{Gestion pedagogique} : notes, bulletins, classements, epreuves
+  \item \textbf{Finance} : scolarite par classe, tranches, paiements en ligne
+  \item \textbf{Discipline} : points, alertes, signalements enseignant→admin
+  \item \textbf{Personnel} : affectation aux classes, promotion titulaire
+  \item \textbf{Planning} : emploi du temps avec detection de conflits
+  \item \textbf{Bibliotheque} : catalogue de livres avec fichiers
+  \item \textbf{Messagerie} : annonces et messages personnels
+  \item \textbf{Bulletins PDF} : generation automatique avec photo
+\end{itemize}
+
+L'architecture modulaire (controleurs, routes, couche ORM) permet une maintenance et une evolution aisées.
+
+\end{document}
