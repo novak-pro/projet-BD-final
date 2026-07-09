@@ -36,7 +36,7 @@ interface TypeInfra {
 
 const DisciplinePage = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'rapport' | 'pending' | 'alertes' | 'types'>('rapport');
+  const [activeTab, setActiveTab] = useState<'rapport' | 'pending' | 'alertes' | 'types'>('pending');
 
   // Rapport tab
   const [form, setForm] = useState({ eleveId: '', type: '', gravite: 'Faible', points: 2, commentaire: '' });
@@ -64,6 +64,8 @@ const DisciplinePage = () => {
 
   useEffect(() => {
     Promise.all([loadEleves(), loadPending(), loadTypes()]).finally(() => setLoading(false));
+    const interval = setInterval(loadPending, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const loadTypes = async () => {
