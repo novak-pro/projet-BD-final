@@ -38,18 +38,23 @@ const TeacherDiscipline = () => {
     if (!form.eleveId) return notifyError("Sélectionnez un élève");
     setSubmitting(true);
     try {
+      const userData = (() => {
+        try { const u = JSON.parse(localStorage.getItem('user') || '{}'); return u.nom || u.prenom || 'Enseignant'; }
+        catch { return 'Enseignant'; }
+      })();
       await api.post('/discipline/incident', {
         eleveId: parseInt(form.eleveId),
-        type: form.type,
+        type: form.type || 'AUTRE',
         gravite: form.gravite,
         pointsDeduits: parseInt(form.pointsDeduits) || 0,
         commentaire: form.commentaire,
-        auteur: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user') || '{}').nom || 'Enseignant' : 'Enseignant',
+        auteur: userData,
       });
       setMessage("Incident signalé !");
       setForm({ eleveId: '', type: '', gravite: 'Faible', pointsDeduits: '1', commentaire: '' });
-    } catch {
-      notifyError("Erreur lors du signalement");
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || err?.response?.data?.error || err?.message || '';
+      notifyError("Erreur: " + detail);
     } finally {
       setSubmitting(false);
     }

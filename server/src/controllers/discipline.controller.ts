@@ -33,55 +33,58 @@ function mapToIncidentType(type: string) {
 export const rapporterIncident = async (req: AuthRequest, res: Response): Promise<void> => {
   const { eleveId, type, gravite, pointsDeduits, commentaire, auteur } = req.body as any;
   const userRole = req.user?.role;
+  const isAdmin = userRole === 'ADMIN_PRINCIPAL';
+  const status = isAdmin ? 'APPROVED' : 'PENDING';
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Créer le rapport d'incident
-      // Si c'est un enseignant (PERSONNEL), status = PENDING et pas de déduction
-      // Si c'est l'admin, status = APPROVED avec déduction
-      const isAdmin = userRole === 'ADMIN_PRINCIPAL';
-      const status = isAdmin ? 'APPROVED' : 'PENDING';
-
       const incident = await tx.incident.create({
         data: { eleveId, type: mapToIncidentType(type), gravite, pointsDeduits, commentaire, auteur, status }
       });
 
-      let eleve = null;
-      let niveauAlerte = null;
-
-      // 2. Déduire les points seulement si approuvé par l'admin
       if (isAdmin) {
-        eleve = await tx.eleve.update({
+        const eleve = await tx.eleve.update({
           where: { matricule: eleveId },
           data: { soldePoints: { decrement: pointsDeduits } }
         });
 
         if (eleve.soldePoints < 0) {
-          eleve = await tx.eleve.update({
+          await tx.eleve.update({
             where: { matricule: eleveId },
             data: { soldePoints: 0 }
           });
         }
 
-        niveauAlerte =
-          eleve.soldePoints === 0  ? 'CRITIQUE' :
-          eleve.soldePoints <= 5   ? 'DANGER'   :
-          eleve.soldePoints <= 10  ? 'WARNING'  :
-          null;
+        return {
+          incident,
+          soldeActuel: eleve.soldePoints < 0 ? 0 : eleve.soldePoints,
+          niveauAlerte:
+            (eleve.soldePoints < 0 ? 0 : eleve.soldePoints) === 0 ? 'CRITIQUE' :
+            (eleve.soldePoints < 0 ? 0 : eleve.soldePoints) <= 5 ? 'DANGER' :
+            (eleve.soldePoints < 0 ? 0 : eleve.soldePoints) <= 10 ? 'WARNING' : null,
+          alerte: (eleve.soldePoints < 0 ? 0 : eleve.soldePoints) <= 10,
+          message: "Incident enregistré"
+        };
       }
 
-      // 3. Notifier les admins si c'est un signalement enseignant
-      if (!isAdmin) {
-        const admins = await tx.user.findMany({
+      return {
+        incident,
+        message: "Signalement envoyé à l'administration pour validation"
+      };
+    });
+
+    // Notification aux admins (hors transaction pour isolation)
+    if (!isAdmin) {
+      try {
+        const admins = await prisma.user.findMany({
           where: { role: 'ADMIN_PRINCIPAL', status: 'ACTIVE' },
           select: { id: true }
         });
-
         if (admins.length > 0) {
           const auteurNom = auteur || 'Un enseignant';
-          await tx.message.createMany({
+          await prisma.message.createMany({
             data: admins.map(a => ({
-              content: `[Discipline] ${auteurNom} a signalé un incident concernant l'élève #${eleveId} : ${commentaire?.substring(0, 100)}`,
+              content: `[Discipline] ${auteurNom} a signalé un incident concernant l'élève #${eleveId}`,
               type: 'PERSONAL',
               status: 'SENT',
               senderId: req.user!.id,
@@ -89,22 +92,15 @@ export const rapporterIncident = async (req: AuthRequest, res: Response): Promis
             })),
           });
         }
+      } catch (notifErr: any) {
+        console.error('Erreur notification admin:', notifErr?.message);
       }
-
-      return {
-        incident,
-        soldeActuel: eleve?.soldePoints,
-        niveauAlerte,
-        alerte: eleve ? eleve.soldePoints <= 10 : false,
-        message: isAdmin
-          ? "Incident enregistré"
-          : "Signalement envoyé à l'administration pour validation"
-      };
-    });
+    }
 
     res.status(201).json(result);
-  } catch (error) {
-    res.status(500).json({ error: "Erreur lors de l'enregistrement de l'incident" });
+  } catch (error: any) {
+    console.error('Erreur rapporterIncident:', error?.message || error);
+    res.status(500).json({ error: "Erreur lors de l'enregistrement de l'incident", detail: error?.message });
   }
 };
 
