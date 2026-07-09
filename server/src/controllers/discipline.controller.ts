@@ -110,7 +110,7 @@ export const getPendingIncidents = async (req: AuthRequest, res: Response): Prom
     const incidents = await prisma.incident.findMany({
       where: { status: 'PENDING' },
       include: {
-        eleve: { select: { matricule: true, nom: true, prenom: true, classeId: true } }
+        eleve: { select: { matricule: true, nom: true, prenom: true, classroomId: true } }
       },
       orderBy: { date: 'desc' }
     });

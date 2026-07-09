@@ -17,7 +17,7 @@ interface Incident {
   auteur: string;
   eleveId: number;
   status: string;
-  eleve?: { matricule: number; nom: string; prenom: string; classeId: number | null };
+  eleve?: { matricule: number; nom: string; prenom: string; classroomId: number | null };
 }
 
 interface Eleve {
