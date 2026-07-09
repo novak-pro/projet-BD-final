@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Users, BookOpen,
@@ -8,12 +8,26 @@ import LanguageSwitcher from '../LanguageSwitcher';
 import SettingsDropdown from '../SettingsDropdown';
 import { useTranslation } from '../../i18n/LanguageContext';
 import { useLogo } from '../../contexts/LogoContext';
+import api from '../../services/axiosInstance';
 
 const AdminLayout = () => {
   const { t } = useTranslation();
   const { logoUrl } = useLogo();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    const fetchPending = async () => {
+      try {
+        const res = await api.get('/discipline/incident/pending');
+        setPendingCount(Array.isArray(res.data) ? res.data.length : 0);
+      } catch { /* ignore */ }
+    };
+    fetchPending();
+    const interval = setInterval(fetchPending, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const menuItems = [
     { icon: <LayoutDashboard size={18} />, label: t('nav.dashboard'),     path: '/admin' },
@@ -64,7 +78,14 @@ const AdminLayout = () => {
                 className={`admin-nav-item ${isActive ? 'active' : ''}`}
               >
                 <span>{item.icon}</span>
-                <span>{item.label}</span>
+                <span>
+                  {item.label}
+                  {item.path === '/admin/discipline' && pendingCount > 0 && (
+                    <span className="ml-2 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                      {pendingCount}
+                    </span>
+                  )}
+                </span>
               </Link>
             );
           })}

@@ -1,0 +1,31 @@
+@startuml
+actor Utilisateur as user
+participant "Frontend\nReact" as frontend
+participant "API\nExpress" as api
+participant "Middleware\nauth" as mw
+participant "Prisma\nORM" as prisma
+database "PostgreSQL" as db
+
+user -> frontend : 1. Saisit email + mot de passe
+frontend -> api : 2. POST /api/auth/login
+api -> mw : 3. Vérification des credentials
+mw -> prisma : 4. Prisma : findUnique({ where: { email } })
+prisma -> db : 5. SELECT * FROM users WHERE email = ?
+db --> prisma : 6. Résultat de la requête
+prisma --> mw : 7. User trouvé (hash + role + status)
+mw -> mw : 8. bcrypt.compare(password, hash)
+mw -> mw : 9. Vérifie status = ACTIVE
+
+alt Échec
+  mw --> api : 10a. Erreur 401
+  api --> frontend : 11a. { message: "Email ou mot de passe incorrect" }
+  frontend --> user : 12a. Affiche message d'erreur
+else Succès
+  mw -> mw : 10b. Génère token JWT { id, role }
+  mw --> api : 11b. { token, user: { id, email, role, profil } }
+  api --> frontend : 12b. Token JWT + infos utilisateur
+  frontend -> frontend : 13b. Stocke token dans localStorage
+  frontend -> frontend : 14b. Redirige vers le dashboard (selon rôle)
+  frontend --> user : 15b. Interface dashboard affichée
+end
+@enduml

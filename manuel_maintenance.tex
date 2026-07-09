@@ -1,0 +1,1008 @@
+\documentclass[12pt,a4paper]{report}
+ 
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{enumitem}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Manuel de Maintenance -- École Excellence}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    pdftitle={Manuel de Maintenance - École Excellence},
+    pdfauthor={Projet BD}
+}
+
+\definecolor{codebg}{RGB}{245,245,245}
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    columns=fullflexible,
+    keepspaces=true
+}
+
+\begin{document}
+
+\setlength{\extrarowheight}{5pt}
+\renewcommand{\arraystretch}{1.3}
+
+\tableofcontents
+\newpage
+
+% =====================================================
+\chapter{Introduction}
+% =====================================================
+
+Ce document décrit les procédures de maintenance de la plateforme \textbf{École Excellence}. Il est destiné aux administrateurs techniques et développeurs en charge du maintien en condition opérationnelle du système.
+
+\section{Rappel de l'architecture cible}
+
+\begin{longtable}{|p{4cm}|p{10.5cm}|}
+\hline
+\textbf{Composant} & \textbf{Hébergement} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Composant} & \textbf{Hébergement} \\
+\hline
+\endhead
+Backend (API Express + TypeScript) & Railway \\
+\hline
+Frontend (React + Vite) & Vercel \\
+\hline
+Base de données & Supabase (PostgreSQL 15, région AWS Europe) \\
+\hline
+Fichiers uploadés (photos, PDF, couvertures) & Filesystem local du conteneur Railway \\
+\hline
+Code source & GitHub (\url{https://github.com/brice-100/school-management}) \\
+\hline
+\end{longtable}
+
+\section{Technologies utilisées}
+
+\begin{longtable}{|p{4cm}|p{10.5cm}|}
+\hline
+\textbf{Couche} & \textbf{Technologies} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Couche} & \textbf{Technologies} \\
+\hline
+\endhead
+Backend & Node.js, Express 5, TypeScript 6, Prisma ORM 6 \\
+\hline
+Base de données & PostgreSQL 15 \\
+\hline
+Frontend & React 19, Vite 8, TailwindCSS v4, TypeScript 6 \\
+\hline
+Auth & JWT (jsonwebtoken), bcrypt \\
+\hline
+Uploads & Multer \\
+\hline
+PDF & jsPDF + jspdf-autotable (côté client) \\
+\hline
+\end{longtable}
+
+% =====================================================
+\chapter{Environnements}
+% =====================================================
+
+\section{Production}
+
+\begin{longtable}{|p{4.5cm}|p{10cm}|}
+\hline
+\textbf{Élément} & \textbf{Valeur} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Élément} & \textbf{Valeur} \\
+\hline
+\endhead
+URL API & \url{https://projet-bd-final-production.up.railway.app} \\
+\hline
+URL Frontend & \url{https://school-management-mauve-seven.vercel.app} \\
+\hline
+Base de données & Supabase (PostgreSQL) \\
+\hline
+Fournisseur BDD & Supabase (\textit{aws-1-eu-central-1.pooler.supabase.com}) \\
+\hline
+\end{longtable}
+
+\section{Développement local}
+
+\begin{longtable}{|p{4.5cm}|p{10cm}|}
+\hline
+\textbf{Élément} & \textbf{Valeur} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Élément} & \textbf{Valeur} \\
+\hline
+\endhead
+API locale & \texttt{http://localhost:5000} \\
+\hline
+Frontend local & \texttt{http://localhost:5173} \\
+\hline
+Base de données locale & PostgreSQL via Docker (\texttt{docker compose up -d db}) \\
+\hline
+URL BDD locale & \texttt{postgresql://admin:ecole\_password@localhost:5432/ecole2026} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\chapter{Comptes et identifiants}
+% =====================================================
+
+Ce chapitre répertorie l'ensemble des comptes et identifiants nécessaires à la maintenance et aux tests de la plateforme.
+
+\section{Compte administrateur par défaut}
+
+Deux scripts permettent de créer le compte administrateur principal :
+
+\subsection{Script \texttt{createAdmin.ts}}
+
+Exécution :
+\begin{lstlisting}
+cd server
+npx ts-node-dev src/scripts/createAdmin.ts
+\end{lstlisting}
+
+Identifiants créés :
+\begin{longtable}{|p{4cm}|p{10.5cm}|}
+\hline
+\textbf{Champ} & \textbf{Valeur} \\
+\hline
+Email & \texttt{admin@ecole.com} \\
+\hline
+Mot de passe & \texttt{admin123} \\
+\hline
+Rôle & \texttt{ADMIN\_PRINCIPAL} \\
+\hline
+Statut & \texttt{ACTIVE} \\
+\hline
+Nom affiché & Administrateur Principal \\
+\hline
+\end{longtable}
+
+\subsection{Script \texttt{seed.ts}}
+
+Exécution :
+\begin{lstlisting}
+cd server
+npx ts-node-dev src/seed.ts
+\end{lstlisting}
+
+Identifiants créés :
+\begin{longtable}{|p{4cm}|p{10.5cm}|}
+\hline
+\textbf{Champ} & \textbf{Valeur} \\
+\hline
+Email & \texttt{admin@ecole.fr} \\
+\hline
+Mot de passe & \texttt{admin123} \\
+\hline
+Rôle & \texttt{ADMIN\_PRINCIPAL} \\
+\hline
+Statut & \texttt{ACTIVE} \\
+\hline
+\end{longtable}
+
+\section{Comptes de test par rôle}
+
+\begin{longtable}{|p{3.5cm}|p{4cm}|p{3.5cm}|p{3.5cm}|}
+\hline
+\textbf{Rôle} & \textbf{Email type} & \textbf{Mot de passe} & \textbf{Création} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Rôle} & \textbf{Email type} & \textbf{Mot de passe} & \textbf{Création} \\
+\hline
+\endhead
+Administrateur & \texttt{admin@ecole.com} & \texttt{admin123} & Script createAdmin \\
+\hline
+Enseignant (Personnel) & \texttt{<email>} & Défini à la création & Interface Admin \\
+\hline
+Parent & \texttt{<email>} & Défini à la création & Interface Admin \\
+\hline
+\end{longtable}
+
+\section{Fichiers sources des identifiants}
+
+Les identifiants et la logique de création se trouvent dans :
+\begin{itemize}
+    \item \texttt{server/src/scripts/createAdmin.ts} -- création du compte admin principal.
+    \item \texttt{server/src/seed.ts} -- seed alternatif avec admin + données de test.
+    \item \texttt{server/src/controllers/authController.ts} -- logique d'inscription et de connexion.
+\end{itemize}
+
+\section{Création d'un nouvel administrateur}
+
+Pour créer un administrateur manuellement en base de données :
+\begin{lstlisting}
+INSERT INTO "User" (email, password, role, status, "createdAt")
+VALUES ('nouveladmin@ecole.com', '$2b$10$...', 'ADMIN_PRINCIPAL', 'ACTIVE', NOW());
+
+INSERT INTO "Admin" (nom, mobile, "userId")
+VALUES ('Nom Admin', '690000000', <id_user_cree>);
+\end{lstlisting}
+
+\textbf{Note :} le mot de passe doit être haché avec bcrypt avant insertion. Utiliser le script \texttt{createAdmin.ts} plutôt qu'une insertion manuelle.
+
+\section{Identifiants des services externes}
+
+\begin{longtable}{|p{4cm}|p{10.5cm}|}
+\hline
+\textbf{Service} & \textbf{Identifiants} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Service} & \textbf{Identifiants} \\
+\hline
+\endhead
+Railway dashboard & \url{https://railway.app/dashboard} -- compte GitHub de l'équipe \\
+\hline
+Supabase dashboard & \url{https://supabase.com/dashboard} -- compte associé au projet \\
+\hline
+Vercel dashboard & \url{https://vercel.com/dashboard} -- compte GitHub de l'équipe \\
+\hline
+GitHub repository & \url{https://github.com/brice-100/school-management} \\
+\hline
+Base PostgreSQL (Supabase) & \texttt{postgresql://postgres.xflqwuotdwjutihujjvr:mdp@aws-1-eu-central-1.pooler.supabase.com:5432/postgres} \\
+\hline
+\end{longtable}
+
+\section{Bonnes pratiques}
+\begin{itemize}
+    \item Ne jamais partager les mots de passe en clair dans les comptes rendus ou tickets.
+    \item Utiliser un gestionnaire de mots de passe d'équipe (Bitwarden, 1Password) pour les accès aux services externes.
+    \item Changer le mot de passe administrateur par défaut après la première connexion.
+    \item Ne pas créer de comptes de test avec des mots de passe faibles en production.
+    \item Désactiver les comptes temporaires après utilisation.
+\end{itemize}
+
+% =====================================================
+\chapter{Base de données}
+% =====================================================
+
+\section{Connexion}
+
+La base de données est un PostgreSQL 15 hébergé sur Supabase. La chaîne de connexion est stockée dans la variable d'environnement \texttt{DATABASE\_URL} du backend.
+
+En local :
+\begin{lstlisting}
+DATABASE_URL="postgresql://admin:ecole_password@localhost:5432/ecole2026?schema=public"
+\end{lstlisting}
+
+En production (Supabase Railway) :
+\begin{lstlisting}
+DATABASE_URL="postgresql://postgres.xflqwuotdwjutihujjvr:mdp@aws-1-eu-central-1.pooler.supabase.com:5432/postgres"
+\end{lstlisting}
+
+\section{Prisma ORM}
+
+Toutes les interactions avec la base de données passent par Prisma Client. L'instance unique est créée dans \texttt{server/src/lib/prisma.ts} :
+\begin{lstlisting}
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+export default prisma;
+\end{lstlisting}
+
+\subsection{Migrations}
+
+Après modification du fichier \texttt{server/prisma/schema.prisma} :
+
+\begin{lstlisting}
+cd server
+npx prisma migrate dev --name description_des_modifications
+\end{lstlisting}
+
+Cette commande :
+\begin{enumerate}
+    \item Détecte les différences entre le schéma et la base existante.
+    \item Génère un fichier SQL de migration dans \texttt{prisma/migrations/}.
+    \item L'applique à la base de développement locale.
+    \item Régénère le client Prisma TypeScript.
+\end{enumerate}
+
+\subsection{Déploiement des migrations en production}
+
+Les migrations sont commitées dans Git et déployées avec le reste du code. Pour les appliquer sur la base de production (Supabase) :
+
+\begin{lstlisting}
+npx prisma migrate deploy
+\end{lstlisting}
+
+Cette commande applique uniquement les migrations qui n'ont pas encore été exécutées sur la base cible.
+
+\subsection{Ajout rapide de colonnes (sans migration)}
+
+Pour des modifications simples sans générer de fichier de migration :
+\begin{lstlisting}
+npx prisma db push
+\end{lstlisting}
+
+\textbf{Attention :} cette commande synchronise directement le schéma Prisma avec la base. Elle est utile en développement mais déconseillée en production car elle ne versionne pas les changements.
+
+\subsection{Régénération du client Prisma}
+
+Après un \texttt{git pull} qui inclut des modifications de schéma ou en cas de corruption du client :
+\begin{lstlisting}
+npx prisma generate
+\end{lstlisting}
+
+\subsection{Script de migration Railway}
+
+Pour les déploiements Railway, un script \texttt{migrate\_railway.js} existe à la racine du projet :
+\begin{lstlisting}
+node migrate_railway.js --url "postgresql://user:mdp@host:port/database"
+\end{lstlisting}
+
+\section{Sauvegardes}
+
+\subsection{Supabase (automatique)}
+Supabase effectue des sauvegardes automatiques des bases de données actives :
+\begin{itemize}
+    \item Plan gratuit : sauvegardes quotidiennes, rétention 7 jours.
+    \item Plans payants : sauvegardes plus fréquentes et rétention étendue.
+\end{itemize}
+
+\subsection{Dump manuel}
+Pour une sauvegarde ponctuelle (recommandé avant une migration critique) :
+\begin{lstlisting}
+pg_dump --dbname="postgresql://user:mdp@host:port/dbname" \
+  --file=backup_$(date +%Y-%m-%d).sql \
+  --format=custom
+\end{lstlisting}
+
+Restauration :
+\begin{lstlisting}
+pg_restore --dbname="postgresql://user:mdp@host:port/dbname" \
+  --format=custom backup_2026-07-08.sql
+\end{lstlisting}
+
+Format SQL brut (plus simple mais plus volumineux) :
+\begin{lstlisting}
+pg_dump "postgresql://user:mdp@host:port/dbname" > backup.sql
+psql "postgresql://user:mdp@host:port/dbname" < backup.sql
+\end{lstlisting}
+
+\section{Erreurs fréquentes de base de données}
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{4cm}|>{\raggedright\arraybackslash}p{5cm}|>{\raggedright\arraybackslash}p{5cm}|}
+\hline
+\textbf{Erreur} & \textbf{Cause} & \textbf{Solution} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Erreur} & \textbf{Cause} & \textbf{Solution} \\
+\hline
+\endhead
+PrismaClientInitializationError & Mauvais DATABASE\_URL ou base injoignable & Vérifier l'URL, tester avec \texttt{psql}, vérifier les IP autorisées dans Supabase \\
+\hline
+PrismaClientKnownRequestError (P2002) & Violation de contrainte unique (email en double, etc.) & Vérifier les doublons dans la table concernée \\
+\hline
+PrismaClientKnownRequestError (P2025) & Enregistrement introuvable (FK ou update ciblant un ID inexistant) & Vérifier que l'ID/matricule existe avant l'opération \\
+\hline
+ECONNREFUSED (log Railway) & Base inaccessible depuis Railway & Vérifier que Supabase autorise les connexions depuis Railway (pas de firewall IP) \\
+\hline
+Connexion refusée locale & Docker PostgreSQL pas démarré & Exécuter \texttt{docker compose up -d db} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\chapter{Backend (Railway)}
+% =====================================================
+
+\section{Structure}
+Le backend est une application Node.js/Express écrite en TypeScript, située dans le dossier \texttt{server/}.
+
+\subsection{Points d'entrée}
+\begin{itemize}
+    \item \textbf{Développement} : \texttt{index.ts} via \texttt{ts-node-dev --respawn --transpile-only}
+    \item \textbf{Production} : \texttt{dist/index.js} compilé via \texttt{tsc}
+\end{itemize}
+
+\subsection{Commandes utiles}
+\begin{lstlisting}
+# Demarrer en developpement
+cd server && npm run dev
+
+# Compiler pour la production
+npm run build
+
+# Demarrer la version compilee
+npm start
+\end{lstlisting}
+
+\section{Configuration (variables d'environnement)}
+
+\begin{longtable}{|p{5cm}|p{9.5cm}|}
+\hline
+\textbf{Variable} & \textbf{Rôle} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Variable} & \textbf{Rôle} \\
+\hline
+\endhead
+\texttt{DATABASE\_URL} & Chaîne de connexion PostgreSQL \\
+\hline
+\texttt{JWT\_SECRET} & Clé secrète de signature des tokens JWT \\
+\hline
+\texttt{PORT} & Port d'écoute (défaut 3000, .env local = 5000) \\
+\hline
+\texttt{CLIENT\_URL} & URL du frontend pour CORS (non utilisée actuellement) \\
+\hline
+\end{longtable}
+
+\section{Middleware d'authentification}
+
+Le fichier \texttt{server/src/middlewares/authMiddleware.ts} expose :
+\begin{itemize}
+    \item \texttt{protect} : vérifie le token JWT, l'existence et l'état actif du compte. Attache \texttt{req.user}.
+    \item \texttt{restrictTo(...roles)} : vérifie que le rôle de l'utilisateur est autorisé.
+    \item \texttt{authenticateToken} : alias de \texttt{protect}.
+\end{itemize}
+
+\textbf{Important} : le token JWT expire selon la valeur \texttt{JWT\_EXPIRES\_IN} (non définie dans le code -- vérifier que l'application gère l'expiration). Le frontend redirige vers \texttt{/login} en cas de code 401 via l'intercepteur Axios.
+
+\section{Uploads de fichiers}
+
+Le backend gère trois types d'uploads via Multer :
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{4.5cm}|}
+\hline
+\textbf{Type} & \textbf{Dossier} & \textbf{Limite} & \textbf{Middleware} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Type} & \textbf{Dossier} & \textbf{Limite} & \textbf{Middleware} \\
+\hline
+\endhead
+Photos élèves & \texttt{server/uploads/eleves/} & 5 Mo, images & uploadStudentPhotoMiddleware.ts \\
+\hline
+Épreuves (sujet + corrigé) & \texttt{server/uploads/epreuves/} & 10 Mo, PDF & uploadMiddleware.ts \\
+\hline
+Livres (couverture + PDF) & \texttt{server/uploads/livres/} & 20 Mo, images+PDF & uploadLivreMiddleware.ts \\
+\hline
+\end{longtable}
+
+Les dossiers sont créés automatiquement au démarrage du serveur (dans \texttt{app.ts}) :
+\begin{lstlisting}
+const uploadDirs = ['uploads/epreuves', 'uploads/livres', 'uploads/eleves'];
+uploadDirs.forEach(dir => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
+\end{lstlisting}
+
+\textbf{Attention :} sur Railway, le filesystem est éphémère. Les fichiers uploadés sont perdus lors d'un redéploiement (conteneur recréé). Il n'existe pas de solution de stockage persistant (S3, Cloudinary) actuellement.
+
+\section{Logs}
+
+\subsection{En développement}
+Les logs s'affichent dans le terminal où \texttt{npm run dev} est exécuté :
+\begin{lstlisting}
+ts-node-dev --respawn --transpile-only index.ts
+[INFO] Serveur lance sur le port 5000
+\end{lstlisting}
+
+Des fichiers locaux sont également générés à la racine du projet :
+\begin{itemize}
+    \item \texttt{server.log} (sortie standard)
+    \item \texttt{server-err.log} (erreurs)
+    \item \texttt{vite-out.txt}, \texttt{vite-err.txt} (logs du build frontend)
+\end{itemize}
+
+\subsection{En production (Railway)}
+Les logs sont accessibles depuis le dashboard Railway :
+\begin{enumerate}
+    \item Se connecter à \url{https://railway.app}.
+    \item Sélectionner le projet \texttt{projet-BDfinal}.
+    \item Cliquer sur le service \texttt{projet-bd-final}.
+    \item Aller dans l'onglet \textbf{Deployments}.
+    \item Cliquer sur le déploiement actif.
+    \item Cliquer sur \textbf{View Logs}.
+\end{enumerate}
+
+\subsection{Interprétation des logs}
+\begin{itemize}
+    \item \texttt{Error: listen EADDRINUSE} : le port est déjà utilisé. Changer le PORT dans \texttt{.env}.
+    \item \texttt{Error: connect ECONNREFUSED} : la base de données est inaccessible.
+    \item \texttt{PrismaClientInitializationError} : problème d'URL de connexion ou d'accès réseau.
+    \item \texttt{401 Unauthorized} : token manquant ou invalide.
+    \item \texttt{403 Forbidden} : rôle insuffisant pour la ressource demandée.
+\end{itemize}
+
+\section{Mise à jour du code et redéploiement}
+
+Le workflow standard est :
+\begin{enumerate}
+    \item Développer et tester localement.
+    \item Commiter les modifications.
+\begin{lstlisting}
+git add .
+git commit -m "Description claire des modifications"
+\end{lstlisting}
+    \item Pousser sur GitHub.
+\begin{lstlisting}
+git push origin main
+\end{lstlisting}
+    \item Railway détecte le push et redéploie automatiquement.
+\end{enumerate}
+
+\subsection{Procédure en cas d'échec du déploiement}
+\begin{enumerate}
+    \item Consulter les logs Railway (section 4.5.2).
+    \item Vérifier que toutes les variables d'environnement sont définies dans Railway.
+    \item Vérifier que le build passe localement : \texttt{cd server \&\& npm run build}.
+    \item Vérifier que les dépendances sont installées : \texttt{npm install} doit s'exécuter automatiquement via le buildpack Node.js.
+    \item Si le problème vient d'une migration Prisma, exécuter manuellement : \texttt{npx prisma migrate deploy}.
+\end{enumerate}
+
+\section{Erreurs backend courantes}
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{4cm}|>{\raggedright\arraybackslash}p{5cm}|>{\raggedright\arraybackslash}p{5cm}|}
+\hline
+\textbf{Erreur} & \textbf{Cause} & \textbf{Solution} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Erreur} & \textbf{Cause} & \textbf{Solution} \\
+\hline
+\endhead
+502 Bad Gateway (Railway) & Crash au démarrage (port, variable manquante, BDD injoignable) & Vérifier les logs Railway, corriger l'env, redéployer \\
+\hline
+503 Service Temporarily Unavailable & Déploiement en cours & Attendre la fin du déploiement \\
+\hline
+404 sur des endpoints existants & Route non trouvée (mauvais préfixe/slash) & Vérifier \texttt{app.ts} et les routeurs \\
+\hline
+500 Internal Server Error & Exception non gérée dans un contrôleur & Vérifier les logs, ajouter try/catch si nécessaire \\
+\hline
+SyntaxError: Unexpected token & Fichier uploadé corrompu ou format non supporté & Vérifier le type et l'intégrité du fichier \\
+\hline
+Cannot find module 'typescript' & Dépendances manquantes dans le déploiement & Vérifier que \texttt{typescript} est dans \texttt{devDependencies} ou \texttt{dependencies} \\
+\hline
+\end{longtable}
+
+% =====================================================
+\chapter{Frontend (Vercel)}
+% =====================================================
+
+\section{Structure}
+Le frontend est une application React 19 avec Vite, située dans le dossier \texttt{client/}.
+
+\subsection{Commandes utiles}
+\begin{lstlisting}
+# Demarrer en developpement
+cd client && npm run dev
+
+# Builder pour la production
+npm run build
+
+# Preview du build
+npm run preview
+\end{lstlisting}
+
+\section{Configuration}
+
+\subsection{Variable d'environnement}
+\begin{lstlisting}
+VITE_API_URL=https://projet-bd-final-production.up.railway.app/api
+\end{lstlisting}
+Cette variable définit la base URL de l'API backend. Elle est utilisée par Axios dans \texttt{client/src/services/axiosInstance.ts}.
+
+\subsection{Fichier de déploiement Vercel (vercel.json)}
+\begin{lstlisting}
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "client/dist",
+  "rewrites": [{ "source": "/api/(.*)", "destination": "/api" }],
+  "functions": { "api/index.ts": { "includeFiles": "server/**" } }
+}
+\end{lstlisting}
+
+\section{Service Axios et intercepteurs}
+
+Le fichier \texttt{client/src/services/axiosInstance.ts} configure :
+\begin{itemize}
+    \item La \texttt{baseURL} pointant vers l'API backend.
+    \item Un intercepteur de requête qui injecte le token JWT (\texttt{localStorage.getItem('token')}).
+    \item Un intercepteur de réponse qui, en cas d'erreur 401, efface le token et redirige vers \texttt{/login}.
+\end{itemize}
+
+\section{Internationalisation (i18n)}
+
+Le projet supporte le français et l'anglais via deux fichiers JSON :
+\begin{itemize}
+    \item \texttt{client/src/i18n/fr.json}
+    \item \texttt{client/src/i18n/en.json}
+\end{itemize}
+
+Pour ajouter une traduction :
+\begin{enumerate}
+    \item Ajouter la clé dans les deux fichiers JSON.
+    \item Utiliser la fonction de traduction dans les composants (via le contexte dédié).
+\end{enumerate}
+
+\section{Erreurs frontend courantes}
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{4cm}|>{\raggedright\arraybackslash}p{5cm}|>{\raggedright\arraybackslash}p{5cm}|}
+\hline
+\textbf{Erreur} & \textbf{Cause} & \textbf{Solution} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Erreur} & \textbf{Cause} & \textbf{Solution} \\
+\hline
+\endhead
+CORS Error & Le domaine Vercel n'est pas autorisé par le backend & Vérifier la configuration CORS dans \texttt{server/app.ts} \\
+\hline
+401 Unauthorized (boucle) & Token expiré ou invalide & Déconnecter l'utilisateur (supprimer le localStorage), le faire se reconnecter \\
+\hline
+Page blanche (blank screen) & Erreur React non gérée (TypeError sur un objet null/undefined) & Vérifier la console navigateur (F12), corriger le composant fautif \\
+\hline
+Chargement infini (spinner) & Appel API échoué sans gestion d'erreur & Vérifier que le composant gère le cas d'erreur et l'état vide \\
+\hline
+Les données ne se rafraîchissent pas & Cache React ou absence de clé dans les dépendances useEffect & Vérifier les dépendances du useEffect, forcer un re-rendu \\
+\hline
+Build Vercel échoué & Erreur TypeScript ou dépendance manquante & Lancer \texttt{npm run build} localement pour reproduire, corriger les erreurs \\
+\hline
+\end{longtable}
+
+% =====================================================
+\chapter{Gestion des comptes et sécurité}
+% =====================================================
+
+\section{Rôles et permissions}
+
+Le système utilise trois rôles définis dans l'enum Prisma \texttt{Role} :
+
+\begin{longtable}{|p{3.5cm}|p{11cm}|}
+\hline
+\textbf{Rôle} & \textbf{Périmètre} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Rôle} & \textbf{Périmètre} \\
+\hline
+\endhead
+\texttt{ADMIN\_PRINCIPAL} & Accès total : création/modification/suppression des élèves, personnel, salles, matières, scolarité, planning, bulletins, discipline, bibliothèque, messagerie (envoi + modération), comptes, années académiques \\
+\hline
+\texttt{PERSONNEL} & Enseignants : consultation de leurs cours, saisie des notes, dépôt d'épreuves, signalement disciplinaire, planning personnel, messagerie (envoi aux parents si titulaire) \\
+\hline
+\texttt{PARENT} & Consultation des enfants, demandes d'inscription, paiements, bibliothèque, discipline, bulletins, planning des enfants, messagerie (réception uniquement) \\
+\hline
+\end{longtable}
+
+\section{Création d'un compte administrateur}
+
+Un script dédié crée le compte administrateur par défaut :
+\begin{lstlisting}
+npx ts-node-dev src/scripts/createAdmin.ts
+\end{lstlisting}
+
+Ce script crée un utilisateur avec :
+\begin{itemize}
+    \item Email : \texttt{admin@ecole.com}
+    \item Mot de passe : \texttt{admin123}
+    \item Rôle : \texttt{ADMIN\_PRINCIPAL}
+    \item Statut : \texttt{ACTIVE}
+\end{itemize}
+
+Un seed alternatif dans \texttt{src/seed.ts} crée \texttt{admin@ecole.fr} / \texttt{admin123}.
+
+\section{Activation des comptes utilisateurs}
+\begin{enumerate}
+    \item Un utilisateur s'inscrit via \texttt{/register} (statut \texttt{PENDING}).
+    \item L'administrateur consulte les comptes en attente via l'interface Admin (ou \texttt{GET /api/admin/pending}).
+    \item L'administrateur approuve ou rejette via \texttt{POST /api/admin/validate}.
+\end{enumerate}
+
+\section{Désactivation et réactivation}
+
+Les routes \texttt{/api/users} permettent :
+\begin{itemize}
+    \item \texttt{GET /deactivated} : lister les comptes désactivés.
+    \item \texttt{POST /reactivate} : réactiver (\texttt{status = ACTIVE}).
+    \item \texttt{POST /deactivate} : désactiver (\texttt{status = DISABLED}).
+\end{itemize}
+
+\textbf{Politique recommandée} : préférer la désactivation à la suppression physique pour conserver l'historique.
+
+\section{Rotation du secret JWT}
+
+En cas de compromission du \texttt{JWT\_SECRET} :
+\begin{enumerate}
+    \item Modifier la variable \texttt{JWT\_SECRET} dans Railway et dans le \texttt{.env} local.
+    \item Redéployer le backend (un push suffit).
+    \item Tous les tokens existants deviennent invalides -- les utilisateurs doivent se reconnecter.
+\end{enumerate}
+
+% =====================================================
+\chapter{Sauvegarde et restauration}
+% =====================================================
+
+\section{Procédure de sauvegarde complète}
+
+Recommandé avant toute opération critique (migration majeure, mise à jour système) :
+
+\begin{enumerate}
+    \item Sauvegarder la base de données :
+\begin{lstlisting}
+pg_dump "postgresql://user:mdp@host:port/dbname" > backup_$(date +%Y-%m-%d).sql
+\end{lstlisting}
+    \item Sauvegarder les fichiers uploadés (si nécessaire) :
+\begin{lstlisting}
+tar -czf uploads_backup_$(date +%Y-%m-%d).tar.gz server/uploads/
+\end{lstlisting}
+    \item Vérifier l'intégrité de la sauvegarde :
+\begin{lstlisting}
+head -5 backup_2026-07-08.sql
+# Doit contenir "PostgreSQL database dump"
+\end{lstlisting}
+\end{enumerate}
+
+\section{Procédure de restauration}
+
+\begin{enumerate}
+    \item Arrêter le backend (ou le mettre en maintenance).
+    \item Restaurer la base de données :
+\begin{lstlisting}
+psql "postgresql://user:mdp@host:port/dbname" < backup_2026-07-08.sql
+\end{lstlisting}
+    \item Restaurer les fichiers uploadés :
+\begin{lstlisting}
+tar -xzf uploads_backup_2026-07-08.tar.gz
+\end{lstlisting}
+    \item Redémarrer le backend.
+    \item Vérifier que l'application fonctionne (connexion, consultation des données).
+\end{enumerate}
+
+% =====================================================
+\chapter{Dépannage avancé}
+% =====================================================
+
+\section{Problèmes de déploiement}
+
+\subsection{Le build échoue sur Railway}
+\begin{enumerate}
+    \item Vérifier que \texttt{npm install} s'exécute correctement :
+    \begin{itemize}
+        \item La commande \texttt{postinstall} (\texttt{cd server \&\& npx prisma generate}) doit réussir.
+        \item Si Prisma generate échoue, le \texttt{schema.prisma} est peut-être corrompu.
+    \end{itemize}
+    \item Vérifier la compilation TypeScript :
+    \begin{itemize}
+        \item \texttt{cd server \&\& npm run build} doit passer localement.
+        \item Les erreurs TypeScript sont bloquantes (\texttt{strict: true} dans tsconfig).
+    \end{itemize}
+    \item Vérifier que \texttt{typescript} est dans les dépendances (présent dans \texttt{devDependencies}).
+\end{enumerate}
+
+\subsection{Le frontend Vercel ne se met pas à jour}
+\begin{enumerate}
+    \item Vérifier que le build Vercel a réussi (dashboard Vercel $\rightarrow$ Deployments).
+    \item Vider le cache Vercel si nécessaire : dashboard $\rightarrow$ Deployments $\rightarrow$ menu $\rightarrow$ Purge Cache.
+    \item Vérifier que \texttt{VITE\_API\_URL} pointe vers la bonne URL.
+\end{enumerate}
+
+\section{Problèmes d'authentification}
+
+\subsection{Token JWT expiré}
+L'intercepteur Axios redirige automatiquement vers \texttt{/login}. Si le problème persiste :
+\begin{enumerate}
+    \item Vider le \texttt{localStorage} (F12 $\rightarrow$ Application $\rightarrow$ Stockage local $\rightarrow$ Supprimer).
+    \item Se reconnecter.
+    \item Si le problème revient, vérifier \texttt{JWT\_EXPIRES\_IN} dans le backend (par défaut 7 jours si défini).
+\end{enumerate}
+
+\subsection{Utilisateur bloqué (status DISABLED)}
+\begin{enumerate}
+    \item L'administrateur doit réactiver le compte via \texttt{POST /api/users/reactivate} ou l'interface Admin $\rightarrow$ Comptes désactivés.
+    \item Vérifier que le compte n'a pas été désactivé par erreur (\texttt{User.status === 'DISABLED'}).
+\end{enumerate}
+
+\section{Problèmes d'upload}
+
+\subsection{Fichier trop volumineux}
+Multer rejette les fichiers dépassant les limites configurées. Le frontend doit afficher une erreur. Vérifier :
+\begin{itemize}
+    \item Photos élèves : 5 Mo max.
+    \item Épreuves (sujet/corrigé) : 10 Mo max.
+    \item Livres (couverture + PDF) : 20 Mo max.
+\end{itemize}
+
+\subsection{Fichiers perdus après redéploiement Railway}
+Les uploads sont stockés sur le filesystem éphémère du conteneur Railway. Solution recommandée pour l'avenir : migrer vers un stockage externe (AWS S3, Cloudinary, Supabase Storage).
+
+\section{Problèmes CORS}
+
+Si le frontend affiche des erreurs CORS dans la console navigateur :
+\begin{enumerate}
+    \item Vérifier la configuration CORS dans \texttt{server/app.ts} :
+\begin{lstlisting}
+app.use(cors({ origin: ['https://*.vercel.app', 'http://localhost:5173'] }));
+\end{lstlisting}
+    \item Vérifier que l'URL exacte du frontend (avec le domaine Vercel complet) est autorisée.
+    \item En développement, vérifier que le backend tourne sur le bon port.
+\end{enumerate}
+
+\section{Problèmes de planning (conflits)}
+
+Le système détecte les conflits lors de la création de créneaux (même salle ou même enseignant sur un même créneau horaire). Si un conflit n'est pas détecté :
+\begin{itemize}
+    \item Vérifier la logique de validation dans \texttt{planning.controller.ts}.
+    \item Vérifier que les heures sont correctement formatées (format ISO, timezone).
+\end{itemize}
+
+\section{Problèmes de génération PDF}
+
+Les bulletins PDF sont générés côté client avec jsPDF. Si un PDF ne se génère pas :
+\begin{enumerate}
+    \item Vérifier la console navigateur pour les erreurs JavaScript.
+    \item Vérifier que les données (notes, moyennes) sont bien chargées.
+    \item Vérifier que \texttt{jspdf-autotable} est bien importé.
+    \item Le PDF utilise des polices intégrées -- vérifier que les caractères accentués s'affichent correctement.
+\end{enumerate}
+
+% =====================================================
+\chapter{Mise à jour et évolutions}
+% =====================================================
+
+\section{Ajouter un nouveau champ dans la base de données}
+\begin{enumerate}
+    \item Modifier \texttt{server/prisma/schema.prisma} (ajouter le champ dans le modèle concerné).
+    \item Créer et appliquer la migration :
+\begin{lstlisting}
+npx prisma migrate dev --name ajout_champ_xxx
+\end{lstlisting}
+    \item Mettre à jour le \texttt{PrismaClient} :
+\begin{lstlisting}
+npx prisma generate
+\end{lstlisting}
+    \item Ajouter le nouveau champ dans les types TypeScript côté client si nécessaire.
+    \item Modifier le contrôleur et les routes pour exposer le nouveau champ.
+    \item Modifier le frontend pour afficher/utiliser le nouveau champ.
+    \item Commiter le tout et déployer.
+\end{enumerate}
+
+\section{Ajouter une nouvelle route}
+\begin{enumerate}
+    \item Créer le fichier de routes dans \texttt{server/src/routes/}.
+    \item Créer le contrôleur correspondant dans \texttt{server/src/controllers/}.
+    \item Monter la route dans \texttt{server/app.ts} :
+\begin{lstlisting}
+app.use('/api/nouveau-module', nouveauModuleRoutes);
+\end{lstlisting}
+    \item Ajouter le service Axios dans \texttt{client/src/services/}.
+    \item Ajouter la page/le composant dans le frontend.
+    \item Ajouter la route dans \texttt{client/src/App.tsx} avec le bon layout et la protection par rôle.
+\end{enumerate}
+
+\section{Ajouter une nouvelle page frontend}
+\begin{enumerate}
+    \item Créer le fichier dans \texttt{client/src/pages/} (ou \texttt{pages/admin/}, \texttt{teacher/}, etc.).
+    \item Ajouter l'import et la route dans \texttt{client/src/App.tsx} avec le layout adapté.
+    \item Si nécessaire, ajouter l'entrée de menu dans le layout correspondant (\texttt{AdminLayout.tsx}, \texttt{TeacherLayout.tsx}, \texttt{ParentLayout.tsx}).
+\end{enumerate}
+
+\section{Mettre à jour les dépendances}
+\begin{lstlisting}
+# Backend
+cd server && npm outdated   # Lister les dependances obsOLETES
+npm update                   # Mettre a jour dans les limites semver
+npm install <package>@latest # Forcer une version specifique
+
+# Frontend
+cd client && npm outdated
+npm update
+\end{lstlisting}
+
+\textbf{Attention :} Express 5, React 19, Prisma 6 et TypeScript 6 sont des versions récentes. Vérifier la compatibilité croisée avant de mettre à jour.
+
+\section{Passer d'un stockage local à un stockage cloud (S3/Cloudinary)}
+
+Pour rendre les uploads persistants :
+\begin{enumerate}
+    \item Créer un bucket S3 ou un compte Cloudinary.
+    \item Installer le SDK correspondant (\texttt{@aws-sdk/client-s3} ou \texttt{cloudinary}).
+    \item Modifier les middlewares multer pour uploader vers le cloud après sauvegarde locale, ou utiliser un package comme \texttt{multer-s3}.
+    \item Mettre à jour les contrôleurs pour renvoyer l'URL cloud.
+    \item Ajouter les variables d'environnement (clés API, bucket).
+\end{enumerate}
+
+% =====================================================
+\chapter{Annexes}
+% =====================================================
+
+\section{Commandes utiles (rappel rapide)}
+
+\begin{longtable}{|p{6cm}|p{8.5cm}|}
+\hline
+\textbf{Commande} & \textbf{Description} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Commande} & \textbf{Description} \\
+\hline
+\endhead
+\texttt{cd server \&\& npm run dev} & Démarrer le backend en développement \\
+\hline
+\texttt{cd client \&\& npm run dev} & Démarrer le frontend en développement \\
+\hline
+\texttt{npx prisma migrate dev --name msg} & Créer et appliquer une migration \\
+\hline
+\texttt{npx prisma migrate deploy} & Appliquer les migrations en production \\
+\hline
+\texttt{npx prisma generate} & Régénérer le client Prisma \\
+\hline
+\texttt{npx prisma db push} & Synchroniser le schéma sans migration \\
+\hline
+\texttt{git push origin main} & Déclencher le redéploiement \\
+\hline
+\texttt{pg\_dump "URL" > backup.sql} & Sauvegarder la base \\
+\hline
+\texttt{psql "URL" < backup.sql} & Restaurer la base \\
+\hline
+\end{longtable}
+
+\section{Emplacement des fichiers importants}
+
+\begin{longtable}{|p{5cm}|p{9.5cm}|}
+\hline
+\textbf{Fichier} & \textbf{Rôle} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Fichier} & \textbf{Rôle} \\
+\hline
+\endhead
+\texttt{server/prisma/schema.prisma} & Schéma de la base de données \\
+\hline
+\texttt{server/app.ts} & Configuration Express (middlewares, routes, uploads) \\
+\hline
+\texttt{server/index.ts} & Point d'entrée du serveur \\
+\hline
+\texttt{server/src/middlewares/authMiddleware.ts} & Authentification JWT et RBAC \\
+\hline
+\texttt{client/src/App.tsx} & Routes et layouts de l'application \\
+\hline
+\texttt{client/src/services/axiosInstance.ts} & Configuration Axios (baseURL, intercepteurs) \\
+\hline
+\texttt{vercel.json} & Configuration de déploiement Vercel \\
+\hline
+\texttt{docker-compose.yml} & PostgreSQL local \\
+\hline
+\texttt{.env} (racine et server/) & Variables d'environnement \\
+\hline
+\end{longtable}
+
+\section{Contacts et références}
+
+\begin{itemize}
+    \item Documentation Prisma : \url{https://www.prisma.io/docs}
+    \item Documentation Railway : \url{https://docs.railway.app}
+    \item Documentation Vercel : \url{https://vercel.com/docs}
+    \item Documentation Supabase : \url{https://supabase.com/docs}
+    \item Dépôt GitHub : \url{https://github.com/brice-100/school-management}
+    \item Dashboard Railway : \url{https://railway.app/dashboard}
+    \item Dashboard Supabase : \url{https://supabase.com/dashboard}
+\end{itemize}
+
+\end{document}

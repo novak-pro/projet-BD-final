@@ -40,7 +40,7 @@ Ce manuel présente la plateforme \textbf{École Excellence}, un système de ges
 
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 1 :} Architecture générale de la plateforme ---}
+	\includegraphics[width=0.5\textwidth]{architecture.png}
 \end{center}
 \medskip
 
@@ -48,11 +48,7 @@ Ce manuel présente la plateforme \textbf{École Excellence}, un système de ges
 
 La plateforme est accessible depuis tout navigateur web moderne (Chrome, Firefox, Edge, Safari). Une connexion Internet est requise. L'interface s'adapte aux écrans d'ordinateur et de tablette.
 
-\medskip
-\begin{center}
-\framebox{--- \textbf{Schéma 2 :} Page de connexion ---}
-\end{center}
-\medskip
+\textbf{Pour accéder à la plateforme :} ouvrez votre navigateur et saisissez l'URL fournie par l'établissement. La page de connexion apparaît.
 
 \section{Connexion et compte}
 
@@ -65,9 +61,18 @@ Chaque utilisateur dispose d'un compte avec un rôle spécifique :
 
 Pour se connecter, l'utilisateur saisit son email et son mot de passe sur la page de connexion. Un compte doit être activé par l'administrateur avant la première connexion.
 
+\textbf{Étapes de connexion :}
+\begin{enumerate}
+    \item Rendez-vous sur l'URL de la plateforme.
+    \item Saisissez votre adresse email dans le champ \og{Email}\fg{}.
+    \item Saisissez votre mot de passe dans le champ \og{Mot de passe}\fg{}.
+    \item Cliquez sur le bouton \og{Se connecter}\fg{}.
+    \item Selon votre rôle, vous serez redirigé vers le tableau de bord correspondant.
+\end{enumerate}
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 3 :} Tableau de bord après connexion ---}
+	\includegraphics[width=0.95\textwidth]{connexion.jpeg}
 \end{center}
 \medskip
 
@@ -79,9 +84,11 @@ Pour se connecter, l'utilisateur saisit son email et son mot de passe sur la pag
 
 Le tableau de bord affiche les statistiques clés de l'établissement : nombre d'élèves, d'enseignants, de salles et de demandes en attente.
 
+\textbf{Pour accéder au tableau de bord :} connectez-vous avec un compte administrateur. Le tableau de bord s'affiche automatiquement après la connexion. Vous pouvez également cliquer sur \og{Tableau de bord}\fg{} dans le menu latéral gauche.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 4 :} Tableau de bord administrateur ---}
+	\includegraphics[width=1\textwidth]{tableau de bord.jpeg}
 \end{center}
 \medskip
 
@@ -89,9 +96,11 @@ Le tableau de bord affiche les statistiques clés de l'établissement : nombre d
 
 L'administrateur visualise les demandes d'inscription soumises par les parents. Il peut les approuver (ce qui crée automatiquement le dossier élève) ou les rejeter avec un motif.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Inscriptions}\fg{}. Vous verrez la liste des demandes. Cliquez sur \og{Approuver}\fg{} ou \og{Rejeter}\fg{} pour traiter chaque demande.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 5 :} Liste des demandes d'inscription ---}
+	\includegraphics[width=1.1\textwidth]{demanded'inscription.jpeg}
 \end{center}
 \medskip
 
@@ -99,29 +108,51 @@ L'administrateur visualise les demandes d'inscription soumises par les parents. 
 
 Cette page permet de consulter la liste complète des élèves, d'ajouter un élève, de modifier ses informations (nom, prénom, classe, cycle, langue, etc.) ou de le supprimer. La colonne \og{Solde de points}\fg{} affiche le solde de conduite avec un code couleur.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Élèves}\fg{}. Utilisez la barre de recherche pour filtrer. Cliquez sur le bouton \og{Ajouter un élève}\fg{} pour ouvrir le formulaire de création. Cliquez sur l'icône de modification (stylo) à côté d'un élève pour éditer ses informations.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 6 :} Liste des élèves ---}
+	\includegraphics[width=1.1\textwidth]{gestion des eleves.jpeg}
 \end{center}
+\medskip
+
+\section{Gestion des matieres}
+
+Les matières sont créées et associées à une ou plusieurs classes. On peut également y rattacher des épreuves et consulter le nombre de cours et de livres liés.
+
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Matières}\fg{}. Cliquez sur \og{Ajouter une matière}\fg{} pour créer une nouvelle matière. Pour associer une matière à une classe, utilisez le sélecteur de classe dans le formulaire d'édition.
+
+\medskip
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=1.1\textwidth]{gestion des matieres.jpeg}
+	\caption{Gestion des matieres.}
+	\label{fig:cycles}
+\end{figure}
+
+\medskip
+
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=1.1\textwidth]{gestion des cycles.jpeg}
+	\caption{Gestion des cycles.}
+	\label{fig:matieres}
+\end{figure}
+
 \medskip
 
 \section{Gestion des cycles et classes}
 
 L'administrateur crée et organise les cycles (Premier cycle, Deuxième cycle, Troisième cycle) et les classes associées. Chaque classe peut être rattachée à un cycle et avoir un responsable.
 
-\medskip
-\begin{center}
-\framebox{--- \textbf{Schéma 7 :} Gestion des cycles et classes ---}
-\end{center}
-\medskip
-
-\section{Gestion des matières}
-
-Les matières sont créées et associées à une ou plusieurs classes. On peut également y rattacher des épreuves et consulter le nombre de cours et de livres liés.
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Cycles et classes}\fg{}. Pour créer un nouveau cycle, cliquez sur \og{Ajouter un cycle}\fg{}. Pour ajouter une classe, sélectionnez un cycle puis cliquez sur \og{Ajouter une classe}\fg{}.
 
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 8 :} Liste des matières ---}
+	\includegraphics[width=1.1\textwidth]{gestion des classes.jpeg}
+	\caption{Gestion des classes.}
+	\label{fig:classes}
 \end{center}
 \medskip
 
@@ -133,9 +164,11 @@ Cette section permet de gérer l'ensemble du personnel (enseignants, surveillant
     \item Affecter un enseignant à une classe avec ses matières
 \end{itemize}
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Personnel}\fg{}. Utilisez le bouton \og{Ajouter}\fg{} pour créer un nouveau membre. Pour modifier, cliquez sur l'icône de modification. Pour affecter un enseignant à une classe, utilisez le bouton \og{Affecter}\fg{}.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 9 :} Gestion du personnel ---}
+\includegraphics[width=1.1\textwidth]{gestion du personnel.jpeg}
 \end{center}
 \medskip
 
@@ -143,9 +176,11 @@ Cette section permet de gérer l'ensemble du personnel (enseignants, surveillant
 
 L'administrateur gère les salles de l'établissement : création, position, capacité, état (disponible, en service, en rénovation, etc.). Chaque salle peut être rattachée à une classe et avoir un enseignant titulaire.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Salles}\fg{}. Cliquez sur \og{Ajouter une salle}\fg{} pour créer une nouvelle salle. Utilisez le menu déroulant \og{État}\fg{} pour changer le statut d'une salle.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 10 :} Gestion des salles ---}
+\includegraphics[width=1.1\textwidth]{gestion des salles.jpeg}
 \end{center}
 \medskip
 
@@ -153,9 +188,11 @@ L'administrateur gère les salles de l'établissement : création, position, cap
 
 Le planning permet de créer des créneaux horaires par classe ou par salle. Le système détecte les conflits (même salle ou même enseignant sur un même créneau).
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Planning}\fg{}. Sélectionnez une classe ou une salle dans le filtre en haut de page. Cliquez sur un créneau vide pour ajouter un cours. Le système vous alertera en cas de conflit de planning.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 11 :} Planning hebdomadaire ---}
+\includegraphics[width=1.1\textwidth]{emploie du temps.jpeg}
 \end{center}
 \medskip
 
@@ -163,9 +200,11 @@ Le planning permet de créer des créneaux horaires par classe ou par salle. Le 
 
 L'administrateur crée les années académiques, active une année en cours, et génère automatiquement les trimestres et sessions d'examens associés.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Académique}\fg{}. Cliquez sur \og{Créer une année}\fg{} pour ajouter une nouvelle année académique. Utilisez le bouton \og{Activer}\fg{} pour définir l'année en cours. Les trimestres et sessions sont générés automatiquement.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 12 :} Gestion académique ---}
+\includegraphics[width=1.1\textwidth]{gestiondel'anneacademique.jpeg}
 \end{center}
 \medskip
 
@@ -173,9 +212,11 @@ L'administrateur crée les années académiques, active une année en cours, et 
 
 Cette page permet de configurer les frais de scolarité par classe : montant d'inscription, montant de la pension, nombre de tranches, et échéancier détaillé (libellé, montant, date limite pour chaque tranche). Les parents visualisent ces informations depuis leur espace.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Scolarité}\fg{}. Sélectionnez une classe dans la liste déroulante. Remplissez les champs (inscription, pension, nombre de tranches) puis cliquez sur \og{Enregistrer}\fg{}. L'échéancier des tranches apparaît : saisissez le libellé, le montant et la date limite pour chaque tranche.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 13 :} Configuration de la scolarité ---}
+\includegraphics[width=1.1\textwidth]{gestiondelascolarite.jpeg}
 \end{center}
 \medskip
 
@@ -183,9 +224,11 @@ Cette page permet de configurer les frais de scolarité par classe : montant d'i
 
 L'administrateur consulte les demandes de paiement soumises par les parents, visualise le reçu joint, et peut valider ou rejeter la demande.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Paiements}\fg{}. La liste des demandes en attente s'affiche. Cliquez sur \og{Voir le reçu}\fg{} pour visualiser le justificatif. Cliquez sur \og{Valider}\fg{} ou \og{Rejeter}\fg{} pour traiter la demande.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 14 :} Validation des paiements ---}
+\includegraphics[width=1.1\textwidth]{paiement.jpeg}
 \end{center}
 \medskip
 
@@ -193,9 +236,11 @@ L'administrateur consulte les demandes de paiement soumises par les parents, vis
 
 Cette page génère les bulletins de notes par classe avec le classement des élèves, les moyennes par matière et la moyenne générale.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Bulletins}\fg{}. Sélectionnez une classe et un trimestre dans les filtres. Le tableau des résultats s'affiche avec le classement. Cliquez sur \og{PDF}\fg{} à côté d'un élève pour télécharger son bulletin individuel. Cliquez sur \og{Exporter tout}\fg{} pour générer les bulletins de toute la classe.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 15 :} Bulletin et classement ---}
+\includegraphics[width=1.1\textwidth]{bulletin.jpeg}
 \end{center}
 \medskip
 
@@ -209,9 +254,11 @@ L'administrateur accède à plusieurs onglets :
     \item \textbf{Types d'infractions :} gérer le catalogue des infractions (libellé, gravité, points)
 \end{itemize}
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Discipline}\fg{}. Naviguez entre les onglets en haut de la page. Dans l'onglet \og{Signalements}\fg{}, utilisez \og{Approuver}\fg{} pour valider un signalement et déduire les points, ou \og{Rejeter}\fg{} pour l'annuler.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 16 :} Gestion disciplinaire ---}
+\includegraphics[width=1.1\textwidth]{rapportdiscipline.jpeg}
 \end{center}
 \medskip
 
@@ -219,9 +266,11 @@ L'administrateur accède à plusieurs onglets :
 
 L'administrateur gère les livres de la bibliothèque scolaire : ajout, modification, suppression avec couverture et fichier PDF.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Bibliothèque}\fg{}. Cliquez sur \og{Ajouter un livre}\fg{} pour ouvrir le formulaire. Remplissez les informations (titre, auteur, cycle, classe) et importez une image de couverture et le fichier PDF du livre. Utilisez les icônes de modification ou de suppression pour gérer les livres existants.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 17 :} Bibliothèque ---}
+\includegraphics[width=1.1\textwidth]{bibliotheque.jpeg}
 \end{center}
 \medskip
 
@@ -234,9 +283,11 @@ L'administrateur peut :
     \item Modérer les messages envoyés par les enseignants (approuver ou rejeter)
 \end{itemize}
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Messagerie}\fg{}. Dans l'onglet \og{Envoyer}\fg{}, sélectionnez un destinataire (tous les parents ou un parent spécifique), rédigez votre message et cliquez sur \og{Envoyer}\fg{}. Dans l'onglet \og{Modération}\fg{}, vous voyez les messages des enseignants en attente : cliquez sur \og{Approuver}\fg{} ou \og{Rejeter}\fg{}.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 18 :} Messagerie ---}
+\includegraphics[width=1.1\textwidth]{messagerieadmin.jpeg}
 \end{center}
 \medskip
 
@@ -244,9 +295,11 @@ L'administrateur peut :
 
 L'administrateur rédige le texte de la procédure d'inscription qui sera affiché aux parents dans leur espace.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Scolarité}\fg{}. Faites défiler jusqu'à la section \og{Procédure d'inscription}\fg{}. Saisissez le texte de la procédure dans la zone de texte, puis cliquez sur \og{Enregistrer}\fg{}. Le texte sera automatiquement affiché aux parents dans leur espace.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 19 :} Édition de la procédure d'inscription ---}
+\includegraphics[width=1.1\textwidth]{proceduredepayement.jpeg}
 \end{center}
 \medskip
 
@@ -258,9 +311,11 @@ L'administrateur rédige le texte de la procédure d'inscription qui sera affich
 
 L'enseignant voit la liste de ses cours assignés avec la classe, la matière, la salle et les informations associées.
 
+\textbf{Pour accéder au tableau de bord :} connectez-vous avec un compte enseignant. Le tableau de bord s'affiche automatiquement après la connexion. Vous pouvez également cliquer sur \og{Tableau de bord}\fg{} dans le menu latéral gauche pour rafraîchir la liste de vos cours.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 20 :} Tableau de bord enseignant ---}
+\includegraphics[width=1.1\textwidth]{tableaudebord.jpeg}
 \end{center}
 \medskip
 
@@ -272,9 +327,11 @@ L'enseignant peut saisir les notes de ses élèves de deux manières :
     \item Via la saisie groupée par classe et matière
 \end{itemize}
 
+\textbf{Pour accéder à la saisie des notes :} dans le menu latéral gauche, cliquez sur \og{Notes}\fg{}. Sélectionnez d'abord la classe, puis la matière. Le tableau des élèves de la classe apparaît avec les colonnes de notes. Saisissez les notes directement dans les champs prévus. Cliquez sur \og{Enregistrer}\fg{} pour sauvegarder. Vous pouvez aussi cliquer sur un cours depuis le tableau de bord, puis sur l'onglet \og{Notes}\fg{} pour saisir les évaluations de ce cours.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 21 :} Saisie des notes ---}
+\includegraphics[width=1.1\textwidth]{saisiedesnotes.jpeg}
 \end{center}
 \medskip
 
@@ -282,9 +339,11 @@ L'enseignant peut saisir les notes de ses élèves de deux manières :
 
 L'enseignant dépose les sujets d'examen et les corrigés au format PDF. Les matières disponibles sont filtrées par classe sélectionnée.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Épreuves}\fg{}. Sélectionnez d'abord la classe dans la liste déroulante. Choisissez ensuite la matière. Cliquez sur \og{Déposer une épreuve}\fg{}, sélectionnez le fichier PDF (sujet ou corrigé) et cliquez sur \og{Uploader}\fg{}.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 22 :} Dépôt d'épreuves ---}
+\includegraphics[width=1.1\textwidth]{depotdesepreuves.jpeg}
 \end{center}
 \medskip
 
@@ -292,9 +351,11 @@ L'enseignant dépose les sujets d'examen et les corrigés au format PDF. Les mat
 
 L'enseignant signale un incident disciplinaire pour un élève. Le signalement est soumis en statut \og{PENDING}\fg{} et doit être approuvé par l'administrateur pour que les points soient déduits.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Discipline}\fg{}. Sélectionnez l'élève concerné dans la liste. Choisissez le type d'infraction dans la liste déroulante. Ajoutez une description si nécessaire, puis cliquez sur \og{Soumettre le signalement}\fg{}. Le signalement apparaîtra dans la liste avec le statut \og{En attente}\fg{}.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 23 :} Signalement disciplinaire ---}
+\includegraphics[width=1.1\textwidth]{discipline.jpeg}
 \end{center}
 \medskip
 
@@ -302,19 +363,23 @@ L'enseignant signale un incident disciplinaire pour un élève. Le signalement e
 
 L'enseignant consulte son emploi du temps personnel avec les créneaux, les classes et les salles.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Planning}\fg{}. Le planning hebdomadaire s'affiche avec vos cours répartis par jour et par créneau. Chaque cours affiche la matière, la classe et la salle. Vous pouvez exporter le planning au format PDF en cliquant sur \og{Export PDF}\fg{}.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 24 :} Planning enseignant ---}
+\includegraphics[width=1.1\textwidth]{planing.jpeg}
 \end{center}
 \medskip
 
 \section{Messagerie}
 
-L'enseignant peut envoyer un message à l'administration. Le message est mis en attente de modération avant d'être transmis au destinataire.
+L'enseignant titulaire (responsable d'une salle/classe) peut envoyer un message à tous les parents des élèves de sa classe. Le message est soumis en statut \og{PENDING}\fg{} et doit être approuvé par l'administrateur avant d'être transmis aux parents.
+
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Messagerie}\fg{}. Si vous êtes titulaire d'une classe, le formulaire d'envoi apparaît : rédigez votre message dans la zone de texte, puis cliquez sur \og{Envoyer}\fg{}. La liste des messages envoyés s'affiche en dessous avec leur statut (En attente, Approuvé, Rejeté). Si vous n'êtes pas titulaire, un message vous informera que cette fonctionnalité n'est pas disponible.
 
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 25 :} Messagerie enseignant ---}
+\includegraphics[width=1.1\textwidth]{messagerie.jpeg}
 \end{center}
 \medskip
 
@@ -326,9 +391,11 @@ L'enseignant peut envoyer un message à l'administration. Le message est mis en 
 
 Le parent soumet une demande d'inscription pour son enfant via un formulaire (nom, prénom, date et lieu de naissance, sexe, cycle, classe, photo et reçu de paiement). La demande est examinée par l'administrateur. Le parent peut suivre l'état de ses demandes depuis son espace.
 
+\textbf{Pour accéder au formulaire d'inscription :} connectez-vous avec un compte parent. Sur le tableau de bord, cliquez sur \og{Inscrire un enfant}\fg{}. Remplissez tous les champs obligatoires du formulaire. Importez une photo de l'enfant et le reçu de paiement des frais d'inscription au format PDF ou image. Cliquez sur \og{Soumettre}\fg{}. Vous pouvez suivre l'état de votre demande dans la section \og{Mes demandes}\fg{}.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 26 :} Formulaire d'inscription ---}
+\includegraphics[width=1.1\textwidth]{formulaired'inscription.jpeg}
 \end{center}
 \medskip
 
@@ -336,9 +403,11 @@ Le parent soumet une demande d'inscription pour son enfant via un formulaire (no
 
 Le parent sélectionne un enfant, consulte les montants de la scolarité (inscription, pension) et l'échéancier des tranches configurés pour sa classe. Il choisit le nombre de tranches à payer, le mode de paiement (cash à l'école ou virement), joint son reçu au format PDF et soumet sa demande. L'historique des paiements est consultable.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Paiements}\fg{}. Sélectionnez votre enfant dans la liste déroulante. Les informations de scolarité s'affichent (montant inscription, pension, échéancier). Choisissez le nombre de tranches à régler. Sélectionnez le mode de paiement. Importez le reçu de paiement au format PDF. Cliquez sur \og{Soumettre la demande}\fg{}. Consultez l'historique dans le tableau en bas de page.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 27 :} Paiement de la pension ---}
+\includegraphics[width=1.1\textwidth]{payementpension.jpeg}
 \end{center}
 \medskip
 
@@ -346,9 +415,11 @@ Le parent sélectionne un enfant, consulte les montants de la scolarité (inscri
 
 Le parent accède à un récapitulatif des frais de scolarité et des échéanciers pour toutes les classes via un bouton \og{Info Scolarité}\fg{}.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Scolarité}\fg{}. La page affiche la procédure d'inscription définie par l'administration. Cliquez sur le bouton \og{Info Scolarité}\fg{} pour ouvrir une fenêtre modale récapitulant les frais et échéanciers de toutes les classes.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 28 :} Information scolarité ---}
+\includegraphics[width=1.1\textwidth]{infoscolarite.jpeg}
 \end{center}
 \medskip
 
@@ -356,9 +427,11 @@ Le parent accède à un récapitulatif des frais de scolarité et des échéanci
 
 Le parent consulte la bibliothèque scolaire : recherche par titre ou auteur, filtre par cycle, et télécharge les PDF des livres disponibles.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Bibliothèque}\fg{}. Utilisez la barre de recherche pour trouver un livre par titre ou auteur. Filtrez par cycle ou classe si nécessaire. Cliquez sur \og{Télécharger}\fg{} sur la fiche d'un livre pour obtenir le fichier PDF.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 29 :} Bibliothèque parent ---}
+\includegraphics[width=1.1\textwidth]{bibliothequeparent.jpeg}
 \end{center}
 \medskip
 
@@ -366,9 +439,11 @@ Le parent consulte la bibliothèque scolaire : recherche par titre ou auteur, fi
 
 Le parent visualise le solde de points de conduite de son enfant et l'historique des incidents avec les détails (date, type, gravité, points déduits). Une alerte s'affiche si le solde est critique.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Discipline}\fg{}. Sélectionnez votre enfant dans la liste déroulante. Le solde de points s'affiche avec un code couleur (vert = bon, orange = attention, rouge = critique). L'historique des incidents apparaît dans le tableau avec la date, le type d'infraction et les points déduits.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 30 :} Discipline parent ---}
+\includegraphics[width=1.1\textwidth]{disciplineparent.jpeg}
 \end{center}
 \medskip
 
@@ -376,9 +451,11 @@ Le parent visualise le solde de points de conduite de son enfant et l'historique
 
 Le parent consulte les bulletins de notes de ses enfants avec les résultats par matière.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Bulletins}\fg{}. Sélectionnez votre enfant et le trimestre souhaité. Le bulletin s'affiche avec les notes par matière, les moyennes et les appréciations. Cliquez sur \og{Exporter PDF}\fg{} pour télécharger le bulletin au format PDF.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 31 :} Bulletins parent ---}
+\includegraphics[width=1.1\textwidth]{bulletinparent.jpeg}
 \end{center}
 \medskip
 
@@ -386,9 +463,11 @@ Le parent consulte les bulletins de notes de ses enfants avec les résultats par
 
 Le parent visualise l'emploi du temps de son enfant pour la semaine en cours.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Planning}\fg{}. Sélectionnez votre enfant dans la liste déroulante. Le planning hebdomadaire s'affiche avec les matières, les salles et les créneaux horaires.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 32 :} Planning enfant ---}
+\includegraphics[width=1.1\textwidth]{planingparent.jpeg}
 \end{center}
 \medskip
 
@@ -396,9 +475,11 @@ Le parent visualise l'emploi du temps de son enfant pour la semaine en cours.
 
 Le parent accède à une vue complète de son enfant : informations personnelles, notes, évaluations, incidents disciplinaires.
 
+\textbf{Pour accéder à cette page :} dans le menu latéral gauche, cliquez sur \og{Profil}\fg{}. Sélectionnez votre enfant. La page affiche les informations personnelles (photo, nom, prénom, classe, cycle), les résultats scolaires, les évaluations récentes et l'historique disciplinaire.
+
 \medskip
 \begin{center}
-\framebox{--- \textbf{Schéma 33 :} Profil enfant ---}
+\includegraphics[width=1.1\textwidth]{profil.jpeg}
 \end{center}
 \medskip
 

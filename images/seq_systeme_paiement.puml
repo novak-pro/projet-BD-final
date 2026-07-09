@@ -1,0 +1,22 @@
+@startuml
+actor Parent as parent
+participant "Système\nÉcole Excellence" as system
+actor Administrateur as admin
+
+== Phase 1 : Initiation du paiement par le parent ==
+
+parent -> system : 1. Sélectionne un élève\net consulte les frais de scolarité
+system --> parent : 2. Affiche le montant total,\nles tranches disponibles\net les dates limites
+parent -> system : 3. Choisit une tranche\net une méthode de paiement\n(Orange Money / MTN MoMo / Carte)
+parent -> system : 4. Confirme le paiement
+system --> parent : 5. Accusé de réception :\n"Demande de paiement soumise.\nEn attente de validation administrative."
+
+== Phase 2 : Validation par l'administrateur ==
+
+admin -> system : 6. Consulte la liste des\npaiements en attente
+system --> admin : 7. Affiche les paiements\navec statut "PENDING"
+admin -> system : 8. Vérifie les informations\net clique sur "Valider"
+system --> admin : 9. Confirmation :\n"Paiement validé avec succès"
+
+system --> parent : 10. Notification :\n"Votre paiement a été validé\npar l'administration"
+@enduml

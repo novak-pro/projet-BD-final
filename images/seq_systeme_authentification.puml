@@ -1,0 +1,13 @@
+@startuml
+actor Utilisateur as user
+participant "Système\nÉcole Excellence" as system
+
+user -> system : 1. Saisit email et mot de passe\net clique sur "Connexion"
+system --> user : 2. Vérification des identifiants
+
+alt Identifiants incorrects
+  system --> user : 3a. Message d'erreur :\n"Email ou mot de passe incorrect"
+else Identifiants valides
+  system --> user : 3b. Authentification réussie\nRedirection vers le tableau de bord\nselon le rôle (Admin/Enseignant/Parent)
+end
+@enduml

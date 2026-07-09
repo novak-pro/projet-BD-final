@@ -1,0 +1,1065 @@
+\documentclass[12pt,a4paper]{report}
+ 
+% ===================== PACKAGES =====================
+\usepackage[french]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{tabularx}
+ 
+% ===================== EN-TETES =====================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{Manuel Technique -- École Excellence}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+ 
+% ===================== HYPERLIENS =====================
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue,
+    pdftitle={Manuel Technique - Plateforme École Excellence},
+    pdfauthor={Projet BD}
+}
+ 
+% ===================== STYLE CODE =====================
+\definecolor{codebg}{RGB}{245,245,245}
+\lstset{
+    backgroundcolor=\color{codebg},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    columns=fullflexible,
+    keepspaces=true
+}
+ 
+\begin{document}
+ 
+% ===================== TABLE DES MATIERES =====================
+\tableofcontents
+ 
+% =====================================================
+\chapter{Introduction générale}
+ 
+\section{Contexte du projet}
+Ce projet est une solution ERP (Enterprise Resource Planning) complète destinée à la gestion d'une école primaire. Le système vise à dématérialiser l'ensemble des opérations administratives, pédagogiques et financières de l'établissement scolaire \textbf{École Excellence}, en remplaçant les processus papier par une plateforme web centralisée.
+
+Le développement s'appuie sur une architecture moderne full-stack TypeScript avec un backend Express et Prisma ORM, un frontend React 19 avec Vite et TailwindCSS, et une base de données PostgreSQL hébergée sur Supabase.
+
+\section{Objectif de l'application}
+L'application a pour objectifs principaux de :
+\begin{itemize}[leftmargin=*]
+    \item Centraliser les informations relatives aux élèves, aux parents et au personnel.
+    \item Simplifier la gestion financière (paiement des scolarités).
+    \item Faciliter le suivi pédagogique (saisie des notes, génération des bulletins, emplois du temps).
+    \item Gérer les inscriptions et les demandes d'admission.
+    \item Permettre la communication via une messagerie interne avec modération.
+    \item Gérer la bibliothèque scolaire et les épreuves.
+    \item Assurer le suivi disciplinaire avec un système de points de conduite.
+\end{itemize}
+ 
+\section{Public cible et acteurs}
+\begin{longtable}{|p{4cm}|p{10.5cm}|}
+\hline
+\textbf{Rôle} & \textbf{Description} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Rôle} & \textbf{Description} \\
+\hline
+\endhead
+Administrateur Principal & Pilotage stratégique, gestion complète de l'établissement, validation des inscriptions, modération des messages, configuration des scolarités. \\
+\hline
+Personnel (Enseignants) & Saisie des notes, dépôt d'épreuves, signalement disciplinaire, consultation du planning, messagerie (titulaires). \\
+\hline
+Parents & Suivi de la scolarité des enfants, paiements, consultation des bulletins et du planning, bibliothèque. \\
+\hline
+\end{longtable}
+ 
+\section{Périmètre fonctionnel}
+Le périmètre couvert par l'application comprend :
+\begin{itemize}[leftmargin=*]
+    \item Gestion administrative des élèves, enseignants et parents.
+    \item Gestion pédagogique : classes, cycles, cours, emplois du temps, évaluations et bulletins.
+    \item Gestion financière : scolarité par classe, tranches de paiement, validation des reçus.
+    \item Gestion de la sécurité et des accès (authentification JWT, RBAC).
+    \item Gestion multi-annuelle (historisation par année académique).
+    \item Bibliothèque numérique avec upload de couvertures et PDF.
+    \item Système disciplinaire avec points de conduite.
+\end{itemize}
+
+\section{Glossaire}
+\begin{longtable}{|p{2.5cm}|p{12cm}|}
+\hline
+\textbf{Terme} & \textbf{Définition} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Terme} & \textbf{Définition} \\
+\hline
+\endhead
+JWT & Jeton cryptographique (JSON Web Token) utilisé pour l'authentification et la gestion des sessions. \\
+\hline
+Prisma ORM & Outil de mapping objet-relationnel pour TypeScript/Node.js, générant un client typé. \\
+\hline
+RBAC & Role-Based Access Control -- contrôle d'accès basé sur les rôles. \\
+\hline
+SPA & Single Page Application -- application web où l'interface est chargée une seule fois et mise à jour dynamiquement (React). \\
+\hline
+API REST & Interface de programmation respectant les principes REST, exposant des ressources via HTTP. \\
+\hline
+CORS & Cross-Origin Resource Sharing -- mécanisme de sécurité encadrant les requêtes inter-domaines. \\
+\hline
+Multer & Middleware Express pour la gestion des uploads de fichiers. \\
+\hline
+\end{longtable}
+ 
+% =====================================================
+\chapter{Architecture technique}
+ 
+\section{Architecture globale}
+L'application est construite selon une architecture client-serveur découplée (frontend et backend séparés, communiquant via une API REST), déployée sur deux plateformes cloud distinctes :
+\begin{itemize}[leftmargin=*]
+    \item Backend (API REST) hébergé sur Railway, base de données PostgreSQL sur Supabase.
+    \item Frontend (interface React) hébergé sur Vercel.
+\end{itemize}
+
+Côté backend, le code suit un patron MVC adapté : Routes $\rightarrow$ Middlewares $\rightarrow$ Contrôleurs $\rightarrow$ Prisma Client (accès BDD).
+
+\subsection*{Accès à l'application déployée}
+\begin{longtable}{|p{4cm}|p{10.5cm}|}
+\hline
+\textbf{Élément} & \textbf{Valeur} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Élément} & \textbf{Valeur} \\
+\hline
+\endhead
+API Backend & \url{https://projet-bd-final-production.up.railway.app} \\
+\hline
+Frontend (Vercel) & \url{https://school-management-mauve-seven.vercel.app} \\
+\hline
+Base de données & PostgreSQL sur Supabase (AWS Europe) \\
+\hline
+Documentation & \url{https://projet-bd-final-production.up.railway.app/api-docs} (si déployée) \\
+\hline
+\end{longtable}
+ 
+\section{Stack technologique}
+ 
+\subsection*{Backend (server/)}
+\begin{longtable}{|p{4.5cm}|p{10cm}|}
+\hline
+\textbf{Technologie} & \textbf{Rôle} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Technologie} & \textbf{Rôle} \\
+\hline
+\endhead
+Node.js \& Express 5 & Routage HTTP et logique métier \\
+\hline
+TypeScript 6 & Typage statique côté serveur \\
+\hline
+Prisma ORM 6 & Mapping objet-relationnel et client typé \\
+\hline
+PostgreSQL 15 & Base de données relationnelle \\
+\hline
+Bcrypt & Hachage sécurisé des mots de passe \\
+\hline
+JWT (jsonwebtoken) & Authentification par jeton \\
+\hline
+Multer & Gestion des uploads (photos élèves, livres, épreuves) \\
+\hline
+CORS & Restriction des origines autorisées \\
+\hline
+ts-node-dev & Rechargement automatique en développement \\
+\hline
+\end{longtable}
+ 
+\subsection*{Frontend (client/)}
+\begin{longtable}{|p{4.5cm}|p{10cm}|}
+\hline
+\textbf{Technologie} & \textbf{Rôle} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Technologie} & \textbf{Rôle} \\
+\hline
+\endhead
+React 19 & Bibliothèque d'interface utilisateur \\
+\hline
+Vite 8 & Outil de build et serveur de développement \\
+\hline
+Tailwind CSS v4 & Framework CSS utilitaire \\
+\hline
+TypeScript 6 & Typage statique côté client \\
+\hline
+Lucide React & Bibliothèque d'icônes \\
+\hline
+Axios & Client HTTP avec intercepteurs (injection du token JWT) \\
+\hline
+React Router DOM v6 & Routage côté client avec rôles \\
+\hline
+jsPDF + jspdf-autotable & Génération de bulletins PDF \\
+\hline
+react-hot-toast & Notifications toast \\
+\hline
+i18n (JSON) & Internationalisation français/anglais \\
+\hline
+\end{longtable}
+ 
+\section{Schéma d'architecture}
+La figure ci-dessous illustre l'architecture générale du système :
+
+\begin{center}
+\begin{tabular}{c}
+\textbf{Frontend (Vercel)} : React SPA $\rightarrow$ Axios Interceptors (JWT) $\rightarrow$ Appels API \\
+$\downarrow$ Requêtes HTTPS \\
+\textbf{Backend (Railway)} : Express Routes $\rightarrow$ Auth Middleware $\rightarrow$ Controllers $\rightarrow$ Prisma Client \\
+(+ Uploads stockés sur le filesystem local) \\
+$\downarrow$ Requêtes SQL \\
+\textbf{Database (Supabase)} : PostgreSQL 15 \\
+\end{tabular}
+\end{center}
+ 
+\section{Flux de données entre modules}
+Le flux général d'une requête est le suivant :
+\begin{enumerate}[leftmargin=*]
+    \item L'utilisateur interagit avec l'interface React (formulaires, listes, dashboards).
+    \item Un appel Axios est déclenché, injectant automatiquement le token JWT dans l'en-tête \texttt{Authorization}.
+    \item La requête arrive sur une route Express côté backend.
+    \item Le middleware \texttt{authMiddleware.ts} vérifie la validité du token JWT et l'état actif du compte.
+    \item Le middleware \texttt{restrictTo(...)} vérifie les droits de l'utilisateur selon son rôle.
+    \item Le contrôleur traite la requête et utilise Prisma Client pour interagir avec PostgreSQL.
+    \item Prisma exécute une requête SQL préparée (prévention des injections).
+    \item La réponse JSON est renvoyée au frontend, qui met à jour l'interface.
+\end{enumerate}
+ 
+\section{Organisation du code source}
+Le code source du projet est divisé en deux dossiers principaux correspondant au backend et au frontend.
+
+\subsection*{Structure du Backend (server/)}
+L'arborescence suit le patron MVC avec Prisma ORM :
+
+\begin{lstlisting}
+server/
+  index.ts              -> Point d'entree (demarrage serveur)
+  app.ts                -> Configuration Express (middlewares, routes)
+  prisma/
+    schema.prisma       -> Schema de donnees (enums, models, relations)
+    migrations/         -> Migrations Prisma
+  src/
+    controllers/        -> Logique metier (20 controleurs)
+    routes/             -> Declaration des endpoints (20 routeurs)
+    middlewares/        -> Authentification, roles, uploads
+    lib/
+      prisma.ts         -> Instance unique Prisma Client
+    scripts/
+      createAdmin.ts    -> Script de creation admin
+    seed.ts             -> Donnees initiales
+  uploads/
+    epreuves/           -> Fichiers d'epreuves
+    livres/             -> Couvertures et PDFs de livres
+    eleves/             -> Photos des eleves
+  tsconfig.json
+  package.json
+\end{lstlisting}
+
+\subsection*{Structure du Frontend (client/)}
+L'interface React est organisée par fonctionnalité et par rôle :
+
+\begin{lstlisting}
+client/
+  src/
+    App.tsx             -> Routeur principal et montage
+    main.tsx            -> Point d'entree React
+    index.css           -> Styles globaux
+    assets/             -> Images et ressources statiques
+    components/         -> Composants reutilisables
+      layout/           -> AdminLayout, TeacherLayout, ParentLayout
+      admin/            -> Affectation, classement, salles
+      teacher/          -> Saisie de notes
+      parent/           -> Vue discipline
+      ProtectedRoute.tsx -> Garde par role
+      Spinner.tsx       -> Indicateur de chargement
+      LanguageSwitcher.tsx -> Changement de langue
+    pages/              -> Pages par role
+      admin/            -> 12 pages admin
+      teacher/          -> 7 pages enseignant
+      *.tsx             -> Pages partagees (Login, Register, etc.)
+    services/           -> Appels API (axiosInstance, apiServices)
+    contexts/           -> Contextes React (Auth, etc.)
+    hooks/              -> Hooks personnalises
+    i18n/               -> Fichiers de traduction (fr.json, en.json)
+    types/              -> Types TypeScript partages
+    utils/              -> Utilitaires (ex. generateBulletinPDF)
+  package.json
+  vite.config.ts
+  tsconfig.json
+\end{lstlisting}
+ 
+% =====================================================
+\chapter{Installation et configuration}
+ 
+\section{Prérequis matériels et logiciels}
+\begin{longtable}{|p{5cm}|p{9.5cm}|}
+\hline
+\textbf{Prérequis} & \textbf{Détail} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Prérequis} & \textbf{Détail} \\
+\hline
+\endhead
+Système d'exploitation & Windows / Linux / macOS \\
+\hline
+Node.js & Version 18 ou supérieure \\
+\hline
+PostgreSQL & Version 15 ou supérieure (local via Docker ou Supabase distant) \\
+\hline
+Gestionnaire de paquets & npm (fourni avec Node.js) \\
+\hline
+Navigateur web & Chrome, Firefox, Edge (versions récentes) \\
+\hline
+Espace disque & 500 Mo minimum \\
+\hline
+Docker & Optionnel (pour PostgreSQL local via docker-compose) \\
+\hline
+Connexion Internet & Requise pour le déploiement et les dépendances npm \\
+\hline
+\end{longtable}
+ 
+\section{Installation du Backend}
+\begin{enumerate}[leftmargin=*]
+    \item Cloner le dépôt et se positionner dans le dossier du backend
+\begin{lstlisting}
+git clone <url-du-depot>
+cd server
+\end{lstlisting}
+ 
+    \item Installer les dépendances
+\begin{lstlisting}
+npm install
+\end{lstlisting}
+    Ceci exécute automatiquement \texttt{prisma generate} via la commande \texttt{postinstall}.
+ 
+    \item Créer le fichier de variables d'environnement \texttt{.env} à la racine de \texttt{server/} :
+\begin{lstlisting}
+DATABASE_URL="postgresql://admin:ecole_password@localhost:5432/ecole2026?schema=public"
+JWT_SECRET="choisis_une_phrase_tres_longue_et_secrete_ici"
+PORT=5000
+\end{lstlisting}
+ 
+    \item Démarrer une instance PostgreSQL (via Docker)
+\begin{lstlisting}
+docker compose up -d db
+\end{lstlisting}
+    Ou utiliser directement Supabase en remote.
+ 
+    \item Appliquer les migrations Prisma
+\begin{lstlisting}
+npx prisma migrate dev
+\end{lstlisting}
+ 
+    \item (Optionnel) Insérer les données de seed
+\begin{lstlisting}
+npx ts-node-dev src/seed.ts
+\end{lstlisting}
+ 
+    \item Démarrer le serveur en mode développement
+\begin{lstlisting}
+npm run dev
+\end{lstlisting}
+    L'API est alors disponible sur \url{http://localhost:5000}.
+\end{enumerate}
+ 
+\section{Installation du Frontend}
+\begin{enumerate}[leftmargin=*]
+    \item Se positionner dans le dossier du client
+\begin{lstlisting}
+cd client
+\end{lstlisting}
+ 
+    \item Installer les dépendances
+\begin{lstlisting}
+npm install
+\end{lstlisting}
+ 
+    \item Créer le fichier \texttt{.env}
+\begin{lstlisting}
+VITE_API_URL=http://localhost:5000/api
+\end{lstlisting}
+ 
+    \item Démarrer le serveur de développement
+\begin{lstlisting}
+npm run dev
+\end{lstlisting}
+    L'application est alors disponible sur \url{http://localhost:5173}.
+\end{enumerate}
+ 
+\section{Déploiement (Railway / Vercel / Supabase)}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Base de données} : hébergée sur Supabase (PostgreSQL 15). L'URL de connexion est configurée dans la variable \texttt{DATABASE\_URL} du backend.
+    \item \textbf{Backend} : déployé sur Railway. Les variables d'environnement (\texttt{DATABASE\_URL}, \texttt{JWT\_SECRET}, \texttt{PORT}) sont configurées dans le tableau de bord Railway. Le backend expose les dossiers \texttt{/uploads} en statique.
+    \item \textbf{Frontend} : déployé sur Vercel. La variable \texttt{VITE\_API\_URL} pointe vers \url{https://projet-bd-final-production.up.railway.app/api}. Le fichier \texttt{vercel.json} à la racine configure le build et les réécritures.
+    \item Le backend doit autoriser le domaine Vercel via la configuration CORS (dans \texttt{app.ts}).
+\end{itemize}
+ 
+% =====================================================
+\chapter{Modèle de données}
+ 
+\section{Diagramme relationnel}
+La base de données PostgreSQL contient 27 tables principales. Le schéma Prisma est défini dans \texttt{server/prisma/schema.prisma} avec les enums et modèles suivants.
+
+\section{Enumérations}
+\begin{longtable}{|p{3.5cm}|p{10.5cm}|}
+\hline
+\textbf{Enum} & \textbf{Valeurs} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Enum} & \textbf{Valeurs} \\
+\hline
+\endhead
+Role & \texttt{ADMIN\_PRINCIPAL}, \texttt{PERSONNEL}, \texttt{PARENT} \\
+\hline
+UserStatus & \texttt{PENDING}, \texttt{ACTIVE}, \texttt{DISABLED} \\
+\hline
+FonctionPersonnel & \texttt{ENSEIGNANT}, \texttt{SURVEILLANT}, \texttt{DIRECTION}, \texttt{SECRETAIRE}, \texttt{COMPTABLE}, \texttt{ADMINISTRATIF} \\
+\hline
+EnrollmentStatus & \texttt{PENDING}, \texttt{APPROVED}, \texttt{REJECTED} \\
+\hline
+PaymentMethod & \texttt{ORANGE\_MONEY}, \texttt{MTN\_MOMO}, \texttt{CARTE\_BANCAIRE} \\
+\hline
+PaymentStatus & \texttt{PENDING}, \texttt{VALIDATED}, \texttt{REJECTED} \\
+\hline
+AnneeStatut & \texttt{PREVUE}, \texttt{EN\_COURS}, \texttt{TERMINEE} \\
+\hline
+SalleEtat & \texttt{DISPONIBLE}, \texttt{EN\_SERVICE}, \texttt{EN\_RENOVATION}, \texttt{EN\_CONSTRUCTION}, \texttt{FERMEE\_TEMPORAIREMENT} \\
+\hline
+IncidentType & \texttt{RETARD}, \texttt{ABSENCE\_INJUSTIFIEE}, \texttt{COMPORTEMENT}, \texttt{AUTRE} \\
+\hline
+JourSemaine & \texttt{LUNDI}, \texttt{MARDI}, \texttt{MERCREDI}, \texttt{JEUDI}, \texttt{VENDREDI}, \texttt{SAMEDI} \\
+\hline
+\end{longtable}
+
+\section{Modèles principaux}
+\begin{longtable}{|p{3cm}|p{4cm}|p{7.5cm}|}
+\hline
+\textbf{Modèle} & \textbf{Table SQL} & \textbf{Description} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Modèle} & \textbf{Table SQL} & \textbf{Description} \\
+\hline
+\endhead
+User & users & Table centrale d'authentification (email, password hash, role, status) \\
+\hline
+Admin & Admin & Profil administrateur (nom, mobile) lié 1:1 à User \\
+\hline
+Personnel & Personnel & Personnel enseignant et administratif (nom, prénom, fonction) \\
+\hline
+Parents & Parents & Profil parent (nom, prénom, téléphone) lié 1:1 à User \\
+\hline
+Eleve & Eleve & Élève (matricule auto, nom, prénom, photo, soldePoints) \\
+\hline
+Classe & Classe & Classes par cycle (libelle, responsable) \\
+\hline
+Cycle & Cycle & Cycles scolaires (Premier, Deuxième, Troisième cycle) \\
+\hline
+Salle & Salle & Salles de classe (libelle, position, capacité, etat) \\
+\hline
+Cours & Cours & Cours dispensés (matière, classe, salle, coefficient) \\
+\hline
+Matiere & Matiere & Matières enseignées (nom, code) \\
+\hline
+Note & Note & Notes des élèves (valeur, évaluation) \\
+\hline
+Evaluation & Evaluation & Évaluations par cours (note, appréciation) \\
+\hline
+Incident & Incident & Incidents disciplinaires (type, gravité, points déduits) \\
+\hline
+Scolarite & Scolarite & Configuration des frais par classe (inscription, pension, tranches) \\
+\hline
+Tranche & Tranche & Échéancier des tranches (libellé, montant, date limite) \\
+\hline
+Payment & Payment & Demandes de paiement (montant, méthode, reçu PDF, statut) \\
+\hline
+Message & Message & Messagerie interne (contenu, type, statut, émetteur, destinataire) \\
+\hline
+EmploiDuTemps & EmploiDuTemps & Créneaux de planning (jour, heure, cours, salle) \\
+\hline
+Livre & Livre & Bibliothèque (titre, auteur, couverture, PDF) \\
+\hline
+Epreuve & Epreuve & Épreuves et examens (sujet PDF, corrigé PDF) \\
+\hline
+AnneeAcademique & AnneeAcademique & Années académiques (libelle, dates, statut) \\
+\hline
+Trimestre & Trimestre & Trimestres par année académique \\
+\hline
+Session & Session & Sessions d'examen par trimestre \\
+\hline
+Frequente & Frequente & Historique de fréquentation (élève $\rightarrow$ classe $\rightarrow$ année) \\
+\hline
+EnrollmentRequest & EnrollmentRequest & Demandes d'inscription des parents \\
+\hline
+TypeInfraction & TypeInfraction & Catalogue d'infractions (libellé, gravité, points) \\
+\hline
+ProcedureInscription & ProcedureInscription & Texte de la procédure d'inscription \\
+\hline
+\end{longtable}
+ 
+% =====================================================
+\chapter{Description fonctionnelle des modules}
+ 
+\section{Module d'authentification et comptes}
+\begin{itemize}[leftmargin=*]
+    \item Authentification basée sur JWT avec génération de token à la connexion (\texttt{POST /api/auth/login}).
+    \item Trois rôles : \texttt{ADMIN\_PRINCIPAL}, \texttt{PERSONNEL} (enseignants), \texttt{PARENT}.
+    \item Les comptes sont créés avec le statut \texttt{PENDING} et doivent être activés par l'administrateur.
+    \item Hachage des mots de passe avec \texttt{bcrypt} (sel automatique).
+    \item Middleware \texttt{protect} : vérifie le token JWT et l'état actif du compte.
+    \item Middleware \texttt{restrictTo(...)} : contrôle d'accès par rôle.
+\end{itemize}
+ 
+\section{Module d'inscription et admissions}
+\begin{itemize}[leftmargin=*]
+    \item Les parents soumettent des demandes d'inscription via \texttt{POST /api/enrollments}.
+    \item Chaque demande inclut photo de l'enfant et reçu de paiement (uploads multer).
+    \item L'administrateur approuve ou rejette via \texttt{PATCH /api/enrollments/:id/process}.
+    \item L'approbation crée automatiquement le dossier élève dans la base.
+    \item Les cycles et classes sont gérés via les endpoints \texttt{/api/enrollments/cycles} et \texttt{/api/enrollments/classes}.
+\end{itemize}
+ 
+\section{Module pédagogique}
+ 
+\subsection*{Élèves}
+\begin{itemize}[leftmargin=*]
+    \item CRUD complet via \texttt{/api/students} avec génération automatique de matricule.
+    \item Attribution d'une photo administrateur distincte (\texttt{photoAdmin}) affichée sur le bulletin PDF.
+    \item Solde de points de conduite (20 par défaut) avec code couleur.
+    \item Filtrage par classe (\texttt{GET /api/students/class/:classroomId}).
+\end{itemize}
+ 
+\subsection*{Cours et matières}
+\begin{itemize}[leftmargin=*]
+    \item Les matières sont créées via \texttt{/api/matieres} et associées aux classes.
+    \item Les cours lient matière, classe, salle, enseignant et coefficient.
+    \item L'enseignant consulte ses cours via \texttt{GET /api/cours/mes-cours}.
+\end{itemize}
+ 
+\subsection*{Évaluations et notes}
+\begin{itemize}[leftmargin=*]
+    \item Saisie des notes individuelle par cours ou groupée par classe/matière.
+    \item Saisie groupée : \texttt{POST /api/notes/bulk} avec tableau de notes.
+    \item Consultation par élève via \texttt{GET /api/notes/eleve/:eleveId}.
+\end{itemize}
+ 
+\subsection*{Bulletins}
+\begin{itemize}[leftmargin=*]
+    \item Calcul automatique des moyennes et classements par classe.
+    \item Trois endpoints : classique (\texttt{/api/bulletins/classe}), détail (\texttt{/api/bulletins/details}), complet (\texttt{/api/bulletins/complet}).
+    \item Génération PDF côté client avec jsPDF (design complet : bandeau, matières, assiduité, signatures, photo admin).
+\end{itemize}
+ 
+\subsection*{Emplois du temps}
+\begin{itemize}[leftmargin=*]
+    \item Créneaux définis par jour, heure, cours et salle.
+    \item Consultation par classe, salle, enseignant ou élève.
+    \item Export PDF du planning.
+\end{itemize}
+ 
+\section{Module financier}
+\begin{itemize}[leftmargin=*]
+    \item Configuration des frais de scolarité par classe (montant inscription, pension, nombre de tranches) via \texttt{/api/scolarite}.
+    \item Échéancier détaillé via \texttt{/api/scolarite/tranches}.
+    \item Les parents initient un paiement (\texttt{POST /api/payments}) avec reçu PDF.
+    \item L'administrateur valide ou rejette via \texttt{PATCH /api/payments/:id/validate}.
+    \item Consultation de l'historique et des configurations.
+\end{itemize}
+ 
+\section{Module disciplinaire}
+\begin{itemize}[leftmargin=*]
+    \item Catalogue d'infractions avec barème de points via \texttt{/api/discipline/types}.
+    \item Signalement d'incidents par les enseignants (statut \texttt{PENDING}) ou rapport direct par l'admin.
+    \item L'administrateur approuve les signalements, ce qui déduit les points de conduite.
+    \item Alerte automatique quand le solde $\le$ 10/20.
+    \item Consultation par élève via \texttt{GET /api/discipline/eleve/:eleveId}.
+\end{itemize}
+ 
+\section{Module bibliothèque}
+\begin{itemize}[leftmargin=*]
+    \item Gestion complète des livres (titre, auteur, maison d'édition, description, cycle, classe, langue).
+    \item Upload de couverture (image) et fichier PDF via multer (20 Mo max).
+    \item Consultation et téléchargement par les parents.
+\end{itemize}
+ 
+\section{Module messagerie}
+\begin{itemize}[leftmargin=*]
+    \item L'administrateur envoie des annonces (tous les parents) ou des messages personnels.
+    \item L'enseignant titulaire envoie des messages aux parents de sa classe (statut \texttt{PENDING}).
+    \item L'administrateur modère les messages des enseignants (\texttt{PATCH /api/messages/:id/moderate}).
+    \item Consultation filtrée par rôle (admin voit tout, parent voit ses messages).
+\end{itemize}
+ 
+\section{Gestion du contexte annuel}
+Le système gère l'historique via les années académiques :
+\begin{itemize}[leftmargin=*]
+    \item Création et gestion des années via \texttt{/api/academique/annees}.
+    \item Génération automatique des trimestres et sessions.
+    \item L'utilisateur peut basculer entre les années pour visualiser les données historisées.
+    \item Table \texttt{Frequente} pour tracer la classe d'un élève par année.
+\end{itemize}
+ 
+% =====================================================
+\chapter{Sécurité}
+ 
+\section{Authentification}
+L'authentification repose sur des jetons JWT (\texttt{jsonwebtoken}), générés à la connexion et transmis dans l'en-tête \texttt{Authorization: Bearer <token>}. Le middleware \texttt{protect} dans \texttt{authMiddleware.ts} vérifie :
+\begin{enumerate}
+    \item La présence et le format du token (Bearer).
+    \item La validité cryptographique et l'expiration.
+    \item L'existence du compte utilisateur en base.
+    \item Le statut actif du compte (\texttt{status === 'ACTIVE'}).
+\end{enumerate}
+ 
+\section{Gestion des rôles (RBAC)}
+La fonction \texttt{restrictTo(...)} dans \texttt{authMiddleware.ts} vérifie que le rôle (\texttt{req.user.role}) est inclus dans la liste des rôles autorisés. Les rôles sont :
+\begin{longtable}{|p{3.5cm}|p{11cm}|}
+\hline
+\textbf{Rôle} & \textbf{Périmètre} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Rôle} & \textbf{Périmètre} \\
+\hline
+\endhead
+\texttt{ADMIN\_PRINCIPAL} & Accès total : gestion élèves, personnel, scolarité, planning, discipline, bibliothèque, messages, académique \\
+\hline
+\texttt{PERSONNEL} & Enseignants : saisie notes, dépôt épreuves, signalement discipline, planning personnel, messagerie titulaire \\
+\hline
+\texttt{PARENT} & Consultation enfants, paiements, bibliothèque, discipline, bulletins, planning \\
+\hline
+\end{longtable}
+ 
+\section{Protection des données}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Hachage des mots de passe} : réalisé avec \texttt{bcrypt} (salage + hachage), aucun mot de passe stocké en clair.
+    \item \textbf{Protection contre les injections SQL} : Prisma ORM utilise systématiquement des requêtes préparées paramétrées.
+    \item \textbf{CORS} : le backend restreint les requêtes entrantes aux domaines autorisés via le module \texttt{cors}.
+    \item \textbf{Uploads de fichiers} : gérés via \texttt{multer} avec limites de taille (5 Mo photos, 10 Mo épreuves, 20 Mo livres) et filtres de types MIME (images JPEG/PNG, PDF).
+    \item \textbf{Suppression logique} : les élèves et entités sont désactivés (\texttt{actif=0}) plutôt que supprimés physiquement.
+\end{itemize}
+ 
+% =====================================================
+\chapter{API / Interfaces}
+ 
+\section{Convention des routes}
+Toutes les routes sont préfixées par \texttt{/api}. Les endpoints suivent le pattern REST standard :
+
+\begin{longtable}{|p{3cm}|p{2cm}|p{4cm}|p{6cm}|}
+\hline
+\textbf{Module} & \textbf{Méthodes} & \textbf{Exemple} & \textbf{Description} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Module} & \textbf{Méthodes} & \textbf{Exemple} & \textbf{Description} \\
+\hline
+\endhead
+Auth & POST, GET & \texttt{/api/auth/login} & Connexion, inscription, profil \\
+\hline
+Admin & GET, POST & \texttt{/api/admin/stats} & Statistiques et configuration \\
+\hline
+Enrollments & GET, POST, PATCH & \texttt{/api/enrollments} & Demandes d'inscription \\
+\hline
+Students & GET, POST, PUT, DELETE & \texttt{/api/students/:matricule} & CRUD élèves \\
+\hline
+Salles & GET, POST, PUT, DELETE & \texttt{/api/salles/:id} & Gestion des salles \\
+\hline
+Matieres & GET, POST, PUT, DELETE & \texttt{/api/matieres/:id} & Gestion des matières \\
+\hline
+Personnel & GET, PUT, POST & \texttt{/api/personnel/:id} & Gestion du personnel \\
+\hline
+Planning & GET, POST, PUT, DELETE & \texttt{/api/planning/classe/:id} & Emplois du temps \\
+\hline
+Bulletins & GET & \texttt{/api/bulletins/classe} & Calcul bulletins \\
+\hline
+Discipline & GET, POST, PUT, DELETE & \texttt{/api/discipline/incident} & Incidents et infractions \\
+\hline
+Notes & GET, POST & \texttt{/api/notes/bulk} & Saisie des notes \\
+\hline
+Epreuves & GET, POST & \texttt{/api/epreuves} & Dépôt d'épreuves \\
+\hline
+Payments & GET, POST, PATCH & \texttt{/api/payments} & Paiements \\
+\hline
+Bibliotheque & GET, POST, PUT, DELETE & \texttt{/api/bibliotheque/:id} & Gestion des livres \\
+\hline
+Messages & GET, POST, PATCH & \texttt{/api/messages} & Messagerie \\
+\hline
+Cours & GET & \texttt{/api/cours/mes-cours} & Cours enseignant \\
+\hline
+Academique & GET, POST, PUT, DELETE & \texttt{/api/academique/annees} & Années et trimestres \\
+\hline
+Users & GET, POST & \texttt{/api/users/deactivated} & Gestion des comptes \\
+\hline
+Procedure & GET, PUT & \texttt{/api/procedure} & Procédure d'inscription \\
+\hline
+Scolarite & GET, POST, PUT, DELETE & \texttt{/api/scolarite/classe/:id} & Configuration scolarité \\
+\hline
+\end{longtable}
+
+\section{Authentification des requêtes}
+\begin{itemize}[leftmargin=*]
+    \item Toutes les routes protégées requièrent l'en-tête :
+\begin{lstlisting}
+Authorization: Bearer <token_jwt>
+\end{lstlisting}
+    \item Les requêtes contenant des fichiers utilisent le format \texttt{multipart/form-data} (multer).
+    \item Les autres requêtes utilisent le format \texttt{application/json}.
+\end{itemize}
+ 
+\section{Liste exhaustive des endpoints}
+Le backend expose 19 routeurs pour un total de plus de 80 endpoints. Voici la répartition par routeur :
+
+\begin{longtable}{|p{3.5cm}|p{2cm}|p{9cm}|}
+\hline
+\textbf{Fichier de routes} & \textbf{Nb endpoints} & \textbf{Endpoints} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Fichier de routes} & \textbf{Nb endpoints} & \textbf{Endpoints} \\
+\hline
+\endhead
+authRoutes & 3 & POST login, POST register, GET profile \\
+\hline
+adminRoutes & 6 & GET stats, GET pending, POST validate, POST/GET salles, PATCH salle etat, GET personnels \\
+\hline
+enrollmentRoutes & 12 & POST submit, GET all, PATCH process, GET my-children, GET child, PATCH child photo/school, CRUD cycles, CRUD classes \\
+\hline
+studentRoutes & 7 & GET all, GET with-frequente, GET by-matricule, POST create, PUT update, DELETE, GET by-class, PUT photo \\
+\hline
+salleRoutes & 6 & POST, GET, PUT, DELETE, PATCH etat, PATCH position \\
+\hline
+matiereRoutes & 4 & POST, GET, PUT, DELETE \\
+\hline
+personnelRoutes & 6 & GET, PUT, POST deactivate, POST promouvoir, DELETE retirer, POST affecter, GET cours \\
+\hline
+planningRoutes & 7 & POST, GET by-classe, GET by-salle, GET by-eleve, PUT, DELETE \\
+\hline
+bulletinRoutes & 3 & GET classe, GET details, GET complet \\
+\hline
+disciplineRoutes & 9 & POST incident, GET pending, PUT incident, DELETE incident, GET eleve, CRUD types \\
+\hline
+noteRoutes & 2 & GET eleve, POST bulk \\
+\hline
+epreuveRoutes & 2 & POST, GET \\
+\hline
+paymentRoutes & 10 & POST, POST initiate, GET my-payments, GET all, GET history, GET config-by-matricule, PATCH validate, GET config, POST config \\
+\hline
+bibliothequeRoutes & 5 & GET all, GET by-id, POST, PUT, DELETE \\
+\hline
+messageRoutes & 6 & GET, GET parents, POST announcement, POST personal, POST teacher, PATCH moderate \\
+\hline
+coursRoutes & 3 & GET mes-cours, GET mes-eleves, GET by-id \\
+\hline
+academiqueRoutes & 15 & GET active, CRUD annees, PATCH active, POST duplicate, POST generate-trimestres, CRUD trimestres, CRUD sessions \\
+\hline
+userRoutes & 3 & GET deactivated, POST reactivate, POST deactivate \\
+\hline
+procedureRoutes & 2 & GET, PUT \\
+\hline
+scolariteRoutes & 7 & GET all, GET by-classe, POST, PUT, DELETE, CRUD tranches \\
+\hline
+\end{longtable}
+ 
+% =====================================================
+\chapter{Maintenance et dépannage}
+ 
+\section{Scripts de migration}
+Les migrations sont gérées par Prisma Migrate. Pour créer une nouvelle migration après modification du schéma :
+\begin{lstlisting}
+npx prisma migrate dev --name description_modification
+\end{lstlisting}
+Pour appliquer les migrations en production :
+\begin{lstlisting}
+npx prisma migrate deploy
+\end{lstlisting}
+ 
+Pour ajouter des colonnes sans perte de données :
+\begin{lstlisting}
+npx prisma db push
+\end{lstlisting}
+ 
+\section{Sauvegardes et restauration}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Supabase} : effectue des sauvegardes automatiques quotidiennes (rétention : 7 jours pour le plan gratuit).
+    \item Dump SQL manuel recommandé pour l'archivage :
+\begin{lstlisting}
+pg_dump --dbname=postgresql://user:password@host:port/db > backup.sql
+\end{lstlisting}
+    \item Restauration :
+\begin{lstlisting}
+psql --dbname=postgresql://user:password@host:port/db < backup.sql
+\end{lstlisting}
+\end{itemize}
+ 
+\section{Erreurs courantes}
+\begin{longtable}{|p{3.5cm}|p{5cm}|p{5.5cm}|}
+\hline
+\textbf{Erreur} & \textbf{Cause probable} & \textbf{Solution} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Erreur} & \textbf{Cause probable} & \textbf{Solution} \\
+\hline
+\endhead
+502 Bad Gateway (Railway) & Le backend crash au démarrage (port, variable d'environnement manquante, échec connexion BDD) & Vérifier les logs Railway et les variables d'environnement \\
+\hline
+CORS Error (Frontend) & L'URL Vercel a changé ou n'est pas reconnue par le backend & Vérifier la configuration CORS dans \texttt{app.ts} \\
+\hline
+Données invisibles & L'utilisateur n'a pas les droits suffisants ou le token est expiré & Vérifier le rôle et reconnecter l'utilisateur \\
+\hline
+PrismaClientInitializationError & Mauvais \texttt{DATABASE\_URL} ou base de données injoignable & Vérifier l'URL de connexion et les droits réseau \\
+\hline
+Upload échoué & Taille ou type de fichier non conforme & Vérifier les limites multer (5 Mo photos, 10 Mo épreuves, 20 Mo livres) \\
+\hline
+\end{longtable}
+ 
+\section{Logs}
+Le système de journalisation repose sur les sorties standard de Node.js (\texttt{console.log} et \texttt{console.error}) :
+\begin{itemize}[leftmargin=*]
+    \item \textbf{En développement} : logs dans le terminal où \texttt{npm run dev} est exécuté.
+    \item \textbf{En production (Railway)} : logs accessibles depuis le tableau de bord Railway, onglet Deployments $\rightarrow$ Logs.
+    \item \textbf{Fichiers locaux} : \texttt{server.log} et \texttt{server-err.log} à la racine du projet.
+\end{itemize}
+ 
+\section{Procédures de mise à jour}
+ 
+\subsection*{Workflow Git}
+\begin{enumerate}[leftmargin=*]
+    \item Développement et test en local.
+    \item Validation des changements :
+\begin{lstlisting}
+git add .
+git commit -m "Description des modifications"
+\end{lstlisting}
+    \item Déploiement :
+\begin{lstlisting}
+git push origin main
+\end{lstlisting}
+\end{enumerate}
+ 
+\subsection*{Redéploiement automatique}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Backend (Railway)} : connecté au dépôt GitHub, redéploiement automatique à chaque push sur \texttt{main}.
+    \item \textbf{Frontend (Vercel)} : rebuild et redéploiement automatique à chaque push sur \texttt{main}.
+\end{itemize}
+ 
+\subsection*{Mise à jour du schéma de base de données}
+En cas de modification du schéma Prisma :
+\begin{enumerate}
+    \item Modifier \texttt{server/prisma/schema.prisma}.
+    \item Créer une migration : \texttt{npx prisma migrate dev --name <description>}.
+    \item Commiter le fichier de migration généré.
+    \item Pousser sur \texttt{main} ; exécuter \texttt{npx prisma migrate deploy} sur la base de production (Railway/Supabase) si le redéploiement automatique ne l'applique pas.
+\end{enumerate}
+ 
+% =====================================================
+\chapter{Annexes}
+ 
+\section{Structure complète des fichiers}
+ 
+\subsection*{Backend (server/src/)}
+\begin{lstlisting}
+server/src/
+  controllers/
+    academiqueController.ts
+    adminController.ts
+    authController.ts
+    bibliotheque.controller.ts
+    bulletin.controller.ts
+    cours.controller.ts
+    discipline.controller.ts
+    enrollmentController.ts
+    epreuve.controller.ts
+    matiere.controller.ts
+    messageController.ts
+    note.controller.ts
+    paymentController.ts
+    personnel.controller.ts
+    planning.controller.ts
+    procedureController.ts
+    salle.controller.ts
+    scolarite.controller.ts
+    studentController.ts
+    userController.ts
+  middlewares/
+    authMiddleware.ts
+    uploadLivreMiddleware.ts
+    uploadMiddleware.ts
+    uploadStudentPhotoMiddleware.ts
+  routes/
+    academiqueRoutes.ts
+    adminRoutes.ts
+    authRoutes.ts
+    bibliothequeRoutes.ts
+    bulletinRoutes.ts
+    coursRoutes.ts
+    disciplineRoutes.ts
+    enrollmentRoutes.ts
+    epreuveRoutes.ts
+    matiereRoutes.ts
+    messageRoutes.ts
+    noteRoutes.ts
+    paymentRoutes.ts
+    personnelRoutes.ts
+    planningRoutes.ts
+    procedureRoutes.ts
+    salleRoutes.ts
+    scolariteRoutes.ts
+    studentRoutes.ts
+    userRoutes.ts
+  lib/
+    prisma.ts
+  scripts/
+    createAdmin.ts
+  seed.ts
+\end{lstlisting}
+ 
+\subsection*{Frontend (client/src/)}
+\begin{lstlisting}
+client/src/
+  App.tsx
+  main.tsx
+  App.css / index.css
+  components/
+    layout/
+      AdminLayout.tsx
+      ParentLayout.tsx
+      TeacherLayout.tsx
+    admin/
+      AffectationForm.tsx
+      ClassementClasse.tsx
+      SallesManager.tsx
+    teacher/
+      GradesEntry.tsx
+    parent/
+      DisciplineView.tsx
+    BrandHeader.tsx
+    ConfirmModal.tsx
+    InboxDropdown.tsx
+    LanguageSwitcher.tsx
+    ProtectedRoute.tsx
+    SettingsDropdown.tsx
+    Spinner.tsx
+    SubmitBtn.tsx
+  pages/
+    Login.tsx / Register.tsx
+    AdminDashboard.tsx
+    AdminEnrollments.tsx
+    AdminFeeConfig.tsx
+    StudentList.tsx
+    ParentBibliotheque.tsx
+    ParentBulletins.tsx
+    ParentChildProfile.tsx
+    ParentDiscipline.tsx
+    ParentPayment.tsx
+    ParentPlanning.tsx
+    ParentScolarite.tsx
+    admin/
+      AdminAcademique.tsx
+      AdminDeactivatedAccounts.tsx
+      AdminMessages.tsx
+      AdminPayments.tsx
+      AdminScolarite.tsx
+      BibliothequePage.tsx
+      BulletinPage.tsx
+      DisciplinePage.tsx
+      Infrastructure.tsx
+      MatierePage.tsx
+      PersonnelPage.tsx
+      PlanningPage.tsx
+    teacher/
+      CourseDetail.tsx
+      EpreuvePage.tsx
+      TeacherDashboard.tsx
+      TeacherDiscipline.tsx
+      TeacherGrades.tsx
+      TeacherMessages.tsx
+      TeacherPlanning.tsx
+  services/
+    apiServices.ts
+    axiosInstance.ts
+    enrollmentService.ts
+  contexts/
+  hooks/
+  i18n/
+    fr.json / en.json
+  types/
+  utils/
+    generateBulletinPDF.ts
+\end{lstlisting}
+ 
+\section{Glossaire complet}
+\begin{longtable}{|p{3cm}|p{11.5cm}|}
+\hline
+\textbf{Terme} & \textbf{Définition} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Terme} & \textbf{Définition} \\
+\hline
+\endhead
+API REST & Interface de programmation respectant les principes REST, exposant des ressources via HTTP. \\
+\hline
+CORS & Cross-Origin Resource Sharing -- mécanisme de sécurité encadrant les requêtes inter-domaines. \\
+\hline
+JWT & JSON Web Token, jeton utilisé pour l'authentification. \\
+\hline
+Prisma ORM & Outil de mapping objet-relationnel pour Node.js/TypeScript. \\
+\hline
+MVC & Modèle-Vue-Contrôleur (adapté : Routes-Controllers-Prisma). \\
+\hline
+RBAC & Role-Based Access Control. \\
+\hline
+SPA & Single Page Application. \\
+\hline
+Multer & Middleware Express de gestion des uploads de fichiers. \\
+\hline
+Pool de connexions & Mécanisme permettant de réutiliser un ensemble de connexions à la base de données (géré par Prisma). \\
+\hline
+Requête préparée & Requête SQL paramétrée empêchant les injections SQL (utilisée par Prisma). \\
+\hline
+Suppression logique & Désactivation d'un enregistrement (\texttt{actif=0} ou \texttt{statut=DISABLED}) sans suppression physique. \\
+\hline
+\end{longtable}
+ 
+\section{Références}
+\begin{itemize}[leftmargin=*]
+    \item Documentation Node.js : \url{https://nodejs.org/docs}
+    \item Documentation Express 5 : \url{https://expressjs.com}
+    \item Documentation React 19 : \url{https://react.dev}
+    \item Documentation Vite : \url{https://vitejs.dev}
+    \item Documentation Prisma ORM : \url{https://www.prisma.io/docs}
+    \item Documentation PostgreSQL : \url{https://www.postgresql.org/docs}
+    \item Documentation TailwindCSS v4 : \url{https://tailwindcss.com/docs}
+    \item Documentation Railway : \url{https://docs.railway.app}
+    \item Documentation Vercel : \url{https://vercel.com/docs}
+    \item Documentation Supabase : \url{https://supabase.com/docs}
+    \item Dépôt GitHub du projet : \url{https://github.com/brice-100/school-management}
+\end{itemize}
+ 
+\end{document}

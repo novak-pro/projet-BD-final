@@ -47,23 +47,53 @@ export const sendPersonalMessage = async (req: Request, res: Response) => {
   }
 };
 
-// Enseignant envoie un message (statut PENDING, doit être approuvé par admin)
+// Enseignant titulaire envoie un message aux parents des élèves de sa classe (statut PENDING, doit être approuvé par admin)
 export const sendTeacherMessage = async (req: Request, res: Response) => {
   try {
-    const { content, recipientId } = req.body;
+    const { content } = req.body;
     const senderId = (req as any).user.id;
 
-    const message = await prisma.message.create({
-      data: {
+    // Récupérer le profil enseignant
+    const personnel = await prisma.personnel.findUnique({
+      where: { userId: senderId },
+      include: {
+        salleTitulaire: {
+          include: {
+            eleves: { include: { parent: true } },
+            classe: true,
+          },
+        },
+      },
+    });
+
+    if (!personnel) return res.status(404).json({ error: 'Profil enseignant introuvable' });
+    if (!personnel.salleTitulaire || personnel.salleTitulaire.length === 0) {
+      return res.status(403).json({ error: 'Vous devez être titulaire d\'une salle pour envoyer des messages aux parents' });
+    }
+
+    const salle = personnel.salleTitulaire[0];
+    const parentUserIds = [
+      ...new Set(salle.eleves.filter(e => e.parent?.userId).map(e => e.parent!.userId)),
+    ];
+
+    if (parentUserIds.length === 0) {
+      return res.status(400).json({ error: 'Aucun parent trouvé pour les élèves de cette classe' });
+    }
+
+    await prisma.message.createMany({
+      data: parentUserIds.map(recipientId => ({
         content,
         type: 'PERSONAL',
         status: 'PENDING',
         senderId,
         recipientId,
-      },
+      })),
     });
 
-    res.status(201).json({ message: 'Message soumis pour validation', data: message });
+    res.status(201).json({
+      message: `Message soumis pour validation (envoyé à ${parentUserIds.length} parent(s))`,
+      nbParents: parentUserIds.length,
+    });
   } catch (error) {
     res.status(500).json({ error: "Erreur lors de l'envoi du message" });
   }
@@ -113,6 +143,7 @@ export const getMessages = async (req: Request, res: Response) => {
         },
         include: {
           sender: { select: { id: true, email: true } },
+          recipient: { select: { id: true, email: true } },
         },
         orderBy: { createdAt: 'desc' },
       });

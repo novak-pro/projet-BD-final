@@ -34,6 +34,7 @@ import CourseDetail      from './pages/teacher/CourseDetail';
 import TeacherDiscipline from './pages/teacher/TeacherDiscipline';
 import TeacherPlanning   from './pages/teacher/TeacherPlanning';
 import TeacherGrades     from './pages/teacher/TeacherGrades';
+import TeacherMessages   from './pages/teacher/TeacherMessages';
 
 // Pages parent
 import ParentScolarite from './pages/ParentScolarite';
@@ -87,6 +88,7 @@ function App() {
             <Route path="/teacher/discipline"   element={<TeacherDiscipline />} />
             <Route path="/teacher/planning"     element={<TeacherPlanning />} />
             <Route path="/teacher/grades"       element={<TeacherGrades />} />
+            <Route path="/teacher/messages"     element={<TeacherMessages />} />
           </Route>
         </Route>
 

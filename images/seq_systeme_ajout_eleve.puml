@@ -1,0 +1,14 @@
+@startuml
+actor Administrateur as admin
+participant "Système\nÉcole Excellence" as system
+
+admin -> system : 1. Remplit le formulaire d'ajout d'élève\n(nom, prénom, date naissance,\nclasse, parent, photo...)
+admin -> system : 2. Clique sur "Enregistrer"
+system -> system : 3. Contrôle des données\n(vérification matricule, CNE,\nunicité des informations)
+
+alt Données invalides ou doublon
+  system --> admin : 4a. Message d'erreur :\n"Un élève avec ces informations\nexiste déjà"
+else Données valides
+  system --> admin : 4b. Message de succès :\n"Élève inscrit avec succès"\nAffichage du matricule généré
+end
+@enduml

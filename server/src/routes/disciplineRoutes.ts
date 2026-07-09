@@ -21,8 +21,8 @@ router.put('/incident/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateIncide
 router.get('/eleve/:eleveId', protect, getIncidentsByEleve);
 router.delete('/incident/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteIncident);
 
-// Types d'infractions (admin only)
-router.get('/types', protect, restrictTo('ADMIN_PRINCIPAL'), getTypeInfractions);
+// Types d'infractions (lecture pour les enseignants aussi)
+router.get('/types', protect, restrictTo('ADMIN_PRINCIPAL', 'PERSONNEL'), getTypeInfractions);
 router.post('/types', protect, restrictTo('ADMIN_PRINCIPAL'), createTypeInfraction);
 router.put('/types/:id', protect, restrictTo('ADMIN_PRINCIPAL'), updateTypeInfraction);
 router.delete('/types/:id', protect, restrictTo('ADMIN_PRINCIPAL'), deleteTypeInfraction);

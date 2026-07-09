@@ -1,0 +1,89 @@
+@startuml
+skinparam useCase {
+  BorderColor black
+  FontSize 12
+}
+skinparam actor {
+  BorderColor black
+  FontSize 12
+}
+
+actor "Administrateur" as admin
+actor "Enseignant" as teacher
+actor "Parent" as parent
+
+rectangle "Application École Excellence" {
+
+  usecase "S'authentifier" as UC1
+
+  usecase "Gérer les élèves" as UC2
+  usecase "Gérer le personnel" as UC3
+  usecase "Gérer les classes\net cycles" as UC4
+  usecase "Gérer les matières" as UC5
+  usecase "Gérer les salles" as UC6
+  usecase "Planifier l'emploi\ndu temps" as UC7
+  usecase "Générer les\nbulletins" as UC8
+  usecase "Valider les\npaiements" as UC14
+  usecase "Gérer la\nbibliothèque" as UC15
+  usecase "Modérer les\nmessages" as UC18
+  usecase "Gérer les années\nacadémiques" as UC19
+  usecase "Valider les\ninscriptions" as UC21
+
+  usecase "Saisir les notes" as UC9
+  usecase "Signaler un\nincident" as UC11
+  usecase "Envoyer des\nmessages" as UC17
+
+  usecase "Consulter notes\net bulletins" as UC10
+  usecase "Suivre la\ndiscipline" as UC12
+  usecase "Effectuer un\npaiement" as UC13
+  usecase "Consulter la\nbibliothèque" as UC16
+  usecase "Soumettre une\ndemande\nd'inscription" as UC20
+
+  UC2 .> UC1 : <<include>>
+  UC3 .> UC1 : <<include>>
+  UC4 .> UC1 : <<include>>
+  UC5 .> UC1 : <<include>>
+  UC6 .> UC1 : <<include>>
+  UC7 .> UC1 : <<include>>
+  UC8 .> UC1 : <<include>>
+  UC14 .> UC1 : <<include>>
+  UC15 .> UC1 : <<include>>
+  UC18 .> UC1 : <<include>>
+  UC19 .> UC1 : <<include>>
+  UC21 .> UC1 : <<include>>
+
+  UC9 .> UC1 : <<include>>
+  UC11 .> UC1 : <<include>>
+  UC17 .> UC1 : <<include>>
+
+  UC10 .> UC1 : <<include>>
+  UC12 .> UC1 : <<include>>
+  UC13 .> UC1 : <<include>>
+  UC16 .> UC1 : <<include>>
+  UC20 .> UC1 : <<include>>
+}
+
+admin --> UC2
+admin --> UC3
+admin --> UC4
+admin --> UC5
+admin --> UC6
+admin --> UC7
+admin --> UC8
+admin --> UC14
+admin --> UC15
+admin --> UC18
+admin --> UC19
+admin --> UC21
+
+teacher --> UC9
+teacher --> UC11
+teacher --> UC17
+
+parent --> UC10
+parent --> UC12
+parent --> UC13
+parent --> UC16
+parent --> UC20
+
+@enduml

@@ -1,0 +1,43 @@
+@startuml
+actor Parent as parent
+participant "Frontend\nReact" as frontend
+participant "API\nExpress" as api
+participant "Prisma\nORM" as prisma
+database "PostgreSQL" as db
+actor "Administrateur" as admin
+
+parent -> frontend : 1. Sélectionne un élève\net une tranche de paiement
+frontend -> api : 2. GET /api/scolarite/classe/:id
+api -> prisma : 3. Prisma : findUnique({ where: { classeId },\ninclude: { tranches: true } })
+prisma -> db : 4. SELECT scolarite + tranches WHERE classeId = ?
+db --> prisma : 5. Données scolarité + tranches
+prisma --> api : 6. Montant, nombre de tranches, dates limites
+api --> frontend : 7. Configuration frais retournée
+
+parent -> frontend : 8. Choisit méthode :\nOrange Money / MTN MoMo / Carte
+frontend -> api : 9. POST /api/payments\n{ eleveId, montant, methode }
+api -> prisma : 10. Prisma : create({ data: { status: PENDING, ... } })
+prisma -> db : 11. INSERT INTO payment (...)
+db --> prisma : 12. Paiement enregistré
+prisma --> api : 13. Objet payment créé
+api --> frontend : 14. 201 { payment, message: "En attente de validation" }
+frontend --> parent : 15. Confirmation + "En attente de validation admin"
+
+...
+
+admin -> frontend : 16. Ouvre liste des paiements PENDING
+frontend -> api : 17. GET /api/payments/all
+api -> prisma : 18. Prisma : findMany({ where: { status: PENDING },\ninclude: { eleve: true, parent: true } })
+prisma -> db : 19. SELECT payments WHERE status = PENDING
+db --> prisma : 20. Liste des paiements en attente
+prisma --> api : 21. Données des paiements
+api --> frontend : 22. Liste des paiements
+admin -> frontend : 23. Clique "Valider"
+frontend -> api : 24. PATCH /api/payments/:id/validate\n{ status: VALIDATED }
+api -> prisma : 25. Prisma : update({ where: { id }, data: { status: VALIDATED } })
+prisma -> db : 26. UPDATE payment SET status = VALIDATED
+db --> prisma : 27. Paiement mis à jour
+prisma --> api : 28. Payment validé
+api --> frontend : 29. Succès
+frontend --> admin : 30. Notification "Paiement validé"
+@enduml

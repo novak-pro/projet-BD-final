@@ -22,6 +22,14 @@ export const getIncidentsByEleve = async (req: AuthRequest, res: Response): Prom
   }
 };
 
+function mapToIncidentType(type: string) {
+  const upper = type?.toUpperCase() || 'AUTRE';
+  if (upper.includes('RETARD')) return 'RETARD' as any;
+  if (upper.includes('ABSENCE') || upper.includes('INJUSTIFIEE')) return 'ABSENCE_INJUSTIFIEE' as any;
+  if (upper.includes('COMPORTEMENT')) return 'COMPORTEMENT' as any;
+  return 'AUTRE' as any;
+}
+
 export const rapporterIncident = async (req: AuthRequest, res: Response): Promise<void> => {
   const { eleveId, type, gravite, pointsDeduits, commentaire, auteur } = req.body as any;
   const userRole = req.user?.role;
@@ -35,7 +43,7 @@ export const rapporterIncident = async (req: AuthRequest, res: Response): Promis
       const status = isAdmin ? 'APPROVED' : 'PENDING';
 
       const incident = await tx.incident.create({
-        data: { eleveId, type, gravite, pointsDeduits, commentaire, auteur, status }
+        data: { eleveId, type: mapToIncidentType(type), gravite, pointsDeduits, commentaire, auteur, status }
       });
 
       let eleve = null;
@@ -60,6 +68,27 @@ export const rapporterIncident = async (req: AuthRequest, res: Response): Promis
           eleve.soldePoints <= 5   ? 'DANGER'   :
           eleve.soldePoints <= 10  ? 'WARNING'  :
           null;
+      }
+
+      // 3. Notifier les admins si c'est un signalement enseignant
+      if (!isAdmin) {
+        const admins = await tx.user.findMany({
+          where: { role: 'ADMIN_PRINCIPAL', status: 'ACTIVE' },
+          select: { id: true }
+        });
+
+        if (admins.length > 0) {
+          const auteurNom = auteur || 'Un enseignant';
+          await tx.message.createMany({
+            data: admins.map(a => ({
+              content: `[Discipline] ${auteurNom} a signalé un incident concernant l'élève #${eleveId} : ${commentaire?.substring(0, 100)}`,
+              type: 'PERSONAL',
+              status: 'SENT',
+              senderId: req.user!.id,
+              recipientId: a.id,
+            })),
+          });
+        }
       }
 
       return {
@@ -113,7 +142,7 @@ export const updateIncident = async (req: AuthRequest, res: Response): Promise<v
       const updated = await tx.incident.update({
         where: { id: Number(id) },
         data: {
-          ...(type && { type }),
+          ...(type && { type: mapToIncidentType(type) }),
           ...(gravite && { gravite }),
           ...(pointsDeduits !== undefined && { pointsDeduits: Number(pointsDeduits) }),
           ...(commentaire && { commentaire }),

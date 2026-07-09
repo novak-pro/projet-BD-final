@@ -1,0 +1,25 @@
+@startuml
+actor Admin as admin
+participant "Frontend\nReact" as frontend
+participant "API\nExpress" as api
+participant "Middleware\nJWT + Multer" as mw
+participant "Prisma\nORM" as prisma
+database "PostgreSQL" as db
+
+admin -> frontend : 1. Remplit formulaire élève\n(nom, prénom, date naissance,\nclasse, parent, photo...)
+frontend -> api : 2. POST /api/students\nAuthorization: Bearer <token>
+api -> mw : 3. Vérifie token JWT\net rôle ADMIN_PRINCIPAL
+mw --> api : 4. Token valide
+
+api -> mw : 5. Upload photo via Multer
+mw --> api : 6. Photo sauvegardée (chemin relatif)
+
+api -> prisma : 7. Prisma : create({ data: { ... } })
+prisma -> db : 8. INSERT INTO eleve (...)
+db --> prisma : 9. Élève créé avec matricule
+prisma --> api : 10. Objet eleve retourné
+
+api --> frontend : 11. 201 { eleve, message: "Élève créé avec succès" }
+frontend -> frontend : 12. Rafraîchit la liste
+frontend --> admin : 13. Affiche notification succès\n+ nouveau matricule
+@enduml

@@ -1,0 +1,215 @@
+@startuml
+!define table(x) class x ## (x) << (T,#FFEEEE) >>
+
+skinparam class {
+  BackgroundColor White
+  BorderColor Black
+}
+
+class User {
+  - id: Int
+  - email: String
+  - password: String
+  - role: Role
+  - status: UserStatus
+  - createdAt: DateTime
+}
+
+class Admin {
+  - id: Int
+  - nom: String
+  - mobile: String?
+}
+
+class Personnel {
+  - id: Int
+  - nom: String
+  - prenom: String
+  - fonction: FonctionPersonnel
+  - telephone: String
+  - photo: String?
+  - statut: String
+}
+
+class Parents {
+  - id: Int
+  - nom: String
+  - prenom: String
+  - telephone: String?
+}
+
+class Eleve {
+  - matricule: Int
+  - nom: String
+  - prenom: String
+  - dateNaissance: DateTime
+  - lieuNaissance: String
+  - sexe: Int
+  - photoURL: String?
+  - photoAdmin: String?
+  - niveau: String
+  - soldePoints: Int
+}
+
+class Classe {
+  - idClasse: Int
+  - libelle: String
+}
+
+class Cycle {
+  - idCycle: Int
+  - libelle: String
+  - description: String?
+}
+
+class Salle {
+  - idSalle: Int
+  - libelle: String
+  - capacite: Int?
+  - etat: SalleEtat
+}
+
+class Matiere {
+  - id: Int
+  - nom: String
+  - code: String?
+}
+
+class Cours {
+  - idCours: Int
+  - coefficient: Float
+}
+
+class Note {
+  - id: Int
+  - valeur: Float
+  - evaluation: String
+  - dateSaisie: DateTime
+}
+
+class Incident {
+  - id: Int
+  - type: IncidentType
+  - date: DateTime
+  - gravite: String
+  - pointsDeduits: Int
+  - commentaire: String
+  - status: String
+}
+
+class Payment {
+  - id: Int
+  - montant: Float
+  - nombreTranches: Int
+  - methode: PaymentMethod
+  - status: PaymentStatus
+  - createdAt: DateTime
+}
+
+class Scolarite {
+  - id: Int
+  - montantInscription: Float
+  - montantPension: Float
+  - nombreTranches: Int
+}
+
+class Tranche {
+  - id: Int
+  - libelle: String
+  - montant: Float
+  - dateLimite: DateTime
+}
+
+class AnneeAcademique {
+  - idAcademi: Int
+  - libelle: String
+  - dateDebut: DateTime
+  - dateFin: DateTime
+  - active: Boolean
+}
+
+class Trimestre {
+  - idTrimestre: Int
+  - libelle: String
+  - dateDebut: DateTime?
+  - dateFin: DateTime?
+}
+
+class EmploiDuTemps {
+  - id: Int
+  - jour: JourSemaine
+  - heureDebut: String
+  - heureFin: String
+}
+
+class Livre {
+  - id: Int
+  - titre: String
+  - auteur: String
+  - description: String?
+  - couvertureUrl: String?
+  - pdfUrl: String?
+}
+
+class Message {
+  - id: Int
+  - content: String
+  - type: String
+  - status: String
+  - createdAt: DateTime
+}
+
+class Epreuve {
+  - id: Int
+  - evaluation: String
+  - sujetUrl: String?
+  - corrigeUrl: String?
+}
+
+class EnrollmentRequest {
+  - id: Int
+  - nom: String
+  - prenom: String
+  - status: EnrollmentStatus
+}
+
+' === RELATIONS ===
+
+User "1" --> "1" Admin
+User "1" --> "1" Personnel
+User "1" --> "1" Parents
+
+Parents "1" --> "*" Eleve : enfants
+Parents "1" --> "*" EnrollmentRequest : demandes
+Parents "1" --> "*" Payment : paiements
+
+Eleve "*" --> "1" Classe
+Eleve "1" --> "*" Note
+Eleve "1" --> "*" Incident
+Eleve "1" --> "*" Payment
+
+Classe "*" --> "1" Cycle
+Classe "1" --> "*" Cours
+Classe "1" --> "*" Salle
+Classe "1" --> "*" Epreuve
+Classe "1" --> "1" Scolarite
+
+Personnel "1" --> "*" Classe : responsable
+Personnel "1" --> "*" Cours : enseigne
+Personnel "1" --> "*" Salle : titulaire
+
+Scolarite "1" --> "*" Tranche
+
+AnneeAcademique "1" --> "*" Trimestre
+Trimestre "1" --> "*" Session
+
+Cours "1" --> "*" EmploiDuTemps
+Cours "1" --> "*" Epreuve
+
+Matiere "1" --> "*" Cours
+Matiere "1" --> "*" Livre
+
+Message "*" --> "1" User : sender
+Message "*" --> "1" User : recipient
+
+@enduml

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
-  BookOpen, ClipboardList, FileText, ShieldAlert, Calendar, Menu, X, GraduationCap
+  BookOpen, ClipboardList, FileText, ShieldAlert, Calendar, MessageSquare, Menu, X, GraduationCap
 } from 'lucide-react';
 import LanguageSwitcher from '../LanguageSwitcher';
 import SettingsDropdown from '../SettingsDropdown';
@@ -21,6 +21,7 @@ const TeacherLayout = () => {
     { icon: <FileText size={18} />,     label: 'Dépôt d\'épreuves', path: '/teacher/epreuves' },
     { icon: <ShieldAlert size={18} />,  label: 'Discipline',        path: '/teacher/discipline' },
     { icon: <Calendar size={18} />,     label: 'Emploi du temps',   path: '/teacher/planning' },
+    { icon: <MessageSquare size={18} />, label: 'Messagerie',       path: '/teacher/messages' },
   ];
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
